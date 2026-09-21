@@ -111,7 +111,7 @@ function ContentEditor({ run, locale }: { run: Run; locale: Locale }) {
       {!sorted ? <Skeleton lines={6} label="جارٍ التحميل" /> : <>
         <h2 className="tmk-admin-heading">شرائح الصفحة الرئيسية <span>{heroes.filter(item => item.active).length} ظاهرة من {heroes.length}</span></h2>
         <div className="tmk-admin-cards">
-          {heroes.map((item, index) => <ContentCard key={item.id} item={item} number={index + 1} onOpen={() => setEditing({ kind: 'item', item })} />)}
+          {heroes.map((item, index) => <ContentCard key={`${item.id}-${item.version}`} item={item} number={index + 1} onOpen={() => setEditing({ kind: 'item', item })} run={run} reload={load} canDelete={heroes.length > 1} />)}
           <button type="button" className="tmk-admin-card tmk-admin-card--add" onClick={() => setEditing({ kind: 'new' })}>
             <Plus aria-hidden="true" size={32} />
             <strong>شريحة جديدة</strong>
@@ -120,7 +120,7 @@ function ContentEditor({ run, locale }: { run: Run; locale: Locale }) {
         </div>
         <h2 className="tmk-admin-heading">الأقسام الثابتة <span>بطاقات المسارات وبانرات الصفحات</span></h2>
         <div className="tmk-admin-cards">
-          {fixed.map(item => <ContentCard key={item.id} item={item} onOpen={() => setEditing({ kind: 'item', item })} />)}
+          {fixed.map(item => <ContentCard key={`${item.id}-${item.version}`} item={item} onOpen={() => setEditing({ kind: 'item', item })} run={run} reload={load} canDelete={false} />)}
         </div>
       </>}
       {editing ? (
@@ -133,21 +133,47 @@ function ContentEditor({ run, locale }: { run: Run; locale: Locale }) {
   );
 }
 
-function ContentCard({ item, number, onOpen }: { item: AdminItem; number?: number; onOpen: () => void }) {
+function ContentCard({ item, number, onOpen, run, reload, canDelete }: {
+  item: AdminItem; number?: number; onOpen: () => void; run: Run; reload: () => Promise<void>; canDelete: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const hero = item.slot === 'hero';
+  const act = (work: () => Promise<string>) => { setBusy(true); void run(async () => { const message = await work(); await reload(); return message; }).finally(() => setBusy(false)); };
   return (
-    <button type="button" className="tmk-admin-card" onClick={onOpen} data-hidden={item.active ? undefined : 'true'}>
-      <span className="tmk-admin-card__media">
-        <img src={item.imageUrl} alt="" loading="lazy" />
-        {number ? <span className="tmk-admin-card__number">{number}</span> : null}
-        <span className="tmk-admin-card__status"><StatusBadge tone={item.active ? 'success' : 'neutral'}>{item.active ? 'ظاهر' : 'مخفي'}</StatusBadge></span>
-        <span className="tmk-admin-card__edit"><Pencil aria-hidden="true" size={16} />تعديل</span>
-      </span>
-      <span className="tmk-admin-card__body">
-        <span className="tmk-admin-card__slot">{SLOT_LABELS[item.slot] ?? item.slot}</span>
-        <strong>{item.title.ar || 'بلا عنوان'}</strong>
-        {item.body.ar ? <span className="tmk-admin-card__text">{item.body.ar}</span> : null}
-      </span>
-    </button>
+    <article className="tmk-admin-card" data-hidden={item.active ? undefined : 'true'}>
+      <button type="button" className="tmk-admin-card__open" onClick={onOpen} aria-label={`تعديل ${item.title.ar || SLOT_LABELS[item.slot]}`}>
+        <span className="tmk-admin-card__media">
+          <img src={item.imageUrl} alt="" loading="lazy" />
+          {number ? <span className="tmk-admin-card__number">{number}</span> : null}
+          <span className="tmk-admin-card__status"><StatusBadge tone={item.active ? 'success' : 'neutral'}>{item.active ? 'ظاهر' : 'مخفي'}</StatusBadge></span>
+        </span>
+        <span className="tmk-admin-card__body">
+          <span className="tmk-admin-card__slot">{SLOT_LABELS[item.slot] ?? item.slot}</span>
+          <strong>{item.title.ar || 'بلا عنوان'}</strong>
+          {item.body.ar ? <span className="tmk-admin-card__text">{item.body.ar}</span> : null}
+        </span>
+      </button>
+      <div className="tmk-admin-card__actions">
+        {confirming ? <>
+          <span className="tmk-admin-card__ask">حذف نهائي؟</span>
+          <button type="button" className="tmk-button tmk-button--danger" disabled={busy} onClick={() => act(async () => { await call(`/admin/site-content/items/${item.id}`, 'DELETE'); return 'حُذفت الشريحة.'; })}><Trash2 aria-hidden="true" size={16} />نعم، احذف</button>
+          <button type="button" className="tmk-button tmk-button--quiet" disabled={busy} onClick={() => setConfirming(false)}>تراجع</button>
+        </> : <>
+          <button type="button" className="tmk-button tmk-button--secondary" onClick={onOpen}><Pencil aria-hidden="true" size={16} />تعديل</button>
+          {hero ? (
+            <button type="button" className="tmk-button tmk-button--quiet" disabled={busy} onClick={() => act(async () => {
+              await call(`/admin/site-content/items/${item.id}`, 'PATCH', { version: item.version, active: !item.active });
+              return item.active ? 'أُخفيت الشريحة.' : 'أصبحت الشريحة ظاهرة.';
+            })}>{item.active ? <><EyeOff aria-hidden="true" size={16} />إخفاء</> : <><Eye aria-hidden="true" size={16} />إظهار</>}</button>
+          ) : null}
+          {hero ? (
+            <button type="button" className="tmk-button tmk-button--quiet tmk-admin-card__delete" disabled={busy || !canDelete} onClick={() => setConfirming(true)}
+              title={canDelete ? undefined : 'لا يمكن حذف آخر شريحة'}><Trash2 aria-hidden="true" size={16} />حذف</button>
+          ) : null}
+        </>}
+      </div>
+    </article>
   );
 }
 
@@ -173,8 +199,10 @@ function ContentDialog({ item, nextOrder, canDelete, onClose, onDone }: {
 
   useEffect(() => {
     const node = dialog.current;
+    // No cleanup: removing the element ends the modal state, and closing it here would fire a
+    // close event that reads as the admin cancelling (React's development double-mount runs the
+    // cleanup straight after opening).
     if (node && !node.open) node.showModal();
-    return () => { if (node?.open) node.close(); };
   }, []);
 
   const attempt = async (work: () => Promise<string>) => {
