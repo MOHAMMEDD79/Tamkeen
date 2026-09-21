@@ -59,6 +59,11 @@ export class IdentityService {
     return user;
   }
 
+  /** Site content, project covers and the contact inbox sit with the same grant as the team screen. */
+  async platformAdministratorUser(actorId: string) {
+    return this.platformAdministrator(actorId);
+  }
+
   /**
    * PART-07. Platform finance operations (executing a payout, running reconciliation, inquiring of
    * the provider) are a platform grant with MFA, not an organisation role: the organisation asks

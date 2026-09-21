@@ -62,7 +62,7 @@ test('the public API exposes only published projects, allowlisted fields and val
     const cards = browse.body.data as Array<Record<string, unknown>>;
     if (cards.length) {
       const card = cards[0] as Record<string, unknown>;
-      assert.deepEqual(Object.keys(card).sort(), ['location', 'organization', 'publishedAt', 'slug', 'state', 'summary', 'title', 'type']);
+      assert.deepEqual(Object.keys(card).sort(), ['coverUrl', 'location', 'organization', 'publishedAt', 'slug', 'state', 'summary', 'title', 'type']);
       const organization = card.organization as Record<string, unknown>;
       assert.deepEqual(Object.keys(organization).sort(), ['city', 'country', 'displayName', 'logoUrl', 'slug', 'type', 'verified']);
       // No internal identifier is published anywhere in the card.

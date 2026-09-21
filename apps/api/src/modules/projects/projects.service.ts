@@ -25,7 +25,8 @@ const PAGE_SIZE_MAX = 100;
 
 const publicInclude = {
   city: { select: { nameAr: true, nameEn: true, country: true, latitude: true, longitude: true } },
-  organization: { select: { slug: true, displayName: true, type: true, city: true, country: true, verification: true, currentLogoId: true } }
+  organization: { select: { slug: true, displayName: true, type: true, city: true, country: true, verification: true, currentLogoId: true } },
+  cover: { select: { imageKey: true } }
 } as const;
 
 /** The detail read additionally needs the campaign, because the public funding block derives from it. */

@@ -292,7 +292,47 @@ const schemas = {
       slug: { type: 'string' }, title: { type: 'string' }, summary: { type: 'string' },
       type: ref('ProjectType'), state: ref('ProjectState'),
       publishedAt: { type: ['string', 'null'], format: 'date-time' },
-      organization: ref('PublicOrganizationSummary'), location: ref('PublicLocation')
+      organization: ref('PublicOrganizationSummary'), location: ref('PublicLocation'),
+      coverUrl: { type: ['string', 'null'], description: 'Platform-chosen cover photo (/api/v1/site-media/{id}); null means the site shows its default photo for the project type.' }
+    }
+  },
+  LocalizedText: { type: 'object', required: ['ar', 'en'], properties: { ar: { type: 'string' }, en: { type: 'string' } }, additionalProperties: false },
+  SiteSlot: { type: 'string', enum: ['hero', 'track.charity', 'track.invest', 'track.work', 'about', 'contact'] },
+  PublicSiteItem: {
+    type: 'object',
+    description: 'Active items only. imageUrl is an uploaded photo (/api/v1/site-media/{id}) or the default path under /media/defaults/ on the web app.',
+    properties: {
+      id: { type: 'string', format: 'uuid' }, slot: ref('SiteSlot'), sortOrder: { type: 'integer' },
+      title: ref('LocalizedText'), body: ref('LocalizedText'),
+      cta: { anyOf: [{ type: 'object', properties: { label: ref('LocalizedText'), href: { type: 'string', description: 'Site-internal path.' } } }, { type: 'null' }] },
+      imageUrl: { type: 'string' }
+    }
+  },
+  PublicSiteContent: {
+    type: 'object',
+    properties: {
+      hero: { type: 'array', items: ref('PublicSiteItem') },
+      tracks: { type: 'object', properties: { charity: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] }, invest: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] }, work: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] } } },
+      about: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] },
+      contact: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] }
+    }
+  },
+  AdminSiteItem: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid' }, slot: ref('SiteSlot'), sortOrder: { type: 'integer' },
+      title: ref('LocalizedText'), body: ref('LocalizedText'),
+      cta: { type: 'object', properties: { label: ref('LocalizedText'), href: { type: 'string' } } },
+      imageKey: { type: ['string', 'null'] }, imageUrl: { type: 'string' }, defaultImage: { type: 'string' },
+      active: { type: 'boolean' }, version: { type: 'integer' }, updatedAt: { type: 'string', format: 'date-time' }
+    }
+  },
+  ContactMessage: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid' }, name: { type: 'string' }, email: { type: 'string', format: 'email' }, subject: { type: 'string' }, body: { type: 'string' },
+      locale: { type: 'string', enum: ['ar', 'en'] }, state: { type: 'string', enum: ['new', 'read', 'archived'] },
+      createdAt: { type: 'string', format: 'date-time' }, readAt: { type: ['string', 'null'], format: 'date-time' }, handledById: { type: ['string', 'null'], format: 'uuid' }
     }
   },
   PublicProjectDetail: {
@@ -2717,6 +2757,23 @@ const paths = {
   '/admin/restore-drills': { post: operation({ id: 'recordRestoreDrill', summary: 'ADM-09.A04. Records measured RPO/RTO and evidence from an actual restore drill.', tag: 'operations', permission: 'ops.manage', body: { type: 'object', required: ['environment', 'evidenceRef', 'measuredRpoMins', 'measuredRtoMins', 'outcome', 'performedAt'], additionalProperties: false, properties: { environment: { type: 'string' }, evidenceRef: { type: 'string' }, measuredRpoMins: { type: 'integer', minimum: 0 }, measuredRtoMins: { type: 'integer', minimum: 0 }, outcome: { type: 'string', enum: ['passed', 'failed', 'partial'] }, notes: { type: 'string', maxLength: 2000 }, performedAt: { type: 'string', format: 'date-time' } } }, success: { status: 201, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', additionalProperties: true }) } }) },
   '/admin/subjects/{id}/freeze': { post: operation({ id: 'freezeSubject', summary: 'ADM-07.A03. Freezes exactly collect, payout or publish, with a reason. Other scopes continue.', tag: 'operations', permission: 'risk.freeze', params: [uuidParam('id', 'Subject identifier.')], body: { type: 'object', required: ['subjectType', 'scope', 'reason'], additionalProperties: false, properties: { subjectType: { type: 'string', minLength: 2, maxLength: 40 }, scope: { type: 'string', enum: ['collect', 'payout', 'publish'] }, reason: { type: 'string', minLength: 10, maxLength: 2000 } } }, success: { status: 201, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', additionalProperties: true }) } }) },
   '/admin/subjects/{id}/unfreeze': { post: operation({ id: 'unfreezeSubject', summary: 'ADM-07.A04. Independent reviewer clears one freeze with a reason; nothing republishes automatically.', tag: 'operations', permission: 'risk.unfreeze', params: [uuidParam('id', 'Subject identifier.')], body: { type: 'object', required: ['freezeId', 'reason', 'version'], additionalProperties: false, properties: { freezeId: { type: 'string', format: 'uuid' }, reason: { type: 'string', minLength: 10, maxLength: 2000 }, version: { type: 'integer', minimum: 1 } } }, success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', additionalProperties: true }) } }) },
+  '/site-content': { get: operation({ id: 'getSiteContent', summary: 'Public site copy and photos: hero slides in order, the three track cards, about and contact. Active items only.', tag: 'site', permission: 'public', public: true, success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope(ref('PublicSiteContent')) } }) },
+  '/site-media/{id}': { get: operation({ id: 'getSiteMedia', summary: 'Serve an uploaded site photo by its random id, with ETag, nosniff and a sandboxing CSP. Demo/test storage only.', tag: 'site', permission: 'public', public: true, params: [uuidParam('id', 'Image id from an imageUrl.')], success: { status: 200, description: 'Image bytes; Content-Type is derived from the stored bytes.', contentType: 'image/jpeg', schema: { type: 'string', format: 'binary' } }, errors: { 304: { description: 'Not modified.' } } }) },
+  '/contact-messages': { post: operation({ id: 'createContactMessage', summary: 'Send a message from the public contact form. No session needed; same-origin only; five per client per ten minutes.', tag: 'site', permission: 'public', public: true, body: { type: 'object', required: ['name', 'email', 'subject', 'body'], additionalProperties: false, properties: { name: { type: 'string', minLength: 2, maxLength: 120 }, email: { type: 'string', format: 'email', maxLength: 254 }, subject: { type: 'string', minLength: 2, maxLength: 200 }, body: { type: 'string', minLength: 10, maxLength: 4000 }, locale: { type: 'string', enum: ['ar', 'en'] } } }, success: { status: 201, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { id: { type: 'string', format: 'uuid' } } }) }, errors: { 429: errorResponse('Rate limited; retry after the Retry-After delay.') } }) },
+  '/admin/site-content': { get: operation({ id: 'getAdminSiteContent', summary: 'Every site item including inactive ones, with both languages, default photo and version.', tag: 'site', permission: 'PlatformAdmin grant with MFA', success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { items: { type: 'array', items: ref('AdminSiteItem') }, slots: { type: 'array', items: ref('SiteSlot') } } }) } }) },
+  '/admin/site-content/items': { post: operation({ id: 'createHeroSlide', summary: 'Add a hero slide. Only hero slides can be created; every other slot is a fixed item edited in place.', tag: 'site', permission: 'PlatformAdmin grant with MFA', body: { type: 'object', required: ['titleAr', 'titleEn'], additionalProperties: false, properties: { sortOrder: { type: 'integer', minimum: 0, maximum: 1000 }, titleAr: { type: 'string', maxLength: 200 }, titleEn: { type: 'string', maxLength: 200 }, bodyAr: { type: 'string', maxLength: 600 }, bodyEn: { type: 'string', maxLength: 600 }, ctaLabelAr: { type: 'string', maxLength: 60 }, ctaLabelEn: { type: 'string', maxLength: 60 }, ctaHref: { type: 'string', maxLength: 300, description: 'Empty, or a path starting with a single /.' }, defaultImage: { type: 'string', pattern: '^/media/defaults/[a-z0-9-]+[.](jpg|jpeg|png|webp)$' }, active: { type: 'boolean' }, imageKey: { type: ['string', 'null'], pattern: '^site/[0-9a-f-]{36}[.]bin$', description: 'A key from the image upload; null reverts to defaultImage.' } } }, success: { status: 201, description: ENVELOPE_DESCRIPTION, schema: envelope(ref('AdminSiteItem')) } }) },
+  '/admin/site-content/items/{id}': {
+    patch: operation({ id: 'updateSiteItem', summary: 'Edit an item text, link, order, visibility or photo. Omitted fields are unchanged; a stale version returns 409, and hiding the last visible hero slide returns 409.', tag: 'site', permission: 'PlatformAdmin grant with MFA', params: [uuidParam('id', 'Site item identifier.')], body: { type: 'object', required: ['version'], additionalProperties: false, properties: { sortOrder: { type: 'integer', minimum: 0, maximum: 1000 }, titleAr: { type: 'string', maxLength: 200 }, titleEn: { type: 'string', maxLength: 200 }, bodyAr: { type: 'string', maxLength: 600 }, bodyEn: { type: 'string', maxLength: 600 }, ctaLabelAr: { type: 'string', maxLength: 60 }, ctaLabelEn: { type: 'string', maxLength: 60 }, ctaHref: { type: 'string', maxLength: 300, description: 'Empty, or a path starting with a single /.' }, defaultImage: { type: 'string', pattern: '^/media/defaults/[a-z0-9-]+[.](jpg|jpeg|png|webp)$' }, active: { type: 'boolean' }, imageKey: { type: ['string', 'null'], pattern: '^site/[0-9a-f-]{36}[.]bin$', description: 'A key from the image upload; null reverts to defaultImage.' }, version: { type: 'integer', minimum: 1 } } }, success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope(ref('AdminSiteItem')) } }),
+    delete: operation({ id: 'deleteHeroSlide', summary: 'Delete a hero slide. Other slots cannot be deleted (403), and the last visible hero slide cannot be deleted (409).', tag: 'site', permission: 'PlatformAdmin grant with MFA', params: [uuidParam('id', 'Site item identifier.')], success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { id: { type: 'string', format: 'uuid' }, deleted: { type: 'boolean' } } }) } })
+  },
+  '/admin/site-media/images': { put: operation({ id: 'uploadSiteImage', summary: 'Upload one PNG, JPEG or WebP as the raw body (max 8 MB, 6000x6000, 40 MP). The declared type must match the bytes. Stored but unused until an item or cover names its key. Demo/test storage only.', tag: 'site', permission: 'PlatformAdmin grant with MFA', headers: [{ name: 'content-length', description: 'Exact byte size; required.' }], body: { type: 'string', format: 'binary' }, bodyContentType: 'image/*', success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { imageKey: { type: 'string' }, imageUrl: { type: 'string' }, contentType: { type: 'string' }, width: { type: 'integer' }, height: { type: 'integer' } } }) } }) },
+  '/admin/projects/covers': { get: operation({ id: 'listProjectCovers', summary: 'All projects, newest first (200 at most), with their current cover photo or null.', tag: 'site', permission: 'PlatformAdmin grant with MFA', success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'array', items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, slug: { type: 'string' }, title: { type: 'string' }, type: { type: 'string' }, state: { type: 'string' }, organization: { type: 'object', properties: { displayName: { type: 'string' } } }, coverUrl: { type: ['string', 'null'] } } } }) } }) },
+  '/admin/projects/{id}/cover': {
+    put: operation({ id: 'setProjectCover', summary: 'Set a project public cover photo from an uploaded image key.', tag: 'site', permission: 'PlatformAdmin grant with MFA', params: [uuidParam('id', 'Project identifier.')], body: { type: 'object', required: ['imageKey'], additionalProperties: false, properties: { imageKey: { type: 'string', pattern: '^site/[0-9a-f-]{36}[.]bin$' } } }, success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { projectId: { type: 'string', format: 'uuid' }, coverUrl: { type: 'string' } } }) } }),
+    delete: operation({ id: 'removeProjectCover', summary: 'Remove a project cover so the site falls back to its default photo. 404 when there is none.', tag: 'site', permission: 'PlatformAdmin grant with MFA', params: [uuidParam('id', 'Project identifier.')], success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { projectId: { type: 'string', format: 'uuid' }, coverUrl: { type: 'null' } } }) } })
+  },
+  '/admin/contact-messages': { get: operation({ id: 'listContactMessages', summary: 'Contact form messages, newest first (200 at most), optionally filtered by state.', tag: 'site', permission: 'PlatformAdmin grant with MFA', query: [{ name: 'state', description: 'new | read | archived. Omitted returns every state.' }], success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'array', items: ref('ContactMessage') }) } }) },
+  '/admin/contact-messages/{id}/state': { post: operation({ id: 'setContactMessageState', summary: 'Mark a contact message read or archived. The first handling sets readAt.', tag: 'site', permission: 'PlatformAdmin grant with MFA', params: [uuidParam('id', 'Contact message identifier.')], body: { type: 'object', required: ['state'], additionalProperties: false, properties: { state: { type: 'string', enum: ['read', 'archived'] } } }, success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope(ref('ContactMessage')) } }) },
 } as const;
 
 export const openapi = {
@@ -2751,7 +2808,8 @@ export const openapi = {
     { name: 'programs', description: 'Training programmes, cohorts, applications, enrolment and attendance. A job is a separate thing, and this tag never creates one.' },
     { name: 'employment', description: 'Jobs, referrals, offers, placements and follow-up. An accepted offer is not an employment, and a follow-up nobody answered is unknown rather than success.' },
     { name: 'enablement', description: 'Agreements and grants, stipends and certificates, incubation, assistance and volunteering. A grant creates no equity, approving a deliverable releases no money, and an assistance record reaches no sponsor and no export.' },
-    { name: 'operations', description: 'Private support, notification outbox, redacted audit access and narrowly scoped risk freezes.' }
+    { name: 'operations', description: 'Private support, notification outbox, redacted audit access and narrowly scoped risk freezes.' },
+    { name: 'site', description: 'Admin-edited site copy and photos, project cover photos and the public contact inbox.' }
   ],
   components: {
     securitySchemes: {

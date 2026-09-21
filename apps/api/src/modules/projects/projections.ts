@@ -1,4 +1,5 @@
 import type { LocationPrecision, ProjectState } from '@tamkeen/database';
+import { siteMediaUrl } from '../site-content/site-media-storage.js';
 
 /**
  * Public projections for PART-04.
@@ -86,6 +87,8 @@ export interface PublicProjectCard {
   publishedAt: string | null;
   organization: PublicOrganizationSummary;
   location: PublicLocation;
+  /** A platform-chosen photo, or null so the site shows its default for the project's type. */
+  coverUrl: string | null;
 }
 
 /**
@@ -101,6 +104,7 @@ export function publicProjectCard(project: {
   publicLocationPrecision: LocationPrecision;
   city: { nameAr: string; nameEn: string; country: string; latitude: number; longitude: number };
   organization: { slug: string; displayName: string; type: string; city: string; country: string; verification: string; currentLogoId: string | null };
+  cover?: { imageKey: string } | null;
 }): PublicProjectCard {
   return {
     slug: project.slug,
@@ -115,7 +119,9 @@ export function publicProjectCard(project: {
       latitude: project.latitude,
       longitude: project.longitude,
       city: project.city
-    })
+    }),
+    // The URL names the random image id, never the project id the cover row is keyed on.
+    coverUrl: project.cover ? siteMediaUrl(project.cover.imageKey) : null
   };
 }
 

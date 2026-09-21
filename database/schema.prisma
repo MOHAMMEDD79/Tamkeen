@@ -764,6 +764,7 @@ model Project {
   agreements          Agreement[]
   payouts           Payout[]
   programs        Program[]
+  cover           ProjectCover?
   @@map("projects")
 }
 
@@ -3952,4 +3953,62 @@ model SubjectFreeze {
   version     Int @default(1)
   @@index([subjectType, subjectId, unfrozenAt])
   @@map("subject_freezes")
+}
+
+/// Admin-edited marketing content for the public site. Every slot but `hero` is a fixed singleton
+/// seeded by the migration, so the site has copy and a photo before anyone edits it. An uploaded
+/// image overrides `defaultImage`; clearing it falls back to the default instead of to nothing.
+model SiteMediaItem {
+  id               String @id @default(uuid()) @db.Uuid
+  slot             String @db.VarChar(32)
+  sortOrder        Int @default(0) @map("sort_order")
+  titleAr          String @default("") @map("title_ar") @db.VarChar(200)
+  titleEn          String @default("") @map("title_en") @db.VarChar(200)
+  bodyAr           String @default("") @map("body_ar") @db.VarChar(600)
+  bodyEn           String @default("") @map("body_en") @db.VarChar(600)
+  ctaLabelAr       String @default("") @map("cta_label_ar") @db.VarChar(60)
+  ctaLabelEn       String @default("") @map("cta_label_en") @db.VarChar(60)
+  // Site-internal only: a stored off-site link would turn an admin typo into an open redirect.
+  ctaHref          String @default("") @map("cta_href") @db.VarChar(300)
+  imageKey         String? @map("image_key") @db.VarChar(120)
+  imageContentType String? @map("image_content_type") @db.VarChar(40)
+  imageChecksum    String? @map("image_checksum") @db.Char(64)
+  defaultImage     String @default("") @map("default_image") @db.VarChar(200)
+  active           Boolean @default(true)
+  version          Int @default(1)
+  updatedById      String? @map("updated_by_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  @@index([slot, sortOrder])
+  @@map("site_media_items")
+}
+
+/// The photo on a project's public card. Chosen by the platform, not the organisation, so it sits
+/// beside the project rather than on it and never enters the project's reviewed version snapshot.
+model ProjectCover {
+  projectId   String @id @map("project_id") @db.Uuid
+  imageKey    String @map("image_key") @db.VarChar(120)
+  contentType String @map("content_type") @db.VarChar(40)
+  checksum    String @db.Char(64)
+  updatedById String? @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@map("project_covers")
+}
+
+/// A message from the public contact form. Sent without a session, so it carries only what the
+/// visitor typed; it is never linked to an account by email.
+model ContactMessage {
+  id          String @id @default(uuid()) @db.Uuid
+  name        String @db.VarChar(120)
+  email       String @db.VarChar(254)
+  subject     String @db.VarChar(200)
+  body        String @db.VarChar(4000)
+  locale      String @default("ar") @db.VarChar(5)
+  state       String @default("new") @db.VarChar(20)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  readAt      DateTime? @map("read_at") @db.Timestamptz(3)
+  handledById String? @map("handled_by_id") @db.Uuid
+  @@index([state, createdAt])
+  @@map("contact_messages")
 }

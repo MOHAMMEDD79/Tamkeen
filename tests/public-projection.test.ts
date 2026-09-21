@@ -105,7 +105,7 @@ test('verified is true only for a current verification', () => {
 test('the project card carries no internal identifier, no manager and no financial figure', () => {
   const card = publicProjectCard(project);
   const serialised = JSON.stringify(card);
-  assert.deepEqual(Object.keys(card).sort(), ['location', 'organization', 'publishedAt', 'slug', 'state', 'summary', 'title', 'type']);
+  assert.deepEqual(Object.keys(card).sort(), ['coverUrl', 'location', 'organization', 'publishedAt', 'slug', 'state', 'summary', 'title', 'type']);
   assert.equal(serialised.includes(project.id), false, 'the internal project id must not be public');
   assert.equal(serialised.includes(project.managerId), false, 'the responsible manager is not public');
   assert.equal(serialised.includes(project.createdBy), false, 'the creator is not public');
@@ -170,4 +170,12 @@ test('a logo url is produced only when a logo exists, and the slug is encoded', 
   const encoded = publicOrganizationSummary({ ...organization, slug: 'جمعية-الأفق' }).logoUrl;
   assert.equal(encoded?.includes(' '), false);
   assert.equal(encoded?.startsWith('/api/v1/organizations/'), true);
+});
+
+test('a cover url names the random image id, never the project, and is null without a cover', () => {
+  assert.equal(publicProjectCard(project).coverUrl, null, 'no cover row means the site falls back to its default photo');
+  const imageId = '0f0e0d0c-0b0a-4908-8706-050403020100';
+  const card = publicProjectCard({ ...project, cover: { imageKey: `site/${imageId}.bin` } });
+  assert.equal(card.coverUrl, `/api/v1/site-media/${imageId}`);
+  assert.equal(JSON.stringify(card).includes(project.id), false);
 });
