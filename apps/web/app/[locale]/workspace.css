@@ -175,8 +175,8 @@ article.row > div:first-child > strong { font-size: 17px; }
  * actions) are left alone. The 680px reading cap above still applies to the narrow sign-in card.
  */
 .tmk-app__main form { max-inline-size: none; }
-.tmk-app__main form:not(.tmk-admin-item):not(.tmk-toolbar):has(> .field, > .tmk-field) { grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); align-items: start; }
-.tmk-app__main form:not(.tmk-admin-item):not(.tmk-toolbar) > :not(.field):not(.tmk-field),
-.tmk-app__main form:not(.tmk-admin-item):not(.tmk-toolbar) > :has(textarea) { grid-column: 1 / -1; }
-.tmk-app__main form:not(.tmk-admin-item):not(.tmk-toolbar) > button { justify-self: start; min-inline-size: 180px; }
+.tmk-app__main form:not(.tmk-editor__form):not(.tmk-toolbar):has(> .field, > .tmk-field) { grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); align-items: start; }
+.tmk-app__main form:not(.tmk-editor__form):not(.tmk-toolbar) > :not(.field):not(.tmk-field),
+.tmk-app__main form:not(.tmk-editor__form):not(.tmk-toolbar) > :has(textarea) { grid-column: 1 / -1; }
+.tmk-app__main form:not(.tmk-editor__form):not(.tmk-toolbar) > button { justify-self: start; min-inline-size: 180px; }
 .tmk-app__main .tmk-page-header__lead { max-inline-size: 820px; }

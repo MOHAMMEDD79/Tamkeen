@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
-import { Archive, Eye, EyeOff, ImagePlus, Inbox, MailOpen, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { Archive, Eye, EyeOff, ImagePlus, Inbox, Loader2, MailOpen, Pencil, Plus, RotateCcw, Save, Trash2, X } from 'lucide-react';
 import { AppShell, EmptyState, Notice, PageHeader, Skeleton, StatusBadge, formatDate, localePath, type Locale } from '@tamkeen/ui';
 
 /**
@@ -79,131 +79,234 @@ export function SiteAdmin({ locale, mode }: { locale: Locale; mode: 'content' | 
 
 type Run = (work: () => Promise<string | void>) => Promise<void>;
 
+const HERO_ORDER = ['hero', 'track.charity', 'track.invest', 'track.work', 'about', 'contact'];
+
+type Editing = { kind: 'new' } | { kind: 'item'; item: AdminItem } | null;
+
+/**
+ * The content overview: every slide and fixed section as a photo card, so the whole site is visible
+ * on one screen. A card opens its editor in a dialog; "new slide" opens the same dialog empty, so a
+ * slide is written, given its photo and published in one step rather than created blank and fixed up.
+ */
 function ContentEditor({ run, locale }: { run: Run; locale: Locale }) {
   const [items, setItems] = useState<AdminItem[] | null>(null);
+  const [editing, setEditing] = useState<Editing>(null);
   const load = useCallback(async () => setItems((await call<{ items: AdminItem[] }>('/admin/site-content')).items), []);
   useEffect(() => { void run(load); }, [run, load]);
-  const order = ['hero', 'track.charity', 'track.invest', 'track.work', 'about', 'contact'];
-  const sorted = items ? [...items].sort((a, b) => order.indexOf(a.slot) - order.indexOf(b.slot) || a.sortOrder - b.sortOrder) : null;
+  const sorted = items ? [...items].sort((a, b) => HERO_ORDER.indexOf(a.slot) - HERO_ORDER.indexOf(b.slot) || a.sortOrder - b.sortOrder) : null;
   const heroes = sorted?.filter(item => item.slot === 'hero') ?? [];
+  const fixed = sorted?.filter(item => item.slot !== 'hero') ?? [];
+  const nextOrder = heroes.reduce((max, item) => Math.max(max, item.sortOrder), 0) + 1;
+
+  const done = async (message: string) => { setEditing(null); await run(async () => { await load(); return message; }); };
+
   return (
     <>
       <PageHeader dashboard eyebrow="إدارة الموقع" title="البانرات والأقسام"
-        lead="كل صورة ونص يظهر في الصفحات العامة. التغيير يظهر للزوار فور الحفظ. اترك الحقل الإنجليزي فارغًا ليُعرض النص العربي."
-        actions={<a className="tmk-button tmk-button--secondary" href={localePath(locale, '/')} target="_blank" rel="noreferrer"><Eye aria-hidden="true" size={18} />معاينة الموقع</a>} />
+        lead="كل صورة ونص يظهر في الصفحات العامة. اضغط على أي بطاقة لتعديلها؛ التغيير يظهر للزوار فور الحفظ."
+        actions={<>
+          <button type="button" className="tmk-button tmk-button--primary" onClick={() => setEditing({ kind: 'new' })}><Plus aria-hidden="true" size={18} />شريحة جديدة</button>
+          <a className="tmk-button tmk-button--secondary" href={localePath(locale, '/')} target="_blank" rel="noreferrer"><Eye aria-hidden="true" size={18} />معاينة الموقع</a>
+        </>} />
       {!sorted ? <Skeleton lines={6} label="جارٍ التحميل" /> : <>
-        <div className="tmk-section-row" style={{ marginBlockStart: 0 }}>
-          <h2>شرائح الصفحة الرئيسية ({heroes.length})</h2>
-          <button type="button" className="tmk-button tmk-button--primary" onClick={() => void run(async () => {
-            await call('/admin/site-content/items', 'POST', { titleAr: 'شريحة جديدة', titleEn: 'New slide', bodyAr: '', ctaHref: '/explore', ctaLabelAr: 'تصفّح المشاريع', ctaLabelEn: 'Browse projects', active: false });
-            await load(); return 'أُضيفت شريحة جديدة مخفية. عدّلها وأظهرها عندما تكون جاهزة.';
-          })}><Plus aria-hidden="true" size={18} />شريحة جديدة</button>
+        <h2 className="tmk-admin-heading">شرائح الصفحة الرئيسية <span>{heroes.filter(item => item.active).length} ظاهرة من {heroes.length}</span></h2>
+        <div className="tmk-admin-cards">
+          {heroes.map((item, index) => <ContentCard key={item.id} item={item} number={index + 1} onOpen={() => setEditing({ kind: 'item', item })} />)}
+          <button type="button" className="tmk-admin-card tmk-admin-card--add" onClick={() => setEditing({ kind: 'new' })}>
+            <Plus aria-hidden="true" size={32} />
+            <strong>شريحة جديدة</strong>
+            <span>العنوان والنص والصورة في خطوة واحدة</span>
+          </button>
         </div>
-        <div className="tmk-stack" style={{ gap: 24 }}>
-          {heroes.map(item => <ItemEditor key={`${item.id}-${item.version}`} item={item} run={run} reload={load} canDelete={heroes.length > 1} locale={locale} />)}
-        </div>
-        <h2>الأقسام الثابتة</h2>
-        <div className="tmk-stack" style={{ gap: 24 }}>
-          {sorted.filter(item => item.slot !== 'hero').map(item => <ItemEditor key={`${item.id}-${item.version}`} item={item} run={run} reload={load} canDelete={false} locale={locale} />)}
+        <h2 className="tmk-admin-heading">الأقسام الثابتة <span>بطاقات المسارات وبانرات الصفحات</span></h2>
+        <div className="tmk-admin-cards">
+          {fixed.map(item => <ContentCard key={item.id} item={item} onOpen={() => setEditing({ kind: 'item', item })} />)}
         </div>
       </>}
+      {editing ? (
+        <ContentDialog key={editing.kind === 'item' ? `${editing.item.id}-${editing.item.version}` : 'new'}
+          item={editing.kind === 'item' ? editing.item : null} nextOrder={nextOrder}
+          canDelete={editing.kind === 'item' && editing.item.slot === 'hero' && heroes.length > 1}
+          onClose={() => setEditing(null)} onDone={done} />
+      ) : null}
     </>
   );
 }
 
-function ItemEditor({ item, run, reload, canDelete, locale }: { item: AdminItem; run: Run; reload: () => Promise<void>; canDelete: boolean; locale: Locale }) {
-  const [preview, setPreview] = useState(item.imageUrl);
-  const [pendingKey, setPendingKey] = useState<string | null | undefined>(undefined);
-  const [busy, setBusy] = useState(false);
-  const hero = item.slot === 'hero';
+function ContentCard({ item, number, onOpen }: { item: AdminItem; number?: number; onOpen: () => void }) {
+  return (
+    <button type="button" className="tmk-admin-card" onClick={onOpen} data-hidden={item.active ? undefined : 'true'}>
+      <span className="tmk-admin-card__media">
+        <img src={item.imageUrl} alt="" loading="lazy" />
+        {number ? <span className="tmk-admin-card__number">{number}</span> : null}
+        <span className="tmk-admin-card__status"><StatusBadge tone={item.active ? 'success' : 'neutral'}>{item.active ? 'ظاهر' : 'مخفي'}</StatusBadge></span>
+        <span className="tmk-admin-card__edit"><Pencil aria-hidden="true" size={16} />تعديل</span>
+      </span>
+      <span className="tmk-admin-card__body">
+        <span className="tmk-admin-card__slot">{SLOT_LABELS[item.slot] ?? item.slot}</span>
+        <strong>{item.title.ar || 'بلا عنوان'}</strong>
+        {item.body.ar ? <span className="tmk-admin-card__text">{item.body.ar}</span> : null}
+      </span>
+    </button>
+  );
+}
 
-  const save = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const value = (name: string) => String(data.get(name) ?? '').trim();
-    setBusy(true);
-    void run(async () => {
-      await call(`/admin/site-content/items/${item.id}`, 'PATCH', {
-        version: item.version, titleAr: value('titleAr'), titleEn: value('titleEn'), bodyAr: value('bodyAr'), bodyEn: value('bodyEn'),
-        ctaLabelAr: value('ctaLabelAr'), ctaLabelEn: value('ctaLabelEn'), ctaHref: value('ctaHref'),
-        ...(hero ? { sortOrder: Number(value('sortOrder') || item.sortOrder) } : {}),
-        ...(pendingKey !== undefined ? { imageKey: pendingKey } : {})
-      });
-      await reload(); return `حُفظ «${value('titleAr') || SLOT_LABELS[item.slot]}».`;
-    }).finally(() => setBusy(false));
+/**
+ * One editor for both creating and editing. The chosen photo shows at once from the local file
+ * while it uploads; the upload only becomes visible to visitors when the form is saved.
+ * Errors are shown inside the dialog, since the page behind it is inert while it is open.
+ */
+function ContentDialog({ item, nextOrder, canDelete, onClose, onDone }: {
+  item: AdminItem | null; nextOrder: number; canDelete: boolean;
+  onClose: () => void; onDone: (message: string) => Promise<void>;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const creating = item === null;
+  const hero = creating || item.slot === 'hero';
+  const [preview, setPreview] = useState(item?.imageUrl ?? '');
+  const [pendingKey, setPendingKey] = useState<string | null | undefined>(undefined);
+  const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [dragging, setDragging] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    const node = dialog.current;
+    if (node && !node.open) node.showModal();
+    return () => { if (node?.open) node.close(); };
+  }, []);
+
+  const attempt = async (work: () => Promise<string>) => {
+    setBusy(true); setError('');
+    try { await onDone(await work()); }
+    catch (e) { setError(e instanceof Error ? e.message : 'تعذر تنفيذ العملية.'); setBusy(false); }
   };
 
   const pick = (file: File | undefined) => {
     if (!file) return;
-    setBusy(true);
-    void run(async () => {
-      const uploaded = await uploadImage(file);
-      setPreview(uploaded.imageUrl); setPendingKey(uploaded.imageKey);
-      return 'رُفعت الصورة. اضغط «حفظ» لتظهر للزوار.';
-    }).finally(() => setBusy(false));
+    setError('');
+    const local = URL.createObjectURL(file);
+    const before = preview;
+    setPreview(local); setUploading(true);
+    uploadImage(file)
+      .then(uploaded => { setPendingKey(uploaded.imageKey); setPreview(uploaded.imageUrl); })
+      .catch(e => { setPreview(before); setError(e instanceof Error ? e.message : 'تعذر رفع الصورة.'); })
+      .finally(() => { setUploading(false); URL.revokeObjectURL(local); });
   };
 
+  const save = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (uploading) { setError('انتظر حتى يكتمل رفع الصورة.'); return; }
+    const data = new FormData(event.currentTarget);
+    const value = (name: string) => String(data.get(name) ?? '').trim();
+    const titleAr = value('titleAr');
+    const common = {
+      titleAr, titleEn: value('titleEn') || (creating ? titleAr : ''), bodyAr: value('bodyAr'), bodyEn: value('bodyEn'),
+      ctaLabelAr: value('ctaLabelAr'), ctaLabelEn: value('ctaLabelEn'),
+      ...(value('ctaHref') ? { ctaHref: value('ctaHref') } : {}),
+      ...(hero && value('sortOrder') ? { sortOrder: Number(value('sortOrder')) } : {})
+    };
+    void attempt(async () => {
+      if (creating) {
+        await call('/admin/site-content/items', 'POST', { ...common, active: data.get('active') === 'on', ...(pendingKey ? { imageKey: pendingKey } : {}) });
+        return data.get('active') === 'on' ? `أُضيفت الشريحة «${titleAr}» وظهرت في الصفحة الرئيسية.` : `أُضيفت الشريحة «${titleAr}» مخفية.`;
+      }
+      await call(`/admin/site-content/items/${item.id}`, 'PATCH', { version: item.version, ...common, ...(pendingKey !== undefined ? { imageKey: pendingKey } : {}) });
+      return `حُفظ «${titleAr || SLOT_LABELS[item.slot]}».`;
+    });
+  };
+
+  const text = (field: 'title' | 'body', lang: 'ar' | 'en') => item ? item[field][lang] : '';
   return (
-    <form className="tmk-card tmk-admin-item" onSubmit={save}>
-      <div className="tmk-admin-item__media">
-        <img src={preview} alt="" />
-        <div className="tmk-row__actions">
-          <label className="tmk-button tmk-button--secondary">
-            <ImagePlus aria-hidden="true" size={18} />تغيير الصورة
-            <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event => pick(event.target.files?.[0])} />
-          </label>
-          {(item.imageKey || pendingKey) && pendingKey !== null ? (
-            <button type="button" className="tmk-button tmk-button--quiet" onClick={() => { setPendingKey(null); setPreview(item.defaultImage); }}><RotateCcw aria-hidden="true" size={16} />الصورة الافتراضية</button>
-          ) : null}
-        </div>
-        {pendingKey !== undefined ? <p className="tmk-field__hint">تغيير لم يُحفظ بعد.</p> : null}
-      </div>
-      <div>
-        <div className="tmk-row" style={{ paddingBlockStart: 0 }}>
-          <div className="tmk-row__lead">
-            <strong>{SLOT_LABELS[item.slot] ?? item.slot}</strong>
-            <StatusBadge tone={item.active ? 'success' : 'neutral'}>{item.active ? 'ظاهر' : 'مخفي'}</StatusBadge>
+    <dialog ref={dialog} className="tmk-dialog tmk-editor" aria-labelledby="tmk-editor-title" onClose={onClose} onCancel={() => onClose()}>
+      <form onSubmit={save} className="tmk-editor__form">
+        <header className="tmk-editor__head">
+          <div>
+            <p className="tmk-editor__eyebrow">{creating ? 'شريحة في الصفحة الرئيسية' : SLOT_LABELS[item.slot] ?? item.slot}</p>
+            <h2 id="tmk-editor-title">{creating ? 'شريحة جديدة' : item.title.ar || 'تعديل'}</h2>
           </div>
-          <span className="tmk-field__hint">آخر تعديل {formatDate(item.updatedAt, locale, true)}</span>
+          {!creating ? <StatusBadge tone={item.active ? 'success' : 'neutral'}>{item.active ? 'ظاهر للزوار' : 'مخفي'}</StatusBadge> : null}
+          <button type="button" className="tmk-button tmk-button--quiet tmk-editor__close" onClick={onClose} aria-label="إغلاق"><X aria-hidden="true" size={20} /></button>
+        </header>
+
+        <div className="tmk-editor__body">
+          <div className="tmk-editor__media">
+            <label className="tmk-editor__drop" data-dragging={dragging ? 'true' : undefined} data-empty={preview ? undefined : 'true'}
+              onDragOver={event => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)}
+              onDrop={event => { event.preventDefault(); setDragging(false); pick(event.dataTransfer.files?.[0]); }}>
+              {preview ? <img src={preview} alt="" /> : null}
+              <span className="tmk-editor__drop-hint">
+                <ImagePlus aria-hidden="true" size={28} />
+                <strong>{preview ? 'تغيير الصورة' : 'أضف صورة'}</strong>
+                <span>اسحبها هنا أو اضغط للاختيار · PNG أو JPEG أو WebP حتى 8MB</span>
+              </span>
+              {uploading ? <span className="tmk-editor__uploading" role="status"><Loader2 aria-hidden="true" size={22} className="tmk-spin" />جارٍ رفع الصورة…</span> : null}
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="tmk-visually-hidden" onChange={event => { pick(event.target.files?.[0]); event.target.value = ''; }} />
+            </label>
+            {creating && !preview ? <p className="tmk-field__hint">بلا صورة تُستخدم صورة افتراضية.</p> : null}
+            {!creating && (item.imageKey || pendingKey) && pendingKey !== null ? (
+              <button type="button" className="tmk-button tmk-button--quiet" onClick={() => { setPendingKey(null); setPreview(item.defaultImage); }}><RotateCcw aria-hidden="true" size={16} />العودة للصورة الافتراضية</button>
+            ) : null}
+            {pendingKey !== undefined && !creating ? <p className="tmk-field__hint">الصورة الجديدة تظهر للزوار بعد الحفظ.</p> : null}
+          </div>
+
+          <div className="tmk-editor__fields">
+            <Field label="العنوان بالعربية" name="titleAr" value={text('title', 'ar')} required max={200} autoFocus={creating} />
+            <Field label="العنوان بالإنجليزية" name="titleEn" value={text('title', 'en')} max={200} ltr hint={creating ? 'اتركه فارغًا ليُستخدم العنوان العربي.' : undefined} />
+            <Field label="النص بالعربية" name="bodyAr" value={text('body', 'ar')} max={600} area />
+            <Field label="النص بالإنجليزية" name="bodyEn" value={text('body', 'en')} max={600} area ltr />
+            <Field label="نص الزر بالعربية" name="ctaLabelAr" value={item ? item.cta.label.ar : 'تصفّح المشاريع'} max={60} />
+            <Field label="نص الزر بالإنجليزية" name="ctaLabelEn" value={item ? item.cta.label.en : 'Browse projects'} max={60} ltr />
+            <Field label="رابط الزر" name="ctaHref" value={item ? item.cta.href : '/explore'} max={300} ltr hint="صفحة داخل الموقع، مثل ‎/explore‎ أو ‎/invest" />
+            {hero ? <Field label="الترتيب في العرض" name="sortOrder" value={String(item ? item.sortOrder : nextOrder)} max={4} ltr numeric /> : null}
+            {creating ? (
+              <label className="check tmk-editor__publish"><input type="checkbox" name="active" defaultChecked /> إظهارها للزوار فور الإضافة</label>
+            ) : null}
+          </div>
         </div>
-        <div className="tmk-admin-item__grid">
-          <Field label="العنوان بالعربية" name="titleAr" value={item.title.ar} required max={200} />
-          <Field label="العنوان بالإنجليزية" name="titleEn" value={item.title.en} max={200} ltr />
-          <Field label="النص بالعربية" name="bodyAr" value={item.body.ar} max={600} area />
-          <Field label="النص بالإنجليزية" name="bodyEn" value={item.body.en} max={600} area ltr />
-          <Field label="نص الزر بالعربية" name="ctaLabelAr" value={item.cta.label.ar} max={60} />
-          <Field label="نص الزر بالإنجليزية" name="ctaLabelEn" value={item.cta.label.en} max={60} ltr />
-          <Field label="رابط الزر (داخل الموقع، مثل /explore)" name="ctaHref" value={item.cta.href} max={300} ltr />
-          {hero ? <Field label="الترتيب" name="sortOrder" value={String(item.sortOrder)} max={4} ltr /> : null}
-        </div>
-        <div className="tmk-row__actions" style={{ marginBlockStart: 16 }}>
-          <button type="submit" className="tmk-button tmk-button--primary" disabled={busy}><Save aria-hidden="true" size={18} />حفظ</button>
-          {hero ? (
-            <button type="button" className="tmk-button tmk-button--secondary" disabled={busy} onClick={() => void run(async () => {
+
+        {error ? <div className="tmk-editor__error"><Notice tone="danger" live="assertive">{error}</Notice></div> : null}
+
+        <footer className="tmk-editor__foot">
+          <button type="submit" className="tmk-button tmk-button--primary" disabled={busy || uploading}>
+            {creating ? <><Plus aria-hidden="true" size={18} />إضافة الشريحة</> : <><Save aria-hidden="true" size={18} />حفظ التغييرات</>}
+          </button>
+          <button type="button" className="tmk-button tmk-button--secondary" onClick={onClose} disabled={busy}>إلغاء</button>
+          <span className="tmk-editor__spacer" />
+          {!creating && hero ? (
+            <button type="button" className="tmk-button tmk-button--quiet" disabled={busy} onClick={() => void attempt(async () => {
               await call(`/admin/site-content/items/${item.id}`, 'PATCH', { version: item.version, active: !item.active });
-              await reload(); return item.active ? 'أُخفيت الشريحة.' : 'أصبحت الشريحة ظاهرة.';
+              return item.active ? 'أُخفيت الشريحة.' : 'أصبحت الشريحة ظاهرة.';
             })}>{item.active ? <><EyeOff aria-hidden="true" size={18} />إخفاء</> : <><Eye aria-hidden="true" size={18} />إظهار</>}</button>
           ) : null}
-          {hero && canDelete ? (
-            <button type="button" className="tmk-button tmk-button--danger" disabled={busy} onClick={() => {
-              if (!window.confirm('حذف هذه الشريحة نهائيًا؟')) return;
-              void run(async () => { await call(`/admin/site-content/items/${item.id}`, 'DELETE'); await reload(); return 'حُذفت الشريحة.'; });
-            }}><Trash2 aria-hidden="true" size={18} />حذف</button>
+          {!creating && canDelete ? (
+            confirmDelete ? (
+              <button type="button" className="tmk-button tmk-button--danger" disabled={busy} onClick={() => void attempt(async () => {
+                await call(`/admin/site-content/items/${item.id}`, 'DELETE');
+                return 'حُذفت الشريحة.';
+              })}><Trash2 aria-hidden="true" size={18} />تأكيد الحذف نهائيًا</button>
+            ) : (
+              <button type="button" className="tmk-button tmk-button--quiet" disabled={busy} onClick={() => setConfirmDelete(true)}><Trash2 aria-hidden="true" size={18} />حذف</button>
+            )
           ) : null}
-        </div>
-      </div>
-    </form>
+        </footer>
+      </form>
+    </dialog>
   );
 }
 
-function Field({ label, name, value, max, required, area, ltr }: { label: string; name: string; value: string; max: number; required?: boolean; area?: boolean; ltr?: boolean }) {
+function Field({ label, name, value, max, required, area, ltr, hint, autoFocus, numeric }: {
+  label: string; name: string; value: string; max: number; required?: boolean; area?: boolean; ltr?: boolean; hint?: string | undefined; autoFocus?: boolean; numeric?: boolean;
+}) {
   const id = `field-${name}-${useId()}`;
   return (
-    <div className="tmk-field" style={{ margin: 0 }}>
-      <label className="tmk-field__label" htmlFor={id}>{label}</label>
+    <div className={area ? 'tmk-field tmk-editor__wide' : 'tmk-field'} style={{ margin: 0 }}>
+      <label className="tmk-field__label" htmlFor={id}>{label}{required ? <span aria-hidden="true"> *</span> : null}</label>
       {area
-        ? <textarea className="tmk-field__control" id={id} name={name} defaultValue={value} maxLength={max} rows={4} dir={ltr ? 'ltr' : undefined} />
-        : <input className="tmk-field__control" id={id} name={name} defaultValue={value} maxLength={max} required={required} dir={ltr ? 'ltr' : undefined} />}
+        ? <textarea className="tmk-field__control" id={id} name={name} defaultValue={value} maxLength={max} rows={3} dir={ltr ? 'ltr' : undefined} />
+        : <input className="tmk-field__control" id={id} name={name} defaultValue={value} maxLength={max} required={required} dir={ltr ? 'ltr' : undefined} autoFocus={autoFocus} inputMode={numeric ? 'numeric' : undefined} />}
+      {hint ? <p className="tmk-field__hint" style={{ margin: 0 }}>{hint}</p> : null}
     </div>
   );
 }
