@@ -148,11 +148,11 @@ export default async function ProgramPage({ params }: { params: Promise<{ locale
                       : '—'}
                     {program.stipendConditions ? ` — ${program.stipendConditions}` : ''}
                   </p>
-                  <Notice tone="warning" title={ar ? 'لا يُصرف في هذه النسخة' : 'Not paid in this build'}>
+                  <Notice tone="warning" title={ar ? 'لا أموال حقيقية بعد' : 'No real money yet'}>
                     <p style={{ marginBlockEnd: 0 }}>
                       {ar
-                        ? 'البدل معلن هنا لتقرأه قبل التقديم، ولم يُبنَ صرفه بعد. لا يُدفع أي مبلغ من هذه النسخة.'
-                        : 'The stipend is stated here so you can read it before applying. Paying one has not been built, and no money is paid by this build.'}
+                        ? 'البدل معلن هنا لتقرأه قبل التقديم. يُحتسب من حضورك المسجَّل ويُصرف عبر دفعات تعتمدها الجهة، لكن لا تنتقل أموال حقيقية حتى يُربط مزود دفع.'
+                        : 'The stipend is stated here so you can read it before applying. It is calculated from your recorded attendance and paid in batches the organisation approves, but no real money moves until a payment provider is connected.'}
                     </p>
                   </Notice>
                 </>

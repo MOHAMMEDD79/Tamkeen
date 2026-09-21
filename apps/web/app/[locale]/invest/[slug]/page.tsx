@@ -179,8 +179,8 @@ export default async function OfferingPage({ params }: { params: Promise<{ local
                 </ul>
                 <p className="tmk-field__hint">
                   {ar
-                    ? 'بقية مستندات غرفة البيانات تحتاج طلب وصول وقبول الإفصاح. التنزيل لم يُبنَ بعد.'
-                    : 'The rest of the data room needs an access request and an accepted disclosure. Downloading has not been built yet.'}
+                    ? 'بقية مستندات غرفة البيانات تحتاج طلب وصول وقبول الإفصاح، وطلب الوصول غير متاح من الموقع بعد.'
+                    : 'The rest of the data room needs an access request and an accepted disclosure; requesting access is not available on the site yet.'}
                 </p>
               </Card>
             ) : null}

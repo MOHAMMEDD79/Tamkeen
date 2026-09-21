@@ -344,7 +344,7 @@ export function OrgPrograms({ locale, orgId, programId, mode }: { locale: Locale
           <div className="tmk-grid tmk-grid--stats">
             <Stat label="السعة" value={<Ltr>{String(detail.capacity)}</Ltr>} />
             <Stat label="الوظائف" value={jobClaim(detail)} note={detail.completionGuaranteesJob ? '' : 'إكمال التدريب لا يمنح حقًا في وظيفة.'} />
-            <Stat label="البدل" value={detail.stipendOffered ? 'معلن' : 'غير معلن'} note={detail.stipendPayable ? '' : 'الصرف لم يُبنَ في هذه النسخة.'} />
+            <Stat label="البدل" value={detail.stipendOffered ? 'معلن' : 'غير معلن'} note={detail.stipendPayable ? '' : 'يُصرف عبر دفعات البدلات، دون أموال حقيقية حتى يُربط مزود دفع.'} />
           </div>
           <p className="tmk-row__actions">
             {detail.state === 'draft' ? (

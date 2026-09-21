@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  AppShell, Card, DataTable, EmptyState, ErrorState, Ltr, Notice, PageHeader,
+  AppShell, Card, DataTable, EmptyState, ErrorState, Ltr, MoneyAmount, Notice, PageHeader,
   Skeleton, Stat, StatusBadge, formatDate, localePath, translator, type Locale
 } from '@tamkeen/ui';
 import './workspace.css';
@@ -671,6 +671,19 @@ export function MyApplications({ locale, applicationId, mode }: { locale: Locale
 // PER-13 — my training
 // ---------------------------------------------------------------------------------------------
 
+/** Mirrors GET /me/certificates: the holder sees a revocation and its reason. */
+interface MyCertificate {
+  id: string; enrollmentId: string; publicId: string; programTitle: string; issuerName: string;
+  completedAt: string; state: string; valid: boolean; issuedAt: string; revokedAt: string | null; revokeReason: string;
+}
+
+/** Mirrors GET /me/stipends: each line carries the arithmetic behind it and whether money moved. */
+interface MyStipend {
+  id: string; periodStart: string; periodEnd: string; sessionsCounted: number; sessionsHeld: number;
+  amountMinor: string; currency: string; basis: string; cancelled: boolean; cancelReason: string;
+  batchState: string; program: string; cohort: string; paid: boolean; paidAt: string | null;
+}
+
 interface MyTrainingData {
   enrollment: { id: string; state: string; confirmedAt: string | null; exitReason: string; version: number };
   cohort: { id: string; name: string; startAt: string; endAt: string; timezone: string };
@@ -692,13 +705,22 @@ export function MyTrainingScreen({ locale, enrollmentId }: { locale: Locale; enr
   const L = (path: string) => localePath(locale, path);
   const t = translator(locale);
   const [data, setData] = useState<MyTrainingData | null>(null);
+  const [certificates, setCertificates] = useState<MyCertificate[] | null>(null);
+  const [stipends, setStipends] = useState<MyStipend[] | null>(null);
   const [signedIn, setSignedIn] = useState(true);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const load = useCallback(async () => setData(await api(`/me/training/${enrollmentId}`) as MyTrainingData), [enrollmentId]);
+  const load = useCallback(async () => {
+    const training = await api(`/me/training/${enrollmentId}`) as MyTrainingData;
+    setData(training);
+    // PER-13.A03/A04. A failed read stays `null` and says so, rather than reading as "none".
+    const [certs, lines] = await Promise.allSettled([api('/me/certificates'), api('/me/stipends')]);
+    setCertificates(certs.status === 'fulfilled' ? (certs.value as MyCertificate[]).filter(item => item.enrollmentId === enrollmentId) : null);
+    setStipends(lines.status === 'fulfilled' ? (lines.value as MyStipend[]).filter(line => line.program === training.program.title && line.cohort === training.cohort.name) : null);
+  }, [enrollmentId]);
 
   useEffect(() => {
     let active = true;
@@ -839,17 +861,50 @@ export function MyTrainingScreen({ locale, enrollmentId }: { locale: Locale; enr
         ) : null}
       </Card>
 
-      {/* PER-13.A03/A04: declared, not offered. */}
-      <Card title="ما لا تستطيع هذه الصفحة فعله بعد">
-        <ul>
-          <li>
-            <strong>البدلات.</strong> {data.stipends.offeredByProgram ? `يعلن البرنامج بدلًا (${data.stipends.conditions || 'بشروطه المعلنة'})، ` : 'لا يعلن هذا البرنامج بدلًا، و'}
-            احتساب الاستحقاق وصرفه لم يُبنَ بعد، فلا يُعرض رقم استحقاق قد يُقرأ كوعد.
-          </li>
-          <li>
-            <strong>الشهادة.</strong> إصدار الشهادات ومرجع تحققها العام لم يُبنَ بعد، فلا يوجد زر تنزيل.
-          </li>
-        </ul>
+      {/* PER-13.A04: the certificate, with its public check reference. */}
+      <Card title="الشهادة">
+        {certificates === null
+          ? <p className="tmk-field__hint">تعذر تحميل الشهادات الآن. أعد تحميل الصفحة.</p>
+          : certificates.length === 0
+            ? <p className="tmk-field__hint">لم تُصدر لك شهادة لهذا التدريب بعد. تصدرها الجهة المشغلة بعد اكتمال التدريب وفق سياستها المعلنة، والشهادة عن التعلّم لا عن وظيفة أو مبلغ.</p>
+            : certificates.map(certificate => (
+                <article className="tmk-row" key={certificate.id}>
+                  <div>
+                    <strong>{certificate.programTitle}</strong>
+                    <p className="tmk-field__hint">أصدرتها {certificate.issuerName} · أُصدرت {formatDate(certificate.issuedAt, locale)}</p>
+                    {!certificate.valid && certificate.revokeReason ? <p className="tmk-field__hint">سبب الإلغاء: {certificate.revokeReason}</p> : null}
+                  </div>
+                  <div className="tmk-row__actions">
+                    <StatusBadge tone={certificate.valid ? 'success' : 'danger'}>{certificate.valid ? 'سارية' : 'أُلغيت'}</StatusBadge>
+                    <a className="tmk-button tmk-button--secondary" href={L(`/verify/${certificate.publicId}`)}>صفحة التحقق العامة</a>
+                  </div>
+                </article>
+              ))}
+      </Card>
+
+      {/* PER-13.A03: stipend lines with the arithmetic behind each one; only a paid payout means money arrived. */}
+      <Card title="البدلات">
+        {stipends === null
+          ? <p className="tmk-field__hint">تعذر تحميل البدلات الآن. أعد تحميل الصفحة.</p>
+          : stipends.length === 0
+            ? <p className="tmk-field__hint">{data.stipends.offeredByProgram ? `يعلن البرنامج بدلًا (${data.stipends.conditions || 'بشروطه المعلنة'}). لم تُحتسب لك دفعة بعد؛ تُحتسب من حضورك المسجَّل عند إعداد دفعة البدلات.` : 'لا يعلن هذا البرنامج بدلًا.'}</p>
+            : <DataTable
+                caption="بدلاتك في هذا التدريب"
+                rows={stipends}
+                rowKey={line => line.id}
+                emptyState={null}
+                columns={[
+                  { key: 'period', header: 'الفترة', cell: line => `${formatDate(line.periodStart, locale)} – ${formatDate(line.periodEnd, locale)}` },
+                  { key: 'sessions', header: 'الجلسات المحتسبة', numeric: true, cell: line => <Ltr>{`${line.sessionsCounted} / ${line.sessionsHeld}`}</Ltr> },
+                  { key: 'amount', header: 'المبلغ', numeric: true, cell: line => <MoneyAmount minor={line.amountMinor} currency={line.currency} locale={locale} /> },
+                  { key: 'state', header: 'الحالة', cell: line => line.cancelled
+                    ? <StatusBadge tone="danger">أُلغي{line.cancelReason ? ` · ${line.cancelReason}` : ''}</StatusBadge>
+                    : line.paid
+                      ? <StatusBadge tone="success">صُرف {line.paidAt ? formatDate(line.paidAt, locale) : ''}</StatusBadge>
+                      : <StatusBadge tone="neutral">قيد الصرف</StatusBadge> },
+                  { key: 'basis', header: 'طريقة الاحتساب', cell: line => <span className="tmk-field__hint">{line.basis}</span> }
+                ]}
+              />}
       </Card>
     </>
   );
