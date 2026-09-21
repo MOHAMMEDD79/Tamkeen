@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { loadConfig } from '../packages/config/src/index.js';
+
+const safe = {
+  APP_ENV: 'demo', DATABASE_URL: 'postgresql://local:secret@127.0.0.1:55432/tamkeen_demo',
+  SESSION_SECRET: 'a'.repeat(48), APP_BASE_URL: 'http://127.0.0.1:3000', API_BASE_URL: 'http://127.0.0.1:4000',
+  API_PORT: '4000', API_HOST: '127.0.0.1', WORKER_HEARTBEAT_MS: '10000',
+  PAYMENT_MODE: 'simulator', EMAIL_MODE: 'mailpit', MONEY_ENABLED: 'false', INVESTMENT_ENABLED: 'false'
+};
+test('accepts the isolated local profile', () => assert.equal(loadConfig(safe).environment, 'demo'));
+test('private local auth delivery is allowed only in demo/test', () => {
+  assert.equal(loadConfig({ ...safe, EMAIL_MODE: 'local-outbox' }).emailMode, 'local-outbox');
+  assert.throws(() => loadConfig({ ...safe, APP_ENV: 'production', EMAIL_MODE: 'local-outbox' }));
+});
+test('refuses real payments, live email and provider secrets before adapters exist', () => {
+  for (const override of [{ MONEY_ENABLED: 'true' }, { INVESTMENT_ENABLED: 'true' }, { PAYMENT_MODE: 'live' }, { EMAIL_MODE: 'smtp' }, { STRIPE_SECRET_KEY: 'sk_live_private' }, { RESEND_API_KEY: 'private' }]) {
+    assert.throws(() => loadConfig({ ...safe, ...override }));
+  }
+});
+test('refuses remote or production-named databases in demo', () => {
+  for (const url of ['postgresql://x:secret@db.example.com/tamkeen_demo', 'postgresql://x:secret@127.0.0.1/tamkeen_prod', 'https://127.0.0.1/tamkeen_demo']) assert.throws(() => loadConfig({ ...safe, DATABASE_URL: url }));
+});
+test('rejects malformed flags, ports and placeholder secrets', () => {
+  for (const override of [{ MONEY_ENABLED: 'FALSE' }, { API_PORT: '4e3' }, { API_PORT: '65536' }, { SESSION_SECRET: 'REPLACE_WITH_GENERATED_SECRET' }, { WORKER_HEARTBEAT_MS: '0' }]) assert.throws(() => loadConfig({ ...safe, ...override }));
+});
+test('validation errors do not disclose configuration secrets', () => {
+  const privateValue = 'postgresql://user:top-secret@private.example.com/tamkeen_prod';
+  assert.throws(() => loadConfig({ ...safe, DATABASE_URL: privateValue }), error => error instanceof Error && !error.message.includes('top-secret') && !error.message.includes('private.example.com'));
+});

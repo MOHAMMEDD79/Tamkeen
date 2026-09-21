@@ -1,0 +1,7 @@
+{
+  "name": "@tamkeen/database", "private": true, "type": "module", "version": "0.1.0",
+  "exports": { ".": { "types": "./dist/client.d.ts", "import": "./dist/client.js" } },
+  "scripts": { "generate": "prisma generate", "build": "prisma generate && tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": { "@prisma/client": "7.10.0", "@prisma/adapter-pg": "7.10.0", "@tamkeen/config": "workspace:*" },
+  "devDependencies": { "prisma": "7.10.0" }
+}

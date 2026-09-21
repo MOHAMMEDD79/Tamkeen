@@ -1,0 +1,6 @@
+{
+  "name": "@tamkeen/web", "private": true, "type": "module", "version": "0.1.0",
+  "scripts": { "build": "next build", "typecheck": "next typegen && tsc --noEmit", "dev": "next dev --hostname 127.0.0.1", "start": "next start --hostname 127.0.0.1" },
+  "dependencies": { "@tamkeen/config": "workspace:*", "@tamkeen/contracts": "workspace:*", "@tamkeen/ui": "workspace:*", "next": "16.3.5", "react": "19.3.0", "react-dom": "19.3.0" },
+  "devDependencies": { "@types/react": "19.3.0", "@types/react-dom": "19.3.0" }
+}

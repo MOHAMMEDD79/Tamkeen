@@ -1,0 +1,10 @@
+{
+  "name": "@tamkeen/ui", "private": true, "type": "module", "version": "0.1.0",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "peerDependencies": { "react": "19.3.0" },
+  "devDependencies": { "@types/react": "19.3.0", "react": "19.3.0" }
+}

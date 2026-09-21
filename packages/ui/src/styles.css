@@ -1,0 +1,356 @@
+/*
+ * Tamkeen component layer. Every custom property it reads is defined by tokensCss() in tokens.ts,
+ * and tests/design-tokens.test.ts fails if this file references one that does not exist.
+ *
+ * Direction is handled with CSS logical properties only. There is no [dir="rtl"] override block:
+ * inline-start/inline-end resolve per direction, so Arabic and English share one rule set and a
+ * layout cannot be correct in one direction and broken in the other.
+ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  color-scheme: light;
+  background: var(--tmk-color-canvas);
+  color: var(--tmk-color-ink);
+  font-size: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--tmk-color-canvas);
+  color: var(--tmk-color-ink);
+  font-family: var(--tmk-type-family-arabic);
+  font-size: var(--tmk-type-body-size);
+  line-height: var(--tmk-type-body-line);
+  /* Never suppress horizontal overflow; the 360px acceptance check must be able to see it. */
+}
+
+html[lang="en"] body { font-family: var(--tmk-type-family-latin); }
+
+h1, h2, h3 { line-height: var(--tmk-type-heading-line); margin-block: 0 var(--tmk-space-16); }
+h1 { font-size: var(--tmk-type-h1-size); }
+h2 { font-size: var(--tmk-type-h2-size); margin-block-start: var(--tmk-space-32); }
+h3 { font-size: var(--tmk-type-h3-size); margin-block-start: var(--tmk-space-24); }
+p { margin-block: 0 var(--tmk-space-16); }
+a { color: var(--tmk-color-primary); text-underline-offset: 4px; }
+a:hover { color: var(--tmk-color-primary-hover); }
+
+/* A single visible focus ring everywhere. Never removed, never colour-only. */
+:focus-visible {
+  outline: 3px solid var(--tmk-color-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Honour a reduced-motion preference rather than assuming animation is welcome. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+.tmk-visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* Keyboard users reach the main content without traversing the whole navigation. */
+.tmk-skip-link {
+  position: absolute; inset-block-start: var(--tmk-space-8); inset-inline-start: var(--tmk-space-8);
+  z-index: 40; padding: var(--tmk-space-12) var(--tmk-space-16);
+  background: var(--tmk-color-surface); color: var(--tmk-color-primary);
+  border: 1px solid var(--tmk-color-field-border); border-radius: var(--tmk-radius-field);
+  transform: translateY(-200%);
+}
+.tmk-skip-link:focus { transform: translateY(0); }
+
+/* ---------- App shell ---------- */
+
+.tmk-shell { min-block-size: 100dvh; display: flex; flex-direction: column; }
+
+.tmk-header {
+  display: flex; align-items: center; gap: var(--tmk-space-16);
+  min-block-size: var(--tmk-layout-header-height);
+  padding-inline: var(--tmk-layout-gutter); padding-block: var(--tmk-space-8);
+  background: var(--tmk-color-surface); border-block-end: 1px solid var(--tmk-color-border);
+  flex-wrap: wrap;
+}
+.tmk-header__brand { font-size: 20px; font-weight: 700; color: var(--tmk-color-primary); text-decoration: none; }
+.tmk-header__spacer { flex: 1 1 auto; }
+
+/* No align-items override: the default stretch is what keeps `main` at the container width.
+   `flex-start` here sized `main` to its content in the column layout, so a wide table pushed
+   the page sideways instead of scrolling inside its own region. */
+.tmk-shell__body { display: flex; flex: 1 1 auto; }
+
+.tmk-sidebar {
+  inline-size: var(--tmk-layout-sidebar-width); flex: 0 0 auto;
+  padding: var(--tmk-space-24) var(--tmk-space-16);
+  background: var(--tmk-color-surface);
+  border-inline-end: 1px solid var(--tmk-color-border);
+  align-self: stretch;
+}
+.tmk-sidebar__group + .tmk-sidebar__group { margin-block-start: var(--tmk-space-24); }
+.tmk-sidebar__title { font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); margin-block-end: var(--tmk-space-8); }
+.tmk-sidebar__link {
+  display: block; padding: var(--tmk-space-8) var(--tmk-space-12); border-radius: var(--tmk-radius-field);
+  color: var(--tmk-color-ink); text-decoration: none;
+}
+.tmk-sidebar__link:hover { background: var(--tmk-color-surface-sunken); }
+/* The current page is marked by weight and a start-edge bar, not by colour alone. */
+.tmk-sidebar__link[aria-current="page"] {
+  font-weight: 700; color: var(--tmk-color-primary); background: var(--tmk-color-primary-tint);
+  box-shadow: inset 3px 0 0 0 var(--tmk-color-primary);
+}
+html[dir="rtl"] .tmk-sidebar__link[aria-current="page"] { box-shadow: inset -3px 0 0 0 var(--tmk-color-primary); }
+
+.tmk-main {
+  flex: 1 1 auto; min-inline-size: 0;
+  padding: var(--tmk-space-24) var(--tmk-layout-gutter) var(--tmk-space-64);
+}
+.tmk-main__inner { max-inline-size: var(--tmk-layout-content-max); margin-inline: auto; }
+.tmk-prose { max-inline-size: var(--tmk-layout-prose-max); }
+
+/* ---------- Page furniture ---------- */
+
+.tmk-breadcrumbs { font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); margin-block-end: var(--tmk-space-16); }
+.tmk-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: var(--tmk-space-8); list-style: none; margin: 0; padding: 0; }
+.tmk-breadcrumbs li::after { content: '/'; margin-inline-start: var(--tmk-space-8); color: var(--tmk-color-border); }
+.tmk-breadcrumbs li:last-child::after { content: ''; }
+
+.tmk-page-header { margin-block-end: var(--tmk-space-24); }
+.tmk-page-header__eyebrow { color: var(--tmk-color-primary); font-weight: 700; font-size: var(--tmk-type-caption-size); margin-block-end: var(--tmk-space-8); }
+.tmk-page-header--dashboard h1 { font-size: var(--tmk-type-h1-dashboard-size); }
+.tmk-page-header__lead { color: var(--tmk-color-muted); max-inline-size: var(--tmk-layout-prose-max); }
+.tmk-page-header__actions { display: flex; flex-wrap: wrap; gap: var(--tmk-space-12); margin-block-start: var(--tmk-space-16); }
+
+.tmk-card {
+  background: var(--tmk-color-surface); border: 1px solid var(--tmk-color-border);
+  border-radius: var(--tmk-radius-card); padding: var(--tmk-space-24);
+}
+.tmk-card + .tmk-card { margin-block-start: var(--tmk-space-16); }
+.tmk-card__title { margin-block-start: 0; }
+
+.tmk-grid { display: grid; gap: var(--tmk-space-16); }
+.tmk-grid--cards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.tmk-grid--stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+
+/* ---------- Controls ---------- */
+
+.tmk-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--tmk-space-8);
+  min-block-size: 44px; padding: var(--tmk-space-12) var(--tmk-space-24);
+  font: inherit; font-weight: 600; cursor: pointer; text-decoration: none;
+  border-radius: var(--tmk-radius-field); border: 1px solid transparent;
+  transition: background-color var(--tmk-motion-fast) var(--tmk-motion-easing);
+}
+.tmk-button--primary { background: var(--tmk-color-primary); color: var(--tmk-color-on-accent); border-color: var(--tmk-color-primary); }
+.tmk-button--primary:hover:not(:disabled) { background: var(--tmk-color-primary-hover); border-color: var(--tmk-color-primary-hover); }
+.tmk-button--secondary { background: var(--tmk-color-surface); color: var(--tmk-color-primary); border-color: var(--tmk-color-field-border); }
+.tmk-button--secondary:hover:not(:disabled) { background: var(--tmk-color-primary-tint); }
+.tmk-button--quiet { background: transparent; color: var(--tmk-color-primary); border-color: transparent; padding-inline: var(--tmk-space-8); }
+.tmk-button--quiet:hover:not(:disabled) { background: var(--tmk-color-surface-sunken); }
+/* A destructive action is visually separated from the primary one (20-UI-CONTRACT). */
+.tmk-button--danger { background: var(--tmk-color-surface); color: var(--tmk-color-danger); border-color: var(--tmk-color-danger); }
+.tmk-button--danger:hover:not(:disabled) { background: var(--tmk-color-danger-tint); }
+/*
+ * An anchor styled as a button keeps the button colours, including on hover.
+ *
+ * Without this, `a:hover` (0,1,1) outranks `.tmk-button--primary` (0,1,0), so hovering a link
+ * button repainted its label in the link colour on top of the button background — a primary
+ * button became dark green text on dark green, about 1:1, and the label vanished. Every variant
+ * is restated rather than only the primary one, so the next variant added cannot regress quietly.
+ */
+a.tmk-button--primary, a.tmk-button--primary:hover { color: var(--tmk-color-on-accent); }
+a.tmk-button--secondary, a.tmk-button--secondary:hover { color: var(--tmk-color-primary); }
+a.tmk-button--quiet, a.tmk-button--quiet:hover { color: var(--tmk-color-primary); }
+a.tmk-button--danger, a.tmk-button--danger:hover { color: var(--tmk-color-danger); }
+.tmk-button:disabled { opacity: 0.55; cursor: not-allowed; }
+.tmk-button[aria-busy="true"] { cursor: progress; }
+
+.tmk-field { display: grid; gap: var(--tmk-space-8); margin-block-end: var(--tmk-space-16); }
+/*
+ * Two fields side by side, one of them carrying a hint: without this the hint pushes its own input
+ * a line lower than its neighbour's, and a form row reads as crooked. The control is pushed to the
+ * end of the equal-height grid cell so every input in a row sits on the same line, whatever is
+ * written above it.
+ */
+/*
+ * A hint inside a table cell is always a second line, never a continuation of the first: rendered
+ * inline it runs straight into the value beside it and the two read as one word.
+ */
+.tmk-table td .tmk-field__hint { display: block; }
+
+.tmk-grid > .tmk-field { display: flex; flex-direction: column; }
+.tmk-grid > .tmk-field > .tmk-field__control { margin-block-start: auto; }
+.tmk-field__label { font-weight: 600; }
+.tmk-field__hint { font-size: var(--tmk-type-caption-size); line-height: var(--tmk-type-caption-line); color: var(--tmk-color-muted); }
+.tmk-field__control {
+  inline-size: 100%; min-inline-size: 0; min-block-size: 44px;
+  padding: var(--tmk-space-12); font: inherit;
+  color: var(--tmk-color-ink); background: var(--tmk-color-surface);
+  border: 1px solid var(--tmk-color-field-border); border-radius: var(--tmk-radius-field);
+}
+textarea.tmk-field__control { min-block-size: 96px; resize: vertical; }
+.tmk-field__control:disabled { background: var(--tmk-color-surface-sunken); color: var(--tmk-color-muted); cursor: not-allowed; }
+/* An invalid field is marked by a thicker border AND a message, never by red alone. */
+.tmk-field__control[aria-invalid="true"] { border-color: var(--tmk-color-danger); border-width: 2px; }
+.tmk-field__error { color: var(--tmk-color-danger); font-size: var(--tmk-type-caption-size); font-weight: 600; }
+
+.tmk-choice { display: flex; align-items: flex-start; gap: var(--tmk-space-12); padding-block: var(--tmk-space-8); line-height: var(--tmk-type-body-line); }
+.tmk-choice input { inline-size: 24px; block-size: 24px; margin-block-start: 0; flex: 0 0 auto; }
+.tmk-fieldset { border: 1px solid var(--tmk-color-border); border-radius: var(--tmk-radius-field); padding: var(--tmk-space-16); margin-block-end: var(--tmk-space-16); }
+.tmk-fieldset legend { font-weight: 600; padding-inline: var(--tmk-space-8); }
+
+/* ---------- Status and feedback ---------- */
+
+.tmk-badge {
+  display: inline-flex; align-items: center; gap: var(--tmk-space-8);
+  padding: var(--tmk-space-4) var(--tmk-space-12); border-radius: var(--tmk-radius-pill);
+  font-size: var(--tmk-type-caption-size); font-weight: 600; border: 1px solid transparent;
+}
+.tmk-badge__icon { font-style: normal; }
+.tmk-badge--neutral { background: var(--tmk-color-surface-sunken); color: var(--tmk-color-ink); border-color: var(--tmk-color-border); }
+.tmk-badge--success { background: var(--tmk-color-success-tint); color: var(--tmk-color-success); border-color: currentColor; }
+.tmk-badge--warning { background: var(--tmk-color-warning-tint); color: var(--tmk-color-warning); border-color: currentColor; }
+.tmk-badge--danger { background: var(--tmk-color-danger-tint); color: var(--tmk-color-danger); border-color: currentColor; }
+.tmk-badge--info { background: var(--tmk-color-info-tint); color: var(--tmk-color-info); border-color: currentColor; }
+
+.tmk-notice {
+  display: flex; gap: var(--tmk-space-12); align-items: flex-start;
+  padding: var(--tmk-space-16); border-radius: var(--tmk-radius-field);
+  border: 1px solid transparent; margin-block-end: var(--tmk-space-16);
+}
+.tmk-notice__icon { font-style: normal; flex: 0 0 auto; }
+.tmk-notice__body { min-inline-size: 0; }
+.tmk-notice__body > :last-child { margin-block-end: 0; }
+.tmk-notice--success { background: var(--tmk-color-success-tint); color: var(--tmk-color-success); border-color: currentColor; }
+.tmk-notice--warning { background: var(--tmk-color-warning-tint); color: var(--tmk-color-warning); border-color: currentColor; }
+.tmk-notice--danger { background: var(--tmk-color-danger-tint); color: var(--tmk-color-danger); border-color: currentColor; }
+.tmk-notice--info { background: var(--tmk-color-info-tint); color: var(--tmk-color-info); border-color: currentColor; }
+
+/* A demo-data banner must stay legible and must not look like a success state. */
+.tmk-demo-banner {
+  display: flex; gap: var(--tmk-space-12); align-items: center;
+  padding: var(--tmk-space-12) var(--tmk-layout-gutter);
+  background: var(--tmk-color-warning-tint); color: var(--tmk-color-warning);
+  border-block-end: 1px solid currentColor; font-weight: 600;
+}
+
+.tmk-empty, .tmk-error-state {
+  text-align: center; padding: var(--tmk-space-48) var(--tmk-space-24);
+  border: 1px dashed var(--tmk-color-field-border); border-radius: var(--tmk-radius-card);
+  background: var(--tmk-color-surface);
+}
+.tmk-empty__title, .tmk-error-state__title { margin-block: 0 var(--tmk-space-8); font-size: var(--tmk-type-h3-size); }
+.tmk-empty__body, .tmk-error-state__body { color: var(--tmk-color-muted); margin-inline: auto; max-inline-size: 48ch; }
+.tmk-error-state { border-style: solid; border-color: var(--tmk-color-danger); }
+.tmk-error-state__reference { font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); }
+
+/* Skeletons hold the final size so content does not jump when it arrives. */
+.tmk-skeleton {
+  background: linear-gradient(90deg, var(--tmk-color-surface-sunken) 25%, var(--tmk-color-border) 37%, var(--tmk-color-surface-sunken) 63%);
+  background-size: 400% 100%; animation: tmk-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--tmk-radius-field); block-size: 1em;
+}
+@keyframes tmk-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+/* ---------- Data ---------- */
+
+.tmk-table-wrap { overflow-x: auto; border: 1px solid var(--tmk-color-border); border-radius: var(--tmk-radius-card); background: var(--tmk-color-surface); }
+.tmk-table { inline-size: 100%; border-collapse: collapse; }
+.tmk-table caption { text-align: start; padding: var(--tmk-space-16); color: var(--tmk-color-muted); font-size: var(--tmk-type-caption-size); }
+.tmk-table th, .tmk-table td { padding: var(--tmk-space-12) var(--tmk-space-16); text-align: start; border-block-end: 1px solid var(--tmk-color-border); }
+.tmk-table thead th { background: var(--tmk-color-surface-sunken); font-size: var(--tmk-type-caption-size); }
+.tmk-table tbody tr:last-child td { border-block-end: none; }
+.tmk-table td[data-numeric="true"], .tmk-table th[data-numeric="true"] { text-align: end; }
+
+/* Money is always tabular and isolated so a mixed-direction string cannot reorder it. */
+.tmk-money { font-family: var(--tmk-type-family-numeric); font-variant-numeric: tabular-nums; white-space: nowrap; unicode-bidi: isolate; }
+.tmk-money__amount { font-weight: 600; }
+.tmk-money__currency { color: var(--tmk-color-muted); font-size: 0.9em; margin-inline-start: var(--tmk-space-8); }
+
+.tmk-meter { display: grid; gap: var(--tmk-space-8); }
+.tmk-meter__track { block-size: 10px; border-radius: var(--tmk-radius-pill); background: var(--tmk-color-surface-sunken); overflow: hidden; }
+.tmk-meter__fill { block-size: 100%; background: var(--tmk-color-primary); border-radius: var(--tmk-radius-pill); transition: inline-size var(--tmk-motion-base) var(--tmk-motion-easing); }
+.tmk-meter__labels { display: flex; justify-content: space-between; gap: var(--tmk-space-12); font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); }
+
+.tmk-stat { background: var(--tmk-color-surface); border: 1px solid var(--tmk-color-border); border-radius: var(--tmk-radius-card); padding: var(--tmk-space-16); }
+.tmk-stat__label { font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); margin-block-end: var(--tmk-space-8); }
+.tmk-stat__value { font-size: var(--tmk-type-h2-size); font-weight: 700; font-variant-numeric: tabular-nums; }
+.tmk-stat__note { font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); margin-block-start: var(--tmk-space-8); }
+/*
+ * An opaque reference — a provider transaction id, a proof reference, a hash — has no spaces to
+ * break at, so a browser will not break it at all. Both failures found in the PART-07 visual pass
+ * come from that: inside a stat card it overflowed and the start of the string was clipped with no
+ * ellipsis, and inside a hint paragraph it pushed the whole page wider than a 360px viewport.
+ *
+ * Every identifier in this product is marked up as `code`, so the rule belongs here rather than on
+ * each place one happens to appear.
+ */
+code { overflow-wrap: anywhere; }
+/* And at the display size of a stat value it needs to come down to a size that can actually fit. */
+.tmk-stat__value code, .tmk-stat__value bdi {
+  font-size: var(--tmk-type-body-size); font-weight: 600; line-height: var(--tmk-type-body-line);
+}
+
+.tmk-timeline { list-style: none; margin: 0; padding: 0; }
+.tmk-timeline__item { display: grid; grid-template-columns: auto 1fr; gap: var(--tmk-space-16); padding-block: var(--tmk-space-12); border-block-end: 1px solid var(--tmk-color-border); }
+.tmk-timeline__item:last-child { border-block-end: none; }
+.tmk-timeline__marker { inline-size: 12px; block-size: 12px; border-radius: 50%; margin-block-start: 6px; background: var(--tmk-color-border); }
+.tmk-timeline__marker--done { background: var(--tmk-color-success); }
+.tmk-timeline__marker--active { background: var(--tmk-color-primary); box-shadow: 0 0 0 3px var(--tmk-color-primary-tint); }
+.tmk-timeline__meta { color: var(--tmk-color-muted); font-size: var(--tmk-type-caption-size); }
+
+.tmk-row {
+  display: flex; flex-wrap: wrap; gap: var(--tmk-space-16);
+  align-items: center; justify-content: space-between;
+  padding-block: var(--tmk-space-16); border-block-end: 1px solid var(--tmk-color-border);
+  overflow-wrap: anywhere;
+}
+.tmk-row:last-child { border-block-end: none; }
+.tmk-row__actions { display: flex; flex-wrap: wrap; gap: var(--tmk-space-8); align-items: center; }
+
+.tmk-inline-links { display: flex; flex-wrap: wrap; gap: var(--tmk-space-16); margin-block: var(--tmk-space-16); }
+.tmk-toolbar { display: flex; flex-wrap: wrap; gap: var(--tmk-space-12); align-items: flex-end; margin-block-end: var(--tmk-space-16); }
+.tmk-toolbar .tmk-field { margin-block-end: 0; }
+
+.tmk-pagination { display: flex; gap: var(--tmk-space-12); align-items: center; justify-content: space-between; flex-wrap: wrap; margin-block-start: var(--tmk-space-16); }
+.tmk-pagination__status { color: var(--tmk-color-muted); font-size: var(--tmk-type-caption-size); }
+
+/* Identifiers, emails and IBANs stay LTR inside Arabic text. */
+.tmk-ltr { unicode-bidi: isolate; direction: ltr; display: inline-block; }
+
+/* ---------- Dialog ---------- */
+
+.tmk-dialog::backdrop { background: rgb(16 42 67 / 0.55); }
+.tmk-dialog {
+  border: none; border-radius: var(--tmk-radius-dialog); padding: var(--tmk-space-24);
+  inline-size: min(560px, calc(100vw - (2 * var(--tmk-layout-gutter))));
+  background: var(--tmk-color-surface); color: var(--tmk-color-ink);
+}
+.tmk-dialog__title { margin-block-start: 0; }
+.tmk-dialog__summary { background: var(--tmk-color-surface-sunken); border-radius: var(--tmk-radius-field); padding: var(--tmk-space-16); margin-block-end: var(--tmk-space-16); }
+.tmk-dialog__actions { display: flex; flex-wrap: wrap; gap: var(--tmk-space-12); justify-content: flex-end; margin-block-start: var(--tmk-space-24); }
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 899px) {
+  .tmk-shell__body { flex-direction: column; }
+  .tmk-sidebar {
+    inline-size: 100%; align-self: auto;
+    border-inline-end: none; border-block-end: 1px solid var(--tmk-color-border);
+    padding-block: var(--tmk-space-16);
+  }
+  .tmk-sidebar__group + .tmk-sidebar__group { margin-block-start: var(--tmk-space-16); }
+  .tmk-sidebar__nav { display: flex; flex-wrap: wrap; gap: var(--tmk-space-8); }
+}
+
+@media (max-width: 599px) {
+  .tmk-card { padding: var(--tmk-space-16); }
+  .tmk-main { padding-block-start: var(--tmk-space-16); }
+  .tmk-row { align-items: flex-start; flex-direction: column; }
+  .tmk-row__actions { inline-size: 100%; }
+  /* A full-width action is easier to hit than a cramped inline pair on a phone. */
+  .tmk-row__actions .tmk-button { flex: 1 1 auto; }
+  .tmk-dialog__actions .tmk-button { flex: 1 1 auto; }
+}

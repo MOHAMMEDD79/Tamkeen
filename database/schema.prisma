@@ -1,0 +1,3944 @@
+generator client {
+  provider = "prisma-client"
+  output = "./src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Applied foundation models remain unchanged; identity is added by a new migration.
+model RuntimeMetadata {
+  key       String   @id @db.VarChar(64)
+  value     String   @db.VarChar(128)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  @@map("runtime_metadata")
+}
+
+model WorkerHeartbeat {
+  workerId String @id @map("worker_id") @db.VarChar(64)
+  lastSeen DateTime @map("last_seen") @db.Timestamptz(3)
+  @@map("worker_heartbeats")
+}
+
+enum UserStatus {
+  active
+  suspended
+  closed
+}
+
+enum IndividualCapability {
+  Donor
+  Beneficiary
+  JobSeeker
+  Investor
+  Volunteer
+}
+
+enum OrganizationType {
+  NGO
+  Company
+  Startup
+  Foundation
+  Institution
+}
+
+enum OrganizationStatus {
+  active
+  suspended
+  closed
+}
+
+enum MembershipStatus {
+  active
+  suspended
+}
+
+enum MembershipRole {
+  Owner
+  OrgAdmin
+  ProjectManager
+  FinanceMaker
+  FinanceApprover
+  Recruiter
+  ProgramManager
+  Trainer
+  InvestmentManager
+  Analyst
+  Viewer
+  /// PART-12. Three specialisations inside a membership, not new kinds of user
+  /// (08-PERMISSION-EXTENSIONS). A mentor comments and does not decide; a coordinator runs the
+  /// volunteering and reaches no beneficiary file; a case worker holds assistance and nothing else.
+  Mentor
+  VolunteerCoordinator
+  CaseWorker
+}
+
+enum VerificationState {
+  not_started
+  submitted
+  in_review
+  changes_requested
+  verified
+  rejected
+  expired
+}
+
+enum VerificationDocumentState {
+  pending_scan
+  clean
+  rejected
+}
+
+enum VerificationDecisionOutcome {
+  changes_requested
+  verified
+  rejected
+}
+
+enum PlatformRole {
+  Support
+  VerificationReviewer
+  ContentReviewer
+  FinanceOperator
+  RiskReviewer
+  PlatformAdmin
+  Auditor
+  Operations
+}
+
+enum MfaChallengeState {
+  pending
+  verified
+  consumed
+  cancelled
+}
+
+enum OwnershipTransferState {
+  pending
+  accepted
+  expired
+}
+
+enum BankChangeRequestState {
+  pending
+  approved
+  rejected
+}
+
+enum ProjectType {
+  charity
+  venture
+  enablement
+}
+
+enum ProjectState {
+  draft
+  submitted
+  in_review
+  changes_requested
+  approved
+  published
+  funding_closed
+  executing
+  impact_review
+  completed
+  archived
+  paused
+  cancelled
+  rejected
+}
+
+enum LocationPrecision {
+  city
+  approximate
+  exact
+}
+
+model User {
+  id              String @id @default(uuid()) @db.Uuid
+  email           String @unique @db.VarChar(254)
+  name            String @db.VarChar(100)
+  emailVerified   Boolean @default(false) @map("email_verified")
+  image           String?
+  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  platformAccessVersion Int @default(1) @map("platform_access_version")
+  status          UserStatus @default(active)
+  termsVersion    String @map("terms_version") @db.VarChar(50)
+  termsAcceptedAt DateTime @map("terms_accepted_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  profile         IndividualProfile?
+  party           Party?
+  memberships     Membership[]
+  sessions        Session[]
+  accounts        Account[]
+  verificationSubmissions OrganizationVerificationSubmission[] @relation("VerificationSubmitter")
+  verificationDecisions OrganizationVerificationDecision[] @relation("VerificationReviewer")
+  assignedVerificationCases OrganizationVerificationCase[] @relation("AssignedVerificationReviewer")
+  twoFactor       TwoFactor?
+  platformGrants  PlatformGrant[] @relation("PlatformGrantSubject")
+  platformGrantsIssued PlatformGrant[] @relation("PlatformGrantIssuer")
+  platformInvitationsCreated PlatformAccessInvitation[] @relation("PlatformInvitationCreator")
+  mfaChallenges   MfaChallenge[]
+  notificationPreference NotificationPreference?
+  createdInvitations Invitation[] @relation("InvitationCreator")
+  declinedInvitations Invitation[] @relation("InvitationDecliner")
+  ownershipTransfersCreated OrganizationOwnershipTransfer[] @relation("OwnershipTransferCurrentOwner")
+  ownershipTransfersReceived OrganizationOwnershipTransfer[] @relation("OwnershipTransferNewOwner")
+  bankChangesRequested OrganizationBankChangeRequest[] @relation("BankChangeRequester")
+  bankChangesReviewed OrganizationBankChangeRequest[] @relation("BankChangeReviewer")
+  managedProjects Project[] @relation("ProjectManager")
+  createdProjects Project[] @relation("ProjectCreator")
+  projectVersionsSubmitted ProjectVersion[] @relation("ProjectVersionSubmitter")
+  bookmarks       Bookmark[]
+  assignedProjects Project[] @relation("ProjectAssignedReviewer")
+  budgetRevisions BudgetRevision[] @relation("BudgetRevisionAuthor")
+  projectReviews  ProjectReviewDecision[] @relation("ProjectReviewer")
+  projectUpdates  ProjectUpdate[] @relation("ProjectUpdateAuthor")
+  projectReports  ProjectReport[] @relation("ProjectReportAuthor")
+  idempotencyRecords IdempotencyRecord[]
+  // PART-08 investment. Each role on a record is its own named relation, so who created, managed,
+  // granted, revoked or reviewed something never collapses into one ambiguous link.
+  ventures                 Venture[]
+  offeringsCreated         Offering[] @relation("OfferingCreator")
+  offeringsManaged         Offering[] @relation("OfferingManager")
+  offeringDisclosures      OfferingDisclosure[]
+  offeringReviews          OfferingReviewDecision[]
+  investorEligibility      InvestorEligibility?
+  eligibilityDecisions     EligibilityDecision[]
+  dataRoomUploads          DataRoomDocument[]
+  dataRoomRequests         DataRoomAccessRequest[] @relation("DataRoomRequester")
+  dataRoomDecisions        DataRoomAccessRequest[] @relation("DataRoomDecider")
+  dataRoomGrants           DataRoomGrant[] @relation("DataRoomGrantee")
+  dataRoomGrantsGiven      DataRoomGrant[] @relation("DataRoomGranter")
+  dataRoomGrantsRevoked    DataRoomGrant[] @relation("DataRoomRevoker")
+  ndaAcceptances           NdaAcceptance[]
+  dataRoomDownloads        DataRoomDownload[]
+  investorQuestions        InvestorQuestion[]
+  investorQuestionReplies  InvestorQuestionReply[]
+  offeringInterests        OfferingInterest[]
+  // PART-09 investment. Each role stays its own named relation.
+  commitments              Commitment[]
+  allocationsHeld          Allocation[] @relation("AllocationHolder")
+  allocationsFinalised     Allocation[] @relation("AllocationFinaliser")
+  allocationRequests       AllocationRequest[] @relation("AllocationRequester")
+  allocationDecisions      AllocationRequest[] @relation("AllocationDecider")
+  holdings                 Holding[]
+  companyReports           CompanyReport[]
+  distributionsRequested   Distribution[] @relation("DistributionRequester")
+  distributionsApproved    Distribution[] @relation("DistributionApprover")
+  corporateEvents          CorporateEvent[]
+  // PART-10 enablement. Every role somebody can hold around a programme is its own named relation,
+  // because "who ran it", "who reviewed it", "who trained on it" and "who applied to it" are four
+  // different people and folding them into one link is how a scope check gets written wrongly.
+  candidateProfile         CandidateProfile?
+  programsCreated          Program[] @relation("ProgramCreator")
+  programsManaged          Program[] @relation("ProgramManagerUser")
+  programsUnderReview      Program[] @relation("ProgramReviewer")
+  programReviewDecisions   ProgramReviewDecision[]
+  cohortsTrained           CohortTrainer[] @relation("CohortTrainerUser")
+  cohortTrainersAssigned   CohortTrainer[] @relation("CohortTrainerAssigner")
+  applications             Application[]
+  applicationReviews       ApplicationReview[]
+  applicationDecisions     ApplicationDecision[]
+  interviewsScheduled      Interview[]
+  rescheduleRequests       InterviewRescheduleRequest[]
+  enrollments              Enrollment[]
+  withdrawalDecisions      EnrollmentWithdrawalRequest[]
+  trainingSessionsCreated  TrainingSession[]
+  attendanceRecorded       Attendance[]
+  attendanceRevisions      AttendanceRevision[]
+  attendanceObjections     AttendanceObjection[] @relation("AttendanceObjector")
+  attendanceObjectionDecisions AttendanceObjection[] @relation("AttendanceObjectionDecider")
+  assessmentsCreated       Assessment[]
+  assessmentResults        AssessmentResult[]
+  // PART-11 employment. A candidate, a recruiter and whoever confirmed a start are three different
+  // people, so each is its own named relation rather than one ambiguous link.
+  jobsCreated              Job[] @relation("JobCreator")
+  jobApplications          JobApplication[]
+  referralsReceived        JobReferral[] @relation("ReferredCandidate")
+  referralsMade            JobReferral[] @relation("JobReferrer")
+  jobOffersCreated         JobOffer[]
+  placements               Placement[]
+  startConfirmations       PlacementStartConfirmation[]
+  followupsRecorded        PlacementFollowup[]
+  placementReviews         PlacementReviewDecision[]
+  // PART-12. Funding, incubation, assistance and volunteering. Each relation is named because the
+  // same person can be on several sides of these records — a mentor on one idea and a founder on
+  // another — and an ambiguous link would let one be read as the other.
+  agreementsCreated        Agreement[]
+  agreementRevisions       AgreementRevision[]
+  agreementAcceptances     AgreementAcceptance[]
+  agreementMilestoneDecisions AgreementMilestoneDecision[]
+  agreementReportsAuthored AgreementReport[] @relation("AgreementReportAuthor")
+  agreementReportsReviewed AgreementReport[] @relation("AgreementReportReviewer")
+  fundingIntents           AgreementFundingIntent[]
+  stipendBatches           StipendBatch[]
+  certificatesIssued       Certificate[] @relation("CertificateIssuer")
+  certificatesRevoked      Certificate[] @relation("CertificateRevoker")
+  proposalsOwned           Proposal[] @relation("ProposalOwner")
+  proposalDecisions        ProposalDecision[]
+  mentoring                MentorAssignment[] @relation("MentorUser")
+  mentorAssignmentsMade    MentorAssignment[] @relation("MentorAssigner")
+  incubationAgreements     IncubationAgreement[]
+  incubationMilestoneDecisions IncubationMilestoneDecision[]
+  assistanceCases          AssistanceCase[] @relation("AssistanceApplicant")
+  assistanceCasesHandled   AssistanceCase[] @relation("AssistanceCaseWorker")
+  assistanceConsents       AssistanceConsent[]
+  assistanceMessages       AssistanceMessage[]
+  assistanceDecisions      AssistanceDecision[]
+  assistanceDeliveries     AssistanceDelivery[]
+  volunteerSupervising     VolunteerOpportunity[] @relation("VolunteerSupervisor")
+  volunteerOpportunitiesCreated VolunteerOpportunity[] @relation("VolunteerOpportunityCreator")
+  volunteerApplications    VolunteerApplication[]
+  volunteerAssignments     VolunteerAssignment[] @relation("VolunteerAssignee")
+  volunteerAssignmentsMade VolunteerAssignment[] @relation("VolunteerAssigner")
+  volunteerHoursApproved   VolunteerHours[] @relation("VolunteerHoursApprover")
+  @@map("users")
+  // PART-07 money operations. Each is a distinct role on the record, so they are named relations
+  // rather than one ambiguous link: who requested, who approved and who executed must stay apart.
+  payoutsMade            Payout[] @relation("PayoutMaker")
+  payoutsApproved        Payout[] @relation("PayoutApprover")
+  payoutsExecuted        Payout[] @relation("PayoutExecutor")
+  payoutDecisions        PayoutDecision[]
+  refundsRequested       Refund[] @relation("RefundRequester")
+  refundsApproved        Refund[] @relation("RefundApprover")
+  refundsExecuted        Refund[] @relation("RefundExecutor")
+  disputesOpened         Dispute[] @relation("DisputeOpener")
+  disputesResolved       Dispute[] @relation("DisputeResolver")
+  reconciliationImports  ReconciliationBatch[]
+  reconciliationResolved ReconciliationItem[]
+}
+
+model TwoFactor {
+  id                      String @id @default(uuid()) @db.Uuid
+  secret                  String
+  backupCodes             String @map("backup_codes")
+  userId                  String @unique @map("user_id") @db.Uuid
+  verified                Boolean @default(true)
+  failedVerificationCount Int @default(0) @map("failed_verification_count")
+  lockedUntil             DateTime? @map("locked_until") @db.Timestamptz(3)
+  user                    User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("two_factors")
+}
+
+model PlatformGrant {
+  id         String @id @default(uuid()) @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  role       PlatformRole
+  grantedBy  String @map("granted_by") @db.Uuid
+  expiresAt  DateTime? @map("expires_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user       User @relation("PlatformGrantSubject", fields: [userId], references: [id], onDelete: Restrict)
+  issuer     User @relation("PlatformGrantIssuer", fields: [grantedBy], references: [id], onDelete: Restrict)
+  @@index([userId, role, revokedAt, expiresAt])
+  @@map("platform_grants")
+}
+
+model PlatformAccessInvitation {
+  id             String @id @default(uuid()) @db.Uuid
+  email          String @db.VarChar(254)
+  roles          PlatformRole[]
+  tokenHash      String @unique @map("token_hash") @db.Char(64)
+  grantExpiresAt DateTime @map("grant_expires_at") @db.Timestamptz(3)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(3)
+  consumedAt     DateTime? @map("consumed_at") @db.Timestamptz(3)
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdBy      String @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  creator        User @relation("PlatformInvitationCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  @@index([email, consumedAt, revokedAt])
+  @@map("platform_access_invitations")
+}
+
+model MfaChallenge {
+  id              String @id @default(uuid()) @db.Uuid
+  userId          String @map("user_id") @db.Uuid
+  sessionId       String @map("session_id") @db.Uuid
+  operation       String @db.VarChar(64)
+  resourceId      String @map("resource_id") @db.Uuid
+  resourceVersion Int @map("resource_version")
+  state           MfaChallengeState @default(pending)
+  attempts        Int @default(0)
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(3)
+  verifiedAt      DateTime? @map("verified_at") @db.Timestamptz(3)
+  consumedAt      DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session         Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  @@index([userId, sessionId, state, expiresAt])
+  @@map("mfa_challenges")
+}
+
+model IndividualProfile {
+  userId          String @id @map("user_id") @db.Uuid
+  displayName     String @map("display_name") @db.VarChar(100)
+  locale          String @default("ar") @db.VarChar(5)
+  city            String? @db.VarChar(100)
+  capabilities    IndividualCapability[] @default([])
+  version         Int @default(1)
+  user            User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@map("individual_profiles")
+}
+
+model Organization {
+  id              String @id @default(uuid()) @db.Uuid
+  legalName       String @map("legal_name") @db.VarChar(200)
+  displayName     String @map("display_name") @db.VarChar(140)
+  slug            String @unique @db.VarChar(90)
+  publicDescription String @default("") @map("public_description") @db.VarChar(1200)
+  sectors         String[] @default([])
+  contactEmail    String? @map("contact_email") @db.VarChar(254)
+  websiteUrl      String? @map("website_url") @db.VarChar(500)
+  contactAddress  String? @map("contact_address") @db.VarChar(300)
+  type            OrganizationType
+  country         String @db.Char(2)
+  city            String @db.VarChar(100)
+  status          OrganizationStatus @default(active)
+  verification    VerificationState @default(not_started)
+  version         Int @default(1)
+  createdBy       String @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  currentLogoId   String? @unique @map("current_logo_id") @db.Uuid
+  memberships     Membership[]
+  invitations     Invitation[]
+  party           Party?
+  verificationCase OrganizationVerificationCase?
+  currentLogo      OrganizationLogoAsset? @relation("CurrentOrganizationLogo", fields: [currentLogoId], references: [id], onDelete: SetNull)
+  logoAssets       OrganizationLogoAsset[] @relation("OrganizationLogoAssets")
+  ownershipTransfers OrganizationOwnershipTransfer[]
+  bankAccount      OrganizationBankAccount?
+  bankChangeRequests OrganizationBankChangeRequest[]
+  payouts            Payout[]
+  projects         Project[]
+  venture            Venture?
+  offerings          Offering[]
+  programs           Program[]
+  jobs               Job[]
+  agreementsAsSponsor  Agreement[] @relation("AgreementSponsor")
+  agreementsAsOperator Agreement[] @relation("AgreementOperator")
+  proposalsIncubated   Proposal[] @relation("ProposalIncubator")
+  proposalStartup      Proposal? @relation("ProposalStartup")
+  assistanceCases      AssistanceCase[]
+  volunteerOpportunities VolunteerOpportunity[]
+  @@map("organizations")
+}
+
+model OrganizationBankAccount {
+  id                          String @id @default(uuid()) @db.Uuid
+  organizationId              String @unique @map("organization_id") @db.Uuid
+  sourceRequestId             String @unique @map("source_request_id") @db.Uuid
+  bankName                    String @map("bank_name") @db.VarChar(140)
+  accountHolder               String @map("account_holder") @db.VarChar(200)
+  accountIdentifierCiphertext String @map("account_identifier_ciphertext") @db.Text
+  accountIdentifierHash       String @map("account_identifier_hash") @db.Char(64)
+  accountLast4                String @map("account_last4") @db.VarChar(4)
+  country                     String @db.Char(2)
+  currency                    String @db.Char(3)
+  createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization                Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  sourceRequest               OrganizationBankChangeRequest @relation("AppliedBankChange", fields: [sourceRequestId], references: [id], onDelete: Restrict)
+  @@map("organization_bank_accounts")
+}
+
+model OrganizationBankChangeRequest {
+  id                          String @id @default(uuid()) @db.Uuid
+  organizationId              String @map("organization_id") @db.Uuid
+  organizationVersion         Int @map("organization_version")
+  requestedBy                 String @map("requested_by") @db.Uuid
+  bankName                    String @map("bank_name") @db.VarChar(140)
+  accountHolder               String @map("account_holder") @db.VarChar(200)
+  accountIdentifierCiphertext String @map("account_identifier_ciphertext") @db.Text
+  accountIdentifierHash       String @map("account_identifier_hash") @db.Char(64)
+  accountLast4                String @map("account_last4") @db.VarChar(4)
+  country                     String @db.Char(2)
+  currency                    String @db.Char(3)
+  state                       BankChangeRequestState @default(pending)
+  version                     Int @default(1)
+  reviewedBy                  String? @map("reviewed_by") @db.Uuid
+  reviewedAt                  DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  reviewReason                String @default("") @map("review_reason") @db.VarChar(1000)
+  createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  organization                Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  requester                   User @relation("BankChangeRequester", fields: [requestedBy], references: [id], onDelete: Restrict)
+  reviewer                    User? @relation("BankChangeReviewer", fields: [reviewedBy], references: [id], onDelete: Restrict)
+  appliedAccount              OrganizationBankAccount? @relation("AppliedBankChange")
+  @@index([organizationId, state, createdAt])
+  @@index([state, createdAt])
+  @@map("organization_bank_change_requests")
+}
+
+model OrganizationOwnershipTransfer {
+  id                  String @id @default(uuid()) @db.Uuid
+  organizationId      String @map("organization_id") @db.Uuid
+  organizationVersion Int @map("organization_version")
+  currentOwnerId      String @map("current_owner_id") @db.Uuid
+  newOwnerId          String @map("new_owner_id") @db.Uuid
+  tokenHash           String @unique @map("token_hash") @db.Char(64)
+  state               OwnershipTransferState @default(pending)
+  expiresAt           DateTime @map("expires_at") @db.Timestamptz(3)
+  acceptedAt          DateTime? @map("accepted_at") @db.Timestamptz(3)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  currentOwner        User @relation("OwnershipTransferCurrentOwner", fields: [currentOwnerId], references: [id], onDelete: Restrict)
+  newOwner            User @relation("OwnershipTransferNewOwner", fields: [newOwnerId], references: [id], onDelete: Restrict)
+  @@index([organizationId, state, expiresAt])
+  @@index([newOwnerId, state, expiresAt])
+  @@map("organization_ownership_transfers")
+}
+
+model OrganizationLogoAsset {
+  id              String @id @default(uuid()) @db.Uuid
+  organizationId  String @map("organization_id") @db.Uuid
+  organizationVersion Int @map("organization_version")
+  fileName        String @map("file_name") @db.VarChar(255)
+  storageKey      String @unique @map("storage_key") @db.VarChar(500)
+  contentType     String @map("content_type") @db.VarChar(100)
+  expectedSize    Int @map("expected_size")
+  actualSize      Int? @map("actual_size")
+  checksum        String? @db.Char(64)
+  uploadTokenHash String? @unique @map("upload_token_hash") @db.Char(64)
+  uploadExpiresAt DateTime? @map("upload_expires_at") @db.Timestamptz(3)
+  scanState       VerificationDocumentState @default(pending_scan) @map("scan_state")
+  scanReason      String? @map("scan_reason") @db.VarChar(64)
+  finalizedAt     DateTime? @map("finalized_at") @db.Timestamptz(3)
+  classification  String @default("Public") @db.VarChar(32)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  organization    Organization @relation("OrganizationLogoAssets", fields: [organizationId], references: [id], onDelete: Restrict)
+  currentFor      Organization? @relation("CurrentOrganizationLogo")
+  @@index([organizationId, scanState])
+  @@map("organization_logo_assets")
+}
+
+model OrganizationVerificationCase {
+  id                String @id @default(uuid()) @db.Uuid
+  organizationId    String @unique @map("organization_id") @db.Uuid
+  registrationNumber String @default("") @map("registration_number") @db.VarChar(100)
+  issuingAuthority  String @default("") @map("issuing_authority") @db.VarChar(200)
+  registeredAddress String @default("") @map("registered_address") @db.VarChar(300)
+  documentExpiresAt DateTime? @map("document_expires_at") @db.Date
+  state             VerificationState @default(not_started)
+  version           Int @default(1)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  assignedReviewerId String? @map("assigned_reviewer_id") @db.Uuid
+  claimedAt         DateTime? @map("claimed_at") @db.Timestamptz(3)
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  documents         OrganizationVerificationDocument[]
+  submissions       OrganizationVerificationSubmission[]
+  assignedReviewer  User? @relation("AssignedVerificationReviewer", fields: [assignedReviewerId], references: [id], onDelete: Restrict)
+  @@map("organization_verification_cases")
+}
+
+model OrganizationVerificationDocument {
+  id             String @id @default(uuid()) @db.Uuid
+  caseId         String @map("case_id") @db.Uuid
+  fileName       String @map("file_name") @db.VarChar(255)
+  storageKey     String @unique @map("storage_key") @db.VarChar(500)
+  contentType    String @default("application/octet-stream") @map("content_type") @db.VarChar(100)
+  expectedSize   Int @default(0) @map("expected_size")
+  actualSize     Int? @map("actual_size")
+  checksum       String? @db.Char(64)
+  uploadTokenHash String? @unique @map("upload_token_hash") @db.Char(64)
+  uploadExpiresAt DateTime? @map("upload_expires_at") @db.Timestamptz(3)
+  scanState      VerificationDocumentState @default(pending_scan) @map("scan_state")
+  scanReason     String? @map("scan_reason") @db.VarChar(64)
+  finalizedAt    DateTime? @map("finalized_at") @db.Timestamptz(3)
+  classification String @default("HighlySensitive") @db.VarChar(32)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  case           OrganizationVerificationCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  @@index([caseId, scanState])
+  @@map("organization_verification_documents")
+}
+
+model OrganizationVerificationSubmission {
+  id                   String @id @default(uuid()) @db.Uuid
+  caseId               String @map("case_id") @db.Uuid
+  sequence             Int
+  previousSubmissionId String? @unique @map("previous_submission_id") @db.Uuid
+  submittedBy          String @map("submitted_by") @db.Uuid
+  snapshot             Json
+  submittedAt          DateTime @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  case                 OrganizationVerificationCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  submitter            User @relation("VerificationSubmitter", fields: [submittedBy], references: [id], onDelete: Restrict)
+  previousSubmission   OrganizationVerificationSubmission? @relation("VerificationChain", fields: [previousSubmissionId], references: [id], onDelete: Restrict)
+  nextSubmission       OrganizationVerificationSubmission? @relation("VerificationChain")
+  decision             OrganizationVerificationDecision?
+  @@unique([caseId, sequence])
+  @@map("organization_verification_submissions")
+}
+
+model OrganizationVerificationDecision {
+  id           String @id @default(uuid()) @db.Uuid
+  submissionId String @unique @map("submission_id") @db.Uuid
+  outcome      VerificationDecisionOutcome
+  publicReason String @default("") @map("public_reason") @db.VarChar(1000)
+  reviewerId   String @map("reviewer_id") @db.Uuid
+  decidedAt    DateTime @default(now()) @map("decided_at") @db.Timestamptz(3)
+  submission   OrganizationVerificationSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  reviewer     User @relation("VerificationReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@map("organization_verification_decisions")
+}
+
+model Party {
+  id              String @id @default(uuid()) @db.Uuid
+  userId          String? @unique @map("user_id") @db.Uuid
+  organizationId  String? @unique @map("organization_id") @db.Uuid
+  user            User? @relation(fields: [userId], references: [id], onDelete: Restrict)
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contributions   Contribution[]
+  @@map("parties")
+}
+
+model Membership {
+  id              String @id @default(uuid()) @db.Uuid
+  userId          String @map("user_id") @db.Uuid
+  organizationId  String @map("organization_id") @db.Uuid
+  status          MembershipStatus @default(active)
+  roles           MembershipRole[]
+  version         Int @default(1)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user            User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  @@unique([userId, organizationId])
+  @@index([organizationId, status])
+  @@map("memberships")
+}
+
+model Invitation {
+  id              String @id @default(uuid()) @db.Uuid
+  organizationId  String @map("organization_id") @db.Uuid
+  email           String @db.VarChar(254)
+  roles           MembershipRole[]
+  tokenHash       String @unique @map("token_hash") @db.Char(64)
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(3)
+  consumedAt      DateTime? @map("consumed_at") @db.Timestamptz(3)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(3)
+  declinedAt      DateTime? @map("declined_at") @db.Timestamptz(3)
+  declinedBy      String? @map("declined_by") @db.Uuid
+  createdBy       String @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  creator         User @relation("InvitationCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  decliner        User? @relation("InvitationDecliner", fields: [declinedBy], references: [id], onDelete: Restrict)
+  @@index([organizationId, email])
+  @@map("invitations")
+}
+
+model IdentityAuditEvent {
+  id              String @id @default(uuid()) @db.Uuid
+  actorId         String @map("actor_id") @db.Uuid
+  organizationId  String? @map("organization_id") @db.Uuid
+  action          String @db.VarChar(64)
+  resourceId      String @map("resource_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([organizationId, createdAt])
+  @@map("identity_audit_events")
+}
+
+model Session {
+  id                    String @id @default(uuid()) @db.Uuid
+  token                 String @unique @map("token_hash") @db.Char(64)
+  userId                String @map("user_id") @db.Uuid
+  expiresAt             DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  ipAddress             String? @map("ip_address")
+  userAgent             String? @map("user_agent")
+  activeOrganizationId  String? @map("active_organization_id") @db.Uuid
+  user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mfaChallenges         MfaChallenge[]
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String @id @default(uuid()) @db.Uuid
+  accountId             String @map("account_id")
+  providerId            String @map("provider_id")
+  userId                String @map("user_id") @db.Uuid
+  password              String?
+  accessToken           String? @map("access_token")
+  refreshToken          String? @map("refresh_token")
+  idToken               String? @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz(3)
+  scope                 String?
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String @id @default(uuid()) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  @@index([identifier])
+  @@map("verifications")
+}
+
+// Private local delivery spool, accessible only through the developer CLI, never HTTP.
+model LocalAuthMail {
+  id        String @id @default(uuid()) @db.Uuid
+  recipient String @db.VarChar(254)
+  purpose   String @db.VarChar(32)
+  url       String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@map("local_auth_mail")
+}
+
+model City {
+  id        String @id @default(uuid()) @db.Uuid
+  country   String @db.Char(2)
+  nameAr    String @map("name_ar") @db.VarChar(100)
+  nameEn    String @map("name_en") @db.VarChar(100)
+  latitude  Float
+  longitude Float
+  projects  Project[]
+  @@unique([country, nameEn])
+  @@map("cities")
+}
+
+model Project {
+  id                      String @id @default(uuid()) @db.Uuid
+  organizationId          String @map("organization_id") @db.Uuid
+  type                    ProjectType
+  slug                    String @unique @db.VarChar(120)
+  title                   String @db.VarChar(140)
+  summary                 String @default("") @db.VarChar(300)
+  story                   String @default("") @db.Text
+  state                   ProjectState @default(draft)
+  managerId               String @map("manager_id") @db.Uuid
+  cityId                  String @map("city_id") @db.Uuid
+  latitude                Float?
+  longitude               Float?
+  publicLocationPrecision LocationPrecision @default(city) @map("public_location_precision")
+  publishedAt             DateTime? @map("published_at") @db.Timestamptz(3)
+  version                 Int @default(1)
+  createdBy               String @map("created_by") @db.Uuid
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization            Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  manager                 User @relation("ProjectManager", fields: [managerId], references: [id], onDelete: Restrict)
+  city                    City @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  creator                 User @relation("ProjectCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  assignedReviewerId      String? @map("assigned_reviewer_id") @db.Uuid
+  claimedAt               DateTime? @map("claimed_at") @db.Timestamptz(3)
+  stateReason             String @default("") @map("state_reason") @db.VarChar(1000)
+  versions                ProjectVersion[]
+  bookmarks               Bookmark[]
+  campaign                Campaign?
+  budgetLines             BudgetLine[]
+  budgetRevisions         BudgetRevision[]
+  milestones              Milestone[]
+  updates                 ProjectUpdate[]
+  reports                 ProjectReport[]
+  fundingPools            FundingPool[]
+  contributions           Contribution[]
+  assignedReviewer        User? @relation("ProjectAssignedReviewer", fields: [assignedReviewerId], references: [id], onDelete: Restrict)
+  @@index([organizationId, state, createdAt])
+  @@index([state, type, cityId, publishedAt])
+  agreements          Agreement[]
+  payouts           Payout[]
+  programs        Program[]
+  @@map("projects")
+}
+
+model ProjectVersion {
+  id                String @id @default(uuid()) @db.Uuid
+  projectId         String @map("project_id") @db.Uuid
+  sequence          Int
+  previousVersionId String? @unique @map("previous_version_id") @db.Uuid
+  snapshot          Json
+  submittedBy       String @map("submitted_by") @db.Uuid
+  submittedAt       DateTime @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  project           Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  previousVersion   ProjectVersion? @relation("ProjectVersionChain", fields: [previousVersionId], references: [id], onDelete: Restrict)
+  nextVersion       ProjectVersion? @relation("ProjectVersionChain")
+  submitter         User @relation("ProjectVersionSubmitter", fields: [submittedBy], references: [id], onDelete: Restrict)
+  decision          ProjectReviewDecision?
+  @@unique([projectId, sequence])
+  @@map("project_versions")
+}
+
+/// A saved thing. PART-10 gave it a second kind of target, so it carries exactly one of them and a
+/// CHECK constraint says so — a bookmark that points at nothing, or at two things, is not a
+/// bookmark. Saving an opportunity is deliberately not applying to it.
+model Bookmark {
+  id        String @id @default(uuid()) @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+  projectId String? @map("project_id") @db.Uuid
+  programId String? @map("program_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  program   Program? @relation(fields: [programId], references: [id], onDelete: Cascade)
+  @@unique([userId, projectId])
+  @@unique([userId, programId])
+  @@map("bookmarks")
+}
+
+enum FundingPolicy {
+  flexible
+  all_or_nothing
+}
+
+enum MilestoneState {
+  planned
+  active
+  evidence_submitted
+  verified
+  cancelled
+}
+
+enum ReviewOutcome {
+  approved
+  changes_requested
+  rejected
+}
+
+enum ReportState {
+  draft
+  submitted
+  published
+}
+
+/// Amounts are BIGINT minor units and leave the API as strings (08-FINANCIAL-SYSTEM).
+model Campaign {
+  id        String @id @default(uuid()) @db.Uuid
+  projectId String @unique @map("project_id") @db.Uuid
+  goalMinor BigInt @map("goal_minor")
+  currency  String @db.Char(3)
+  policy    FundingPolicy @default(flexible)
+  endsAt    DateTime @map("ends_at") @db.Timestamptz(3)
+  version   Int @default(1)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  @@map("campaigns")
+}
+
+model BudgetLine {
+  id          String @id @default(uuid()) @db.Uuid
+  projectId   String @map("project_id") @db.Uuid
+  label       String @db.VarChar(140)
+  amountMinor BigInt @map("amount_minor")
+  sortOrder   Int @map("sort_order")
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  @@index([projectId, sortOrder])
+  @@map("budget_lines")
+}
+
+model BudgetRevision {
+  id         String @id @default(uuid()) @db.Uuid
+  projectId  String @map("project_id") @db.Uuid
+  sequence   Int
+  reason     String @default("") @db.VarChar(1000)
+  snapshot   Json
+  totalMinor BigInt @map("total_minor")
+  createdBy  String @map("created_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  author     User @relation("BudgetRevisionAuthor", fields: [createdBy], references: [id], onDelete: Restrict)
+  @@unique([projectId, sequence])
+  @@map("budget_revisions")
+}
+
+model Milestone {
+  id                  String @id @default(uuid()) @db.Uuid
+  projectId           String @map("project_id") @db.Uuid
+  sequence            Int
+  title               String @db.VarChar(140)
+  budgetMinor         BigInt @map("budget_minor")
+  weight              Int
+  state               MilestoneState @default(planned)
+  evidenceNote        String @default("") @map("evidence_note") @db.VarChar(2000)
+  evidenceSubmittedAt DateTime? @map("evidence_submitted_at") @db.Timestamptz(3)
+  verifiedAt          DateTime? @map("verified_at") @db.Timestamptz(3)
+  project             Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  @@unique([projectId, sequence])
+  payouts         Payout[]
+  @@map("milestones")
+}
+
+model ProjectReviewDecision {
+  id               String @id @default(uuid()) @db.Uuid
+  projectVersionId String @unique @map("project_version_id") @db.Uuid
+  outcome          ReviewOutcome
+  publicReason     String @default("") @map("public_reason") @db.VarChar(1000)
+  reviewerId       String @map("reviewer_id") @db.Uuid
+  decidedAt        DateTime @default(now()) @map("decided_at") @db.Timestamptz(3)
+  projectVersion   ProjectVersion @relation(fields: [projectVersionId], references: [id], onDelete: Restrict)
+  reviewer         User @relation("ProjectReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@map("project_review_decisions")
+}
+
+model ProjectUpdate {
+  id          String @id @default(uuid()) @db.Uuid
+  projectId   String @map("project_id") @db.Uuid
+  title       String @db.VarChar(140)
+  body        String @db.Text
+  publishedAt DateTime @default(now()) @map("published_at") @db.Timestamptz(3)
+  publishedBy String @map("published_by") @db.Uuid
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  author      User @relation("ProjectUpdateAuthor", fields: [publishedBy], references: [id], onDelete: Restrict)
+  @@index([projectId, publishedAt])
+  @@map("project_updates")
+}
+
+model ProjectReport {
+  id          String @id @default(uuid()) @db.Uuid
+  projectId   String @map("project_id") @db.Uuid
+  sequence    Int
+  title       String @db.VarChar(140)
+  periodStart DateTime @map("period_start") @db.Date
+  periodEnd   DateTime @map("period_end") @db.Date
+  body        String @default("") @db.Text
+  state       ReportState @default(draft)
+  version     Int @default(1)
+  snapshot    Json?
+  createdBy   String @map("created_by") @db.Uuid
+  submittedAt DateTime? @map("submitted_at") @db.Timestamptz(3)
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  author      User @relation("ProjectReportAuthor", fields: [createdBy], references: [id], onDelete: Restrict)
+  @@unique([projectId, sequence])
+  @@map("project_reports")
+}
+
+enum PoolKind {
+  charity_campaign
+  /// PART-09. Money an offering has taken in, held apart from any project's funds.
+  offering_escrow
+}
+
+enum LedgerAccountType {
+  asset
+  liability
+  revenue
+  expense
+}
+
+enum PaymentIntentState {
+  created
+  awaiting_action
+  processing
+  succeeded
+  failed
+  cancelled
+  expired
+}
+
+enum ContributionState {
+  pending
+  succeeded
+  failed
+  expired
+  refunded
+  partially_refunded
+}
+
+enum ContributionVisibility {
+  named
+  anonymous
+}
+
+enum SettlementState {
+  pending
+  settled
+  disputed
+}
+
+model FundingPool {
+  id           String @id @default(uuid()) @db.Uuid
+  /// Exactly one of these is set. A pool belongs to a project (a charity campaign) or to an
+  /// offering (its escrow), and the two kinds of money are never in the same pool.
+  projectId    String? @map("project_id") @db.Uuid
+  offeringId   String? @unique @map("offering_id") @db.Uuid
+  kind         PoolKind @default(charity_campaign)
+  currency     String @db.Char(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  offering     Offering? @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  accounts     LedgerAccount[]
+  transactions LedgerTransaction[]
+  contributions Contribution[]
+  // A project has one pool per kind. An offering pool is keyed by its own unique offeringId.
+  @@unique([projectId, kind])
+  payouts      Payout[]
+  refunds      Refund[]
+  disputes     Dispute[]
+  @@map("funding_pools")
+}
+
+model LedgerAccount {
+  id       String @id @default(uuid()) @db.Uuid
+  poolId   String @map("pool_id") @db.Uuid
+  code     String @db.VarChar(40)
+  type     LedgerAccountType
+  currency String @db.Char(3)
+  pool     FundingPool @relation(fields: [poolId], references: [id], onDelete: Restrict)
+  entries  LedgerEntry[]
+  @@unique([poolId, code])
+  @@map("ledger_accounts")
+}
+
+model LedgerTransaction {
+  id         String @id @default(uuid()) @db.Uuid
+  poolId     String @map("pool_id") @db.Uuid
+  currency   String @db.Char(3)
+  sourceType String @map("source_type") @db.VarChar(40)
+  sourceId   String @map("source_id") @db.Uuid
+  reversalOf String? @map("reversal_of") @db.Uuid
+  postedAt   DateTime @default(now()) @map("posted_at") @db.Timestamptz(3)
+  pool       FundingPool @relation(fields: [poolId], references: [id], onDelete: Restrict)
+  original   LedgerTransaction? @relation("LedgerReversal", fields: [reversalOf], references: [id], onDelete: Restrict)
+  reversals  LedgerTransaction[] @relation("LedgerReversal")
+  entries    LedgerEntry[]
+  @@unique([sourceType, sourceId])
+  @@index([poolId, postedAt])
+  @@map("ledger_transactions")
+}
+
+model LedgerEntry {
+  id            String @id @default(uuid()) @db.Uuid
+  transactionId String @map("transaction_id") @db.Uuid
+  accountId     String @map("account_id") @db.Uuid
+  debitMinor    BigInt @default(0) @map("debit_minor")
+  creditMinor   BigInt @default(0) @map("credit_minor")
+  transaction   LedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  account       LedgerAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  @@index([transactionId])
+  @@index([accountId])
+  @@map("ledger_entries")
+}
+
+model Contribution {
+  id                 String @id @default(uuid()) @db.Uuid
+  poolId             String @map("pool_id") @db.Uuid
+  projectId          String @map("project_id") @db.Uuid
+  payerPartyId       String @map("payer_party_id") @db.Uuid
+  amountMinor        BigInt @map("amount_minor")
+  currency           String @db.Char(3)
+  state              ContributionState @default(pending)
+  visibility         ContributionVisibility @default(anonymous)
+  showAmountPublicly Boolean @default(false) @map("show_amount_publicly")
+  feeMinor           BigInt @default(0) @map("fee_minor")
+  refundedMinor      BigInt @default(0) @map("refunded_minor")
+  reservedUntil      DateTime? @map("reserved_until") @db.Timestamptz(3)
+  confirmedAt        DateTime? @map("confirmed_at") @db.Timestamptz(3)
+  simulated          Boolean @default(true)
+  version            Int @default(1)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  pool               FundingPool @relation(fields: [poolId], references: [id], onDelete: Restrict)
+  project            Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  payer              Party @relation(fields: [payerPartyId], references: [id], onDelete: Restrict)
+  intent             PaymentIntent?
+  @@index([projectId, state, createdAt])
+  @@index([payerPartyId, createdAt])
+  @@index([poolId, state, reservedUntil])
+  refunds            Refund[]
+  disputes           Dispute[]
+  @@map("contributions")
+}
+
+model PaymentIntent {
+  id                String @id @default(uuid()) @db.Uuid
+  /// Exactly one of these is set. Both kinds of payment go through the same signed webhook and the
+  /// same inbox, because two idempotency implementations is two places to get idempotency wrong.
+  contributionId    String? @unique @map("contribution_id") @db.Uuid
+  subscriptionId    String? @unique @map("subscription_id") @db.Uuid
+  provider          String @db.VarChar(40)
+  providerReference String @map("provider_reference") @db.VarChar(120)
+  state             PaymentIntentState @default(created)
+  amountMinor       BigInt @map("amount_minor")
+  currency          String @db.Char(3)
+  lastEventAt       DateTime? @map("last_event_at") @db.Timestamptz(3)
+  expiresAt         DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  contribution      Contribution? @relation(fields: [contributionId], references: [id], onDelete: Restrict)
+  subscription      Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  settlement        Settlement?
+  @@unique([provider, providerReference])
+  agreementFundingIntent AgreementFundingIntent?
+  @@map("payment_intents")
+}
+
+model Settlement {
+  id              String @id @default(uuid()) @db.Uuid
+  paymentIntentId String @unique @map("payment_intent_id") @db.Uuid
+  state           SettlementState @default(pending)
+  grossMinor      BigInt @map("gross_minor")
+  feeMinor        BigInt @map("fee_minor")
+  netMinor        BigInt @map("net_minor")
+  settledAt       DateTime? @map("settled_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  intent          PaymentIntent @relation(fields: [paymentIntentId], references: [id], onDelete: Restrict)
+  @@map("settlements")
+}
+
+model WebhookInbox {
+  id          String @id @default(uuid()) @db.Uuid
+  provider    String @db.VarChar(40)
+  eventId     String @map("event_id") @db.VarChar(120)
+  eventType   String @map("event_type") @db.VarChar(60)
+  payload     Json
+  receivedAt  DateTime @default(now()) @map("received_at") @db.Timestamptz(3)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
+  outcome     String? @db.VarChar(40)
+  @@unique([provider, eventId])
+  @@map("webhook_inbox")
+}
+
+model OutboxEvent {
+  id            String @id @default(uuid()) @db.Uuid
+  topic         String @db.VarChar(60)
+  payload       Json
+  status        String @default("pending") @db.VarChar(20)
+  attempts      Int @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([status, nextAttemptAt])
+  @@map("outbox_events")
+}
+
+model IdempotencyRecord {
+  id             String @id @default(uuid()) @db.Uuid
+  actorId        String @map("actor_id") @db.Uuid
+  route          String @db.VarChar(120)
+  idempotencyKey String @map("idempotency_key") @db.VarChar(120)
+  requestHash    String @map("request_hash") @db.Char(64)
+  response       Json
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  actor          User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@unique([actorId, route, idempotencyKey])
+  @@map("idempotency_records")
+}
+
+// ---------------------------------------------------------------------------------------------
+// PART-07 — payouts, refunds, disputes and reconciliation (08-FINANCIAL-SYSTEM)
+// ---------------------------------------------------------------------------------------------
+
+/// 08: requested → approved → queued → processing → paid / failed / unknown.
+/// `unknown` is terminal until an inquiry resolves it; it is never retried blindly.
+enum PayoutState {
+  requested
+  approved
+  rejected
+  cancelled
+  queued
+  processing
+  paid
+  failed
+  unknown
+}
+
+/// 08: requested → approved → processing → succeeded / failed / unknown.
+enum RefundState {
+  requested
+  approved
+  rejected
+  processing
+  succeeded
+  failed
+  unknown
+}
+
+/// A chargeback is its own entity after a success. It never turns the original payment into a
+/// failure that did not happen (08).
+enum DisputeState {
+  opened
+  under_review
+  lost
+  won
+  withdrawn
+}
+
+enum ReconciliationBatchState {
+  imported
+  matched
+  closed
+}
+
+/// Per-line outcome of matching a provider statement against our own record.
+enum ReconciliationMatch {
+  match
+  mismatch
+  missing
+  duplicate
+}
+
+/// A disbursement from a funding pool to the delivering organisation's verified bank account.
+///
+/// The beneficiary is stored as a snapshot of the bank account as it stood when the request was
+/// made, because approval is bound to what the approver actually saw. Only the last four digits
+/// are kept here: the full identifier is HighlySensitive and stays in organization_bank_accounts.
+model Payout {
+  id                  String @id @default(uuid()) @db.Uuid
+  poolId              String @map("pool_id") @db.Uuid
+  projectId           String @map("project_id") @db.Uuid
+  organizationId      String @map("organization_id") @db.Uuid
+  milestoneId         String? @map("milestone_id") @db.Uuid
+  budgetRevisionId    String? @map("budget_revision_id") @db.Uuid
+  amountMinor         BigInt @map("amount_minor")
+  currency            String @db.Char(3)
+  reason              String @db.VarChar(1000)
+  invoiceReference    String @default("") @map("invoice_reference") @db.VarChar(120)
+  state               PayoutState @default(requested)
+  /// SHA-256 over the material terms. Approval is bound to this; changing any of them voids it.
+  requestHash         String @map("request_hash") @db.Char(64)
+  beneficiaryBankName String @map("beneficiary_bank_name") @db.VarChar(140)
+  beneficiaryHolder   String @map("beneficiary_holder") @db.VarChar(200)
+  beneficiaryLast4    String @map("beneficiary_last4") @db.VarChar(4)
+  makerId             String @map("maker_id") @db.Uuid
+  approverId          String? @map("approver_id") @db.Uuid
+  approvedAt          DateTime? @map("approved_at") @db.Timestamptz(3)
+  executedBy          String? @map("executed_by") @db.Uuid
+  provider            String? @db.VarChar(40)
+  providerReference   String? @map("provider_reference") @db.VarChar(120)
+  /// Independent evidence that the money actually left, which `approved` is not (08).
+  paidProofReference  String? @map("paid_proof_reference") @db.VarChar(200)
+  paidAt              DateTime? @map("paid_at") @db.Timestamptz(3)
+  failureReason       String @default("") @map("failure_reason") @db.VarChar(1000)
+  lastInquiredAt      DateTime? @map("last_inquired_at") @db.Timestamptz(3)
+  simulated           Boolean @default(true)
+  version             Int @default(1)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  pool                FundingPool @relation(fields: [poolId], references: [id], onDelete: Restrict)
+  project             Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  milestone           Milestone? @relation(fields: [milestoneId], references: [id], onDelete: Restrict)
+  maker               User @relation("PayoutMaker", fields: [makerId], references: [id], onDelete: Restrict)
+  approver            User? @relation("PayoutApprover", fields: [approverId], references: [id], onDelete: Restrict)
+  executor            User? @relation("PayoutExecutor", fields: [executedBy], references: [id], onDelete: Restrict)
+  decisions           PayoutDecision[]
+  stipendBatch        StipendBatch?
+  @@unique([provider, providerReference])
+  @@index([organizationId, state, createdAt])
+  @@index([poolId, state])
+  @@map("payouts")
+}
+
+/// Append-only: every approve, reject, withdraw or execution decision on a payout, with the hash
+/// of the request it was made against, so a later change cannot be presented as pre-approved.
+model PayoutDecision {
+  id          String @id @default(uuid()) @db.Uuid
+  payoutId    String @map("payout_id") @db.Uuid
+  actorId     String @map("actor_id") @db.Uuid
+  action      String @db.VarChar(20)
+  requestHash String @map("request_hash") @db.Char(64)
+  reason      String @default("") @db.VarChar(1000)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  payout      Payout @relation(fields: [payoutId], references: [id], onDelete: Restrict)
+  actor       User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([payoutId, createdAt])
+  @@map("payout_decisions")
+}
+
+/// A refund of a confirmed contribution, back to its original source.
+model Refund {
+  id                String @id @default(uuid()) @db.Uuid
+  contributionId    String @map("contribution_id") @db.Uuid
+  poolId            String @map("pool_id") @db.Uuid
+  amountMinor       BigInt @map("amount_minor")
+  currency          String @db.Char(3)
+  reason            String @db.VarChar(1000)
+  state             RefundState @default(requested)
+  /// Whether the processor fee is returned too. 08: a full refund cannot come out of the net
+  /// alone, so who covers the difference is decided before execution, not discovered after.
+  feeCoveredByPool  Boolean @default(true) @map("fee_covered_by_pool")
+  feeMinor          BigInt @default(0) @map("fee_minor")
+  requestedBy       String @map("requested_by") @db.Uuid
+  approverId        String? @map("approver_id") @db.Uuid
+  approvedAt        DateTime? @map("approved_at") @db.Timestamptz(3)
+  executedBy        String? @map("executed_by") @db.Uuid
+  provider          String? @db.VarChar(40)
+  providerReference String? @map("provider_reference") @db.VarChar(120)
+  succeededAt       DateTime? @map("succeeded_at") @db.Timestamptz(3)
+  failureReason     String @default("") @map("failure_reason") @db.VarChar(1000)
+  lastInquiredAt    DateTime? @map("last_inquired_at") @db.Timestamptz(3)
+  simulated         Boolean @default(true)
+  version           Int @default(1)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  contribution      Contribution @relation(fields: [contributionId], references: [id], onDelete: Restrict)
+  pool              FundingPool @relation(fields: [poolId], references: [id], onDelete: Restrict)
+  requester         User @relation("RefundRequester", fields: [requestedBy], references: [id], onDelete: Restrict)
+  approver          User? @relation("RefundApprover", fields: [approverId], references: [id], onDelete: Restrict)
+  executor          User? @relation("RefundExecutor", fields: [executedBy], references: [id], onDelete: Restrict)
+  @@unique([provider, providerReference])
+  @@index([contributionId, state])
+  @@index([poolId, state])
+  @@map("refunds")
+}
+
+/// A chargeback raised after a payment succeeded. Separate from the contribution on purpose: the
+/// original payment did happen, and a dispute does not rewrite it (08).
+model Dispute {
+  id             String @id @default(uuid()) @db.Uuid
+  contributionId String @map("contribution_id") @db.Uuid
+  poolId         String @map("pool_id") @db.Uuid
+  amountMinor    BigInt @map("amount_minor")
+  currency       String @db.Char(3)
+  state          DisputeState @default(opened)
+  reason         String @db.VarChar(1000)
+  /// How the shortfall is to be covered when the money has already been disbursed. 08 forbids
+  /// forcing the balance to zero, so the gap is carried explicitly until it is settled.
+  coveragePlan   String @default("") @map("coverage_plan") @db.VarChar(2000)
+  openedBy       String @map("opened_by") @db.Uuid
+  resolvedBy     String? @map("resolved_by") @db.Uuid
+  resolvedAt     DateTime? @map("resolved_at") @db.Timestamptz(3)
+  version        Int @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  contribution   Contribution @relation(fields: [contributionId], references: [id], onDelete: Restrict)
+  pool           FundingPool @relation(fields: [poolId], references: [id], onDelete: Restrict)
+  opener         User @relation("DisputeOpener", fields: [openedBy], references: [id], onDelete: Restrict)
+  resolver       User? @relation("DisputeResolver", fields: [resolvedBy], references: [id], onDelete: Restrict)
+  @@index([poolId, state])
+  @@map("disputes")
+}
+
+/// An imported provider statement. The file hash is unique per source and environment, so the
+/// same statement cannot be imported twice and quietly double-counted.
+model ReconciliationBatch {
+  id            String @id @default(uuid()) @db.Uuid
+  source        String @db.VarChar(40)
+  environment   String @db.VarChar(20)
+  fileHash      String @map("file_hash") @db.Char(64)
+  statementDate DateTime @map("statement_date") @db.Timestamptz(3)
+  rowCount      Int @map("row_count")
+  state         ReconciliationBatchState @default(imported)
+  importedBy    String @map("imported_by") @db.Uuid
+  lastRunAt     DateTime? @map("last_run_at") @db.Timestamptz(3)
+  version       Int @default(1)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  importer      User @relation(fields: [importedBy], references: [id], onDelete: Restrict)
+  items         ReconciliationItem[]
+  @@unique([source, environment, fileHash])
+  @@index([state, createdAt])
+  @@map("reconciliation_batches")
+}
+
+/// One statement line and what matching it against our record concluded. A difference is a work
+/// item with an owner and a reason; it is never closed by editing a balance (08).
+model ReconciliationItem {
+  id                    String @id @default(uuid()) @db.Uuid
+  batchId               String @map("batch_id") @db.Uuid
+  providerTransactionId String @map("provider_transaction_id") @db.VarChar(120)
+  amountMinor           BigInt @map("amount_minor")
+  currency              String @db.Char(3)
+  feeMinor              BigInt @default(0) @map("fee_minor")
+  outcome               String @db.VarChar(20)
+  matchState            ReconciliationMatch @map("match_state")
+  /// What we hold for the same reference, when we hold anything, so the gap is visible.
+  ourAmountMinor        BigInt? @map("our_amount_minor")
+  ourFeeMinor           BigInt? @map("our_fee_minor")
+  ourState              String? @map("our_state") @db.VarChar(30)
+  note                  String @default("") @db.VarChar(500)
+  resolvedBy            String? @map("resolved_by") @db.Uuid
+  resolvedAt            DateTime? @map("resolved_at") @db.Timestamptz(3)
+  resolutionReason      String @default("") @map("resolution_reason") @db.VarChar(1000)
+  version               Int @default(1)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batch                 ReconciliationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  resolver              User? @relation(fields: [resolvedBy], references: [id], onDelete: Restrict)
+  @@unique([batchId, providerTransactionId])
+  @@index([batchId, matchState])
+  @@map("reconciliation_items")
+}
+
+/// The simulated provider's own record of what it believes happened, deliberately separate from
+/// ours. An inquiry is only meaningful when it asks a different system; in this build there is no
+/// second system, so the simulator keeps its answers here and nothing else reads them.
+///
+/// This table exists only because there is no payment provider. It is demo/test infrastructure.
+model SimulatedProviderOperation {
+  id                String @id @default(uuid()) @db.Uuid
+  kind              String @db.VarChar(20)
+  providerReference String @map("provider_reference") @db.VarChar(120)
+  result            String @db.VarChar(20)
+  proofReference    String? @map("proof_reference") @db.VarChar(200)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  @@unique([kind, providerReference])
+  @@map("simulated_provider_operations")
+}
+
+// ---------------------------------------------------------------------------------------------
+// PART-08 — ventures, offerings, disclosures, eligibility and the data room (06-INVESTMENT)
+// ---------------------------------------------------------------------------------------------
+
+/// 06: draft → submitted → due_diligence → changes_requested | rejected | approved → open →
+/// closing → allocated → reporting → exited/closed, with suspended reachable from open/closing.
+/// Everything from `closing` onwards belongs to PART-09; this part stops at `open`.
+enum OfferingState {
+  draft
+  submitted
+  due_diligence
+  changes_requested
+  rejected
+  approved
+  open
+  suspended
+  closing
+  failed
+  allocated
+  reporting
+  closed
+}
+
+/// The only instrument in this build. 06 forbids collapsing shares, loans and grants into one
+/// "investment" field, so the enum exists from the start even with a single member.
+enum InvestmentInstrument {
+  common_shares
+}
+
+/// 06: reject is the default. `pro_rata` is a per-offering decision that also needs a remainder
+/// rule and a tie-break, so it cannot be switched on without those being specified.
+enum OversubscriptionPolicy {
+  reject
+  pro_rata
+}
+
+enum EligibilityState {
+  not_started
+  draft
+  submitted
+  in_review
+  changes_requested
+  approved
+  rejected
+  expired
+}
+
+/// 06's data room categories. A document without one cannot be filed.
+enum DataRoomCategory {
+  company_profile
+  historical_performance
+  use_of_funds
+  current_ownership
+  contracts
+  risks
+  due_diligence_report
+}
+
+/// Who may see a document. `public` is part of the offering page; `nda` needs a signed acceptance;
+/// `granted` additionally needs a per-offering grant that has not expired.
+enum DataRoomClassification {
+  public
+  nda
+  granted
+}
+
+enum DataRoomRequestState {
+  requested
+  approved
+  rejected
+  withdrawn
+}
+
+/// The commercial entity behind an offering. Separate from the organisation because an
+/// organisation is a legal counterparty, while a venture is the thing with share capital.
+model Venture {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @map("organization_id") @db.Uuid
+  legalName      String @map("legal_name") @db.VarChar(200)
+  summary        String @db.VarChar(2000)
+  /// Shares in issue before any offering. Integer: 06 forbids fractional shares in this release.
+  currentShares  BigInt @map("current_shares")
+  currency       String @db.Char(3)
+  incorporatedAt DateTime? @map("incorporated_at") @db.Timestamptz(3)
+  version        Int @default(1)
+  createdBy      String @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  creator        User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  offerings      Offering[]
+  holdings        Holding[]
+  companyReports  CompanyReport[]
+  distributions   Distribution[]
+  corporateEvents CorporateEvent[]
+  @@map("ventures")
+}
+
+/// One offering of new shares. 06: the offering owns the instrument, the issuer, the currency, the
+/// amount, the limits, the deadline, the eligibility rule and the disclosure version.
+model Offering {
+  id                     String @id @default(uuid()) @db.Uuid
+  ventureId              String @map("venture_id") @db.Uuid
+  organizationId         String @map("organization_id") @db.Uuid
+  slug                   String @unique @db.VarChar(120)
+  title                  String @db.VarChar(200)
+  instrument             InvestmentInstrument @default(common_shares)
+  currency               String @db.Char(3)
+  /// New shares on offer, and the price of one. Both integers; money is minor units.
+  sharesOffered          BigInt @map("shares_offered")
+  pricePerShareMinor     BigInt @map("price_per_share_minor")
+  /// The raise that must be reached for the offering to succeed, and the per-investor limits.
+  minimumRaiseMinor      BigInt @map("minimum_raise_minor")
+  minimumTicketMinor     BigInt @map("minimum_ticket_minor")
+  maximumTicketMinor     BigInt? @map("maximum_ticket_minor")
+  useOfFunds             String @default("") @map("use_of_funds") @db.VarChar(4000)
+  oversubscriptionPolicy OversubscriptionPolicy @default(reject) @map("oversubscription_policy")
+  /// Eligibility is a separate decision from holding the Investor capability (06, PART-08).
+  requiresEligibility    Boolean @default(true) @map("requires_eligibility")
+  requiresNda            Boolean @default(false) @map("requires_nda")
+  state                  OfferingState @default(draft)
+  stateReason            String @default("") @map("state_reason") @db.VarChar(1000)
+  opensAt                DateTime? @map("opens_at") @db.Timestamptz(3)
+  closesAt               DateTime? @map("closes_at") @db.Timestamptz(3)
+  managerId              String? @map("manager_id") @db.Uuid
+  /// The disclosure the offering is currently published against.
+  currentDisclosureId    String? @unique @map("current_disclosure_id") @db.Uuid
+  simulated              Boolean @default(true)
+  version                Int @default(1)
+  createdBy              String @map("created_by") @db.Uuid
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  venture                Venture @relation(fields: [ventureId], references: [id], onDelete: Restrict)
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  manager                User? @relation("OfferingManager", fields: [managerId], references: [id], onDelete: Restrict)
+  creator                User @relation("OfferingCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  currentDisclosure      OfferingDisclosure? @relation("CurrentDisclosure", fields: [currentDisclosureId], references: [id], onDelete: Restrict)
+  disclosures            OfferingDisclosure[] @relation("OfferingDisclosures")
+  reviewDecisions        OfferingReviewDecision[]
+  documents              DataRoomDocument[]
+  grants                 DataRoomGrant[]
+  accessRequests         DataRoomAccessRequest[]
+  ndaAcceptances         NdaAcceptance[]
+  questions              InvestorQuestion[]
+  interests              OfferingInterest[]
+  escrowPool          FundingPool?
+  commitments         Commitment[]
+  allocations         Allocation[]
+  allocationRequests  AllocationRequest[]
+  @@index([state, opensAt])
+  @@index([organizationId, state])
+  @@map("offerings")
+}
+
+/// An immutable, numbered disclosure. 06: a material change creates a new version and halts the
+/// offering until existing commitments have been dealt with under the agreed policy.
+model OfferingDisclosure {
+  id          String @id @default(uuid()) @db.Uuid
+  offeringId  String @map("offering_id") @db.Uuid
+  sequence    Int
+  summary     String @db.VarChar(4000)
+  risks       String @db.VarChar(6000)
+  useOfFunds  String @map("use_of_funds") @db.VarChar(4000)
+  /// SHA-256 of the disclosure text, so an investor's acceptance can name exactly what they read.
+  checksum    String @db.Char(64)
+  /// A material revision is what forces a re-acknowledgement; an editorial one does not.
+  material    Boolean @default(true)
+  reason      String @default("") @db.VarChar(1000)
+  publishedAt DateTime @default(now()) @map("published_at") @db.Timestamptz(3)
+  createdBy   String @map("created_by") @db.Uuid
+  offering    Offering @relation("OfferingDisclosures", fields: [offeringId], references: [id], onDelete: Restrict)
+  currentFor  Offering? @relation("CurrentDisclosure")
+  creator     User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  acceptances NdaAcceptance[]
+  commitments   Commitment[]
+  subscriptions Subscription[]
+  @@unique([offeringId, sequence])
+  @@map("offering_disclosures")
+}
+
+/// ADM-04.A01. Append-only, and bound to the disclosure version that was reviewed.
+model OfferingReviewDecision {
+  id           String @id @default(uuid()) @db.Uuid
+  offeringId   String @map("offering_id") @db.Uuid
+  disclosureId String @map("disclosure_id") @db.Uuid
+  reviewerId   String @map("reviewer_id") @db.Uuid
+  outcome      ReviewOutcome
+  publicReason String @default("") @map("public_reason") @db.VarChar(1000)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  offering     Offering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  reviewer     User @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@index([offeringId, createdAt])
+  @@map("offering_review_decisions")
+}
+
+/// PER-07. Investor eligibility, which is emphatically **not** the Investor capability: choosing a
+/// capability says what someone wants to do, eligibility is a reviewed decision about whether they
+/// may. 06 and PART-08 both require the two to stay separate.
+model InvestorEligibility {
+  id          String @id @default(uuid()) @db.Uuid
+  userId      String @unique @map("user_id") @db.Uuid
+  state       EligibilityState @default(not_started)
+  /// Draft answers, not yet submitted. Private to the person (12-SECURITY).
+  draft       Json?
+  decidedAt   DateTime? @map("decided_at") @db.Timestamptz(3)
+  /// 06: an eligibility result carries an expiry, and expiring before payment blocks continuing.
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(3)
+  reason      String @default("") @db.VarChar(1000)
+  version     Int @default(1)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user        User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  submissions InvestorEligibilitySubmission[]
+  decisions   EligibilityDecision[]
+  @@map("investor_eligibility")
+}
+
+/// An immutable snapshot of what was submitted, so a decision can always be read against the
+/// answers it was actually made on.
+model InvestorEligibilitySubmission {
+  id            String @id @default(uuid()) @db.Uuid
+  eligibilityId String @map("eligibility_id") @db.Uuid
+  sequence      Int
+  answers       Json
+  checksum      String @db.Char(64)
+  submittedAt   DateTime @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  eligibility   InvestorEligibility @relation(fields: [eligibilityId], references: [id], onDelete: Restrict)
+  decisions     EligibilityDecision[]
+  @@unique([eligibilityId, sequence])
+  @@map("investor_eligibility_submissions")
+}
+
+/// ADM-04.A02. Append-only, with a reason and an expiry.
+model EligibilityDecision {
+  id            String @id @default(uuid()) @db.Uuid
+  eligibilityId String @map("eligibility_id") @db.Uuid
+  submissionId  String @map("submission_id") @db.Uuid
+  reviewerId    String @map("reviewer_id") @db.Uuid
+  outcome       ReviewOutcome
+  reason        String @default("") @db.VarChar(1000)
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(3)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  eligibility   InvestorEligibility @relation(fields: [eligibilityId], references: [id], onDelete: Restrict)
+  submission    InvestorEligibilitySubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  reviewer      User @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@index([eligibilityId, createdAt])
+  @@map("eligibility_decisions")
+}
+
+/// A data room document. Every one carries a category, an access classification, a version and a
+/// checksum, so what an investor saw can be identified later (06).
+model DataRoomDocument {
+  id             String @id @default(uuid()) @db.Uuid
+  offeringId     String @map("offering_id") @db.Uuid
+  category       DataRoomCategory
+  classification DataRoomClassification @default(granted)
+  title          String @db.VarChar(200)
+  sequence       Int
+  checksum       String @db.Char(64)
+  byteSize       Int @map("byte_size")
+  contentType    String @map("content_type") @db.VarChar(100)
+  /// Where the bytes live. Absent until the document store exists, so downloads are unavailable
+  /// rather than pretending to serve a file.
+  storageKey     String? @map("storage_key") @db.VarChar(400)
+  scanState      VerificationDocumentState @default(pending_scan) @map("scan_state")
+  uploadTokenHash String? @map("upload_token_hash") @db.Char(64)
+  uploadExpiresAt DateTime? @map("upload_expires_at") @db.Timestamptz(3)
+  actualSize      Int? @map("actual_size")
+  scanReason      String @default("") @map("scan_reason") @db.VarChar(100)
+  finalizedAt     DateTime? @map("finalized_at") @db.Timestamptz(3)
+  supersededById String? @unique @map("superseded_by_id") @db.Uuid
+  uploadedBy     String @map("uploaded_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  offering       Offering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  uploader       User @relation(fields: [uploadedBy], references: [id], onDelete: Restrict)
+  supersededBy   DataRoomDocument? @relation("DocumentSupersession", fields: [supersededById], references: [id], onDelete: Restrict)
+  supersedes     DataRoomDocument? @relation("DocumentSupersession")
+  downloads      DataRoomDownload[]
+  @@unique([offeringId, title, sequence])
+  @@index([offeringId, classification])
+  @@map("data_room_documents")
+}
+
+/// PUB-08.A02. A request to enter one offering's data room.
+model DataRoomAccessRequest {
+  id         String @id @default(uuid()) @db.Uuid
+  offeringId String @map("offering_id") @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  state      DataRoomRequestState @default(requested)
+  reason     String @default("") @db.VarChar(1000)
+  decidedBy  String? @map("decided_by") @db.Uuid
+  decidedAt  DateTime? @map("decided_at") @db.Timestamptz(3)
+  version    Int @default(1)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  offering   Offering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  user       User @relation("DataRoomRequester", fields: [userId], references: [id], onDelete: Restrict)
+  decider    User? @relation("DataRoomDecider", fields: [decidedBy], references: [id], onDelete: Restrict)
+  @@unique([offeringId, userId])
+  @@map("data_room_access_requests")
+}
+
+/// BUS-03.A02. A time-boxed grant into one offering's data room, and only that one.
+model DataRoomGrant {
+  id           String @id @default(uuid()) @db.Uuid
+  offeringId   String @map("offering_id") @db.Uuid
+  userId       String @map("user_id") @db.Uuid
+  grantedBy    String @map("granted_by") @db.Uuid
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz(3)
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedBy    String? @map("revoked_by") @db.Uuid
+  revokeReason String @default("") @map("revoke_reason") @db.VarChar(1000)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  offering     Offering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  user         User @relation("DataRoomGrantee", fields: [userId], references: [id], onDelete: Restrict)
+  granter      User @relation("DataRoomGranter", fields: [grantedBy], references: [id], onDelete: Restrict)
+  revoker      User? @relation("DataRoomRevoker", fields: [revokedBy], references: [id], onDelete: Restrict)
+  @@index([offeringId, userId, revokedAt])
+  @@map("data_room_grants")
+}
+
+/// What an investor accepted, and when. 06: the version the investor agreed to is kept even after
+/// the offering's documents are replaced, so consent always points at the text that was consented to.
+model NdaAcceptance {
+  id           String @id @default(uuid()) @db.Uuid
+  offeringId   String @map("offering_id") @db.Uuid
+  userId       String @map("user_id") @db.Uuid
+  disclosureId String @map("disclosure_id") @db.Uuid
+  /// Copied from the disclosure at acceptance time, so a later edit cannot silently change what
+  /// this record claims was agreed.
+  checksum     String @db.Char(64)
+  acceptedAt   DateTime @default(now()) @map("accepted_at") @db.Timestamptz(3)
+  offering     Offering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  user         User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  disclosure   OfferingDisclosure @relation(fields: [disclosureId], references: [id], onDelete: Restrict)
+  @@unique([offeringId, userId, disclosureId])
+  @@map("nda_acceptances")
+}
+
+/// Every download, because 06 requires access to the data room to be logged.
+model DataRoomDownload {
+  id         String @id @default(uuid()) @db.Uuid
+  documentId String @map("document_id") @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  document   DataRoomDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  user       User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@index([documentId, createdAt])
+  @@map("data_room_downloads")
+}
+
+/// PUB-08.A05 and BUS-03.A04. A question is private between one investor and the issuer: 06
+/// forbids a reply revealing other investors.
+model InvestorQuestion {
+  id         String @id @default(uuid()) @db.Uuid
+  offeringId String @map("offering_id") @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  body       String @db.VarChar(2000)
+  answeredAt DateTime? @map("answered_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  offering   Offering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  user       User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  replies    InvestorQuestionReply[]
+  @@index([offeringId, createdAt])
+  @@map("investor_questions")
+}
+
+model InvestorQuestionReply {
+  id         String @id @default(uuid()) @db.Uuid
+  questionId String @map("question_id") @db.Uuid
+  authorId   String @map("author_id") @db.Uuid
+  body       String @db.VarChar(4000)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  question   InvestorQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  author     User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  @@index([questionId, createdAt])
+  @@map("investor_question_replies")
+}
+
+/// PUB-08.A01. 06 is explicit: an interest reserves no capacity and is not funding. It is kept
+/// apart from a commitment precisely so the investor interface can show the difference.
+model OfferingInterest {
+  id         String @id @default(uuid()) @db.Uuid
+  offeringId String @map("offering_id") @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  /// What they might put in, for the issuer's planning. Never a reservation and never a promise.
+  indicativeAmountMinor BigInt? @map("indicative_amount_minor")
+  withdrawnAt DateTime? @map("withdrawn_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  offering   Offering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  user       User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@unique([offeringId, userId])
+  @@map("offering_interests")
+}
+
+// ---------------------------------------------------------------------------------------------
+// PART-09 — commitments, subscriptions, allocations and holdings (06-INVESTMENT-LIFECYCLE)
+// ---------------------------------------------------------------------------------------------
+
+/// 06 keeps these four apart on purpose, and the investor interface shows them apart:
+/// an interest is nothing, a commitment reserves capacity, a subscription is a contract, and an
+/// allocation is what actually creates a holding. There is no path from commitment to holding.
+enum CommitmentState {
+  reserved
+  confirmed
+  paying
+  paid
+  allocated
+  cancelled
+  expired
+  refunding
+  refunded
+}
+
+/// A signature in this build is simulated and says so. 06 makes the binding step adapter-specific,
+/// so the record keeps what was signed and how, rather than claiming a legal signature.
+enum SignatureMethod {
+  simulated_click
+}
+
+enum AllocationRequestState {
+  draft
+  submitted
+  approved
+  rejected
+}
+
+enum DistributionState {
+  requested
+  approved
+  rejected
+  paying
+  paid
+  failed
+}
+
+/// 06: a corporate event is executed from an approved document, never by editing shares by hand.
+enum CorporateEventKind {
+  report
+  distribution
+  buyback
+  exit
+  loss
+  liquidation
+}
+
+/// An investor's reservation of capacity in an offering.
+///
+/// It expires. 06 is explicit that a commitment holds capacity only until `expires_at`, so a
+/// reservation that has lapsed stops counting against the offering without anyone touching it.
+model Commitment {
+  id                 String @id @default(uuid()) @db.Uuid
+  offeringId         String @map("offering_id") @db.Uuid
+  userId             String @map("user_id") @db.Uuid
+  /// What the investor asked to invest, before it was rounded down to whole shares.
+  requestedMinor     BigInt @map("requested_minor")
+  /// What whole shares actually cost. Money is minor units; units are whole shares.
+  amountMinor        BigInt @map("amount_minor")
+  units              BigInt
+  currency           String @db.Char(3)
+  state              CommitmentState @default(reserved)
+  /// The disclosure version in force when the commitment was made. A newer one blocks continuing.
+  disclosureId       String @map("disclosure_id") @db.Uuid
+  /// Whether the investor was eligible at this moment. Re-checked before every later step anyway.
+  eligibleAtCommitment Boolean @default(false) @map("eligible_at_commitment")
+  expiresAt          DateTime @map("expires_at") @db.Timestamptz(3)
+  cancelledReason    String @default("") @map("cancelled_reason") @db.VarChar(1000)
+  simulated          Boolean @default(true)
+  version            Int @default(1)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  offering           Offering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  user               User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  disclosure         OfferingDisclosure @relation(fields: [disclosureId], references: [id], onDelete: Restrict)
+  subscription       Subscription?
+  allocation         Allocation?
+  @@index([offeringId, state, expiresAt])
+  @@index([userId, createdAt])
+  @@map("commitments")
+}
+
+/// The confirmed contract. Immutable once written: it records exactly which disclosure the
+/// investor agreed to and what they acknowledged, so a later revision cannot rewrite the terms
+/// somebody signed up to.
+model Subscription {
+  id               String @id @default(uuid()) @db.Uuid
+  commitmentId     String @unique @map("commitment_id") @db.Uuid
+  disclosureId     String @map("disclosure_id") @db.Uuid
+  /// Copied from the disclosure at confirmation, so the agreement names its own text.
+  disclosureChecksum String @map("disclosure_checksum") @db.Char(64)
+  /// SHA-256 over the material terms of the contract the investor confirmed.
+  contractChecksum String @map("contract_checksum") @db.Char(64)
+  signatureMethod  SignatureMethod @default(simulated_click) @map("signature_method")
+  /// 06 requires the total-loss acknowledgement to be explicit at the binding step too.
+  acknowledgedRisk Boolean @map("acknowledged_risk")
+  confirmedAt      DateTime @default(now()) @map("confirmed_at") @db.Timestamptz(3)
+  commitment       Commitment @relation(fields: [commitmentId], references: [id], onDelete: Restrict)
+  disclosure       OfferingDisclosure @relation(fields: [disclosureId], references: [id], onDelete: Restrict)
+  intent           PaymentIntent?
+  @@map("subscriptions")
+}
+
+/// The proof that units were actually issued, and the only thing that may create a holding.
+///
+/// 06: an allocation is finalised by an authorised party against a settled payment. In this build
+/// the adapter is simulated and every allocation is marked as such — the platform does not claim
+/// that a database row created legal ownership.
+model Allocation {
+  id             String @id @default(uuid()) @db.Uuid
+  offeringId     String @map("offering_id") @db.Uuid
+  commitmentId   String @unique @map("commitment_id") @db.Uuid
+  userId         String @map("user_id") @db.Uuid
+  units          BigInt
+  /// What the units cost. The investor's cost basis, which is not a current valuation.
+  costMinor      BigInt @map("cost_minor")
+  currency       String @db.Char(3)
+  /// Evidence from outside the platform that the issue happened. Simulated here, and labelled.
+  proofReference String @map("proof_reference") @db.VarChar(200)
+  simulated      Boolean @default(true)
+  finalisedBy    String @map("finalised_by") @db.Uuid
+  finalisedAt    DateTime @default(now()) @map("finalised_at") @db.Timestamptz(3)
+  offering       Offering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  commitment     Commitment @relation(fields: [commitmentId], references: [id], onDelete: Restrict)
+  user           User @relation("AllocationHolder", fields: [userId], references: [id], onDelete: Restrict)
+  finaliser      User @relation("AllocationFinaliser", fields: [finalisedBy], references: [id], onDelete: Restrict)
+  holding        Holding?
+  @@index([offeringId, finalisedAt])
+  @@map("allocations")
+}
+
+/// What someone holds, produced only by a proven allocation.
+///
+/// 06: in real operation a holding reflects a confirmed entry in the register. Here it is derived
+/// from a simulated allocation and carries that fact, so nothing on screen claims legal title.
+model Holding {
+  id           String @id @default(uuid()) @db.Uuid
+  allocationId String @unique @map("allocation_id") @db.Uuid
+  ventureId    String @map("venture_id") @db.Uuid
+  userId       String @map("user_id") @db.Uuid
+  units        BigInt
+  costMinor    BigInt @map("cost_minor")
+  currency     String @db.Char(3)
+  simulated    Boolean @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  allocation   Allocation @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+  venture      Venture @relation(fields: [ventureId], references: [id], onDelete: Restrict)
+  user         User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  distributionLines DistributionLine[]
+  @@index([userId, ventureId])
+  @@map("holdings")
+}
+
+/// BUS-04.A02. A proposed allocation schedule, submitted for an authorised decision rather than
+/// applied directly. The snapshot is what was calculated, so the decision names what it approved.
+model AllocationRequest {
+  id           String @id @default(uuid()) @db.Uuid
+  offeringId   String @map("offering_id") @db.Uuid
+  state        AllocationRequestState @default(submitted)
+  /// The computed schedule: one line per commitment, with units and cost.
+  snapshot     Json
+  /// SHA-256 over the snapshot, so an approval is bound to the figures that were reviewed.
+  checksum     String @db.Char(64)
+  totalUnits   BigInt @map("total_units")
+  totalMinor   BigInt @map("total_minor")
+  requestedBy  String @map("requested_by") @db.Uuid
+  decidedBy    String? @map("decided_by") @db.Uuid
+  decidedAt    DateTime? @map("decided_at") @db.Timestamptz(3)
+  reason       String @default("") @db.VarChar(1000)
+  version      Int @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  offering     Offering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  requester    User @relation("AllocationRequester", fields: [requestedBy], references: [id], onDelete: Restrict)
+  decider      User? @relation("AllocationDecider", fields: [decidedBy], references: [id], onDelete: Restrict)
+  @@index([offeringId, state])
+  @@map("allocation_requests")
+}
+
+/// BUS-05.A01. A report to the company's investors, published as a frozen version.
+model CompanyReport {
+  id          String @id @default(uuid()) @db.Uuid
+  ventureId   String @map("venture_id") @db.Uuid
+  sequence    Int
+  title       String @db.VarChar(200)
+  body        String @db.VarChar(20000)
+  periodStart DateTime @map("period_start") @db.Timestamptz(3)
+  periodEnd   DateTime @map("period_end") @db.Timestamptz(3)
+  publishedBy String @map("published_by") @db.Uuid
+  publishedAt DateTime @default(now()) @map("published_at") @db.Timestamptz(3)
+  venture     Venture @relation(fields: [ventureId], references: [id], onDelete: Restrict)
+  publisher   User @relation(fields: [publishedBy], references: [id], onDelete: Restrict)
+  @@unique([ventureId, sequence])
+  @@map("company_reports")
+}
+
+/// BUS-05.A02/A03. A distribution to holders, proposed and then approved by someone else.
+///
+/// The holdings it is computed against are captured when it is proposed, so an approval applies to
+/// the register as it stood and not as it drifted afterwards.
+model Distribution {
+  id            String @id @default(uuid()) @db.Uuid
+  ventureId     String @map("venture_id") @db.Uuid
+  totalMinor    BigInt @map("total_minor")
+  currency      String @db.Char(3)
+  reason        String @db.VarChar(1000)
+  state         DistributionState @default(requested)
+  /// Units in issue when this was proposed; the denominator every line was computed from.
+  snapshotUnits BigInt @map("snapshot_units")
+  requestedBy   String @map("requested_by") @db.Uuid
+  approverId    String? @map("approver_id") @db.Uuid
+  approvedAt    DateTime? @map("approved_at") @db.Timestamptz(3)
+  failureReason String @default("") @map("failure_reason") @db.VarChar(1000)
+  simulated     Boolean @default(true)
+  version       Int @default(1)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  venture       Venture @relation(fields: [ventureId], references: [id], onDelete: Restrict)
+  requester     User @relation("DistributionRequester", fields: [requestedBy], references: [id], onDelete: Restrict)
+  approver      User? @relation("DistributionApprover", fields: [approverId], references: [id], onDelete: Restrict)
+  lines         DistributionLine[]
+  @@index([ventureId, state])
+  @@map("distributions")
+}
+
+/// One holder's share of a distribution, computed from integers and never a rounded float.
+model DistributionLine {
+  id             String @id @default(uuid()) @db.Uuid
+  distributionId String @map("distribution_id") @db.Uuid
+  holdingId      String @map("holding_id") @db.Uuid
+  units          BigInt
+  amountMinor    BigInt @map("amount_minor")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  distribution   Distribution @relation(fields: [distributionId], references: [id], onDelete: Cascade)
+  holding        Holding @relation(fields: [holdingId], references: [id], onDelete: Restrict)
+  @@unique([distributionId, holdingId])
+  @@map("distribution_lines")
+}
+
+/// BUS-05.A04. A company event recorded from a document, for review. It changes no holding by
+/// itself: 06 forbids adjusting shares by hand, so this is a record and a trigger for a process.
+model CorporateEvent {
+  id          String @id @default(uuid()) @db.Uuid
+  ventureId   String @map("venture_id") @db.Uuid
+  kind        CorporateEventKind
+  title       String @db.VarChar(200)
+  body        String @db.VarChar(10000)
+  documentRef String @default("") @map("document_ref") @db.VarChar(200)
+  effectiveAt DateTime @map("effective_at") @db.Timestamptz(3)
+  recordedBy  String @map("recorded_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  venture     Venture @relation(fields: [ventureId], references: [id], onDelete: Restrict)
+  recorder    User @relation(fields: [recordedBy], references: [id], onDelete: Restrict)
+  @@index([ventureId, effectiveAt])
+  @@map("corporate_events")
+}
+
+// -----------------------------------------------------------------------------------------------
+// PART-10 — programmes, cohorts, applications, enrolment, attendance and assessment
+// (07-INCUBATION-EMPLOYMENT, 09-DATA-MODEL)
+//
+// The separation 07 opens with is the one these tables exist to hold: a Programme is the training
+// plan, a Cohort is a group with dates and seats, an Application is a candidacy, an Enrolment is a
+// seat accepted. A job is none of those, and **being accepted onto training is not being hired** —
+// the two never share a state machine here.
+// -----------------------------------------------------------------------------------------------
+
+enum ProgramState {
+  draft
+  review
+  approved
+  recruiting
+  selection
+  active
+  completed
+  follow_up
+  closed
+  paused
+  cancelled
+}
+
+enum ProgramDeliveryMode {
+  in_person
+  remote
+  hybrid
+}
+
+/// Whether advertised jobs are a target the operator hopes for or an obligation it has signed up to.
+/// 07 forbids letting a reader mistake one for the other, so it is an explicit field, not a note.
+enum JobCommitmentKind {
+  none
+  expected
+  committed
+}
+
+enum CohortState {
+  planned
+  recruiting
+  running
+  completed
+  cancelled
+}
+
+enum ApplicationState {
+  draft
+  submitted
+  screening
+  shortlisted
+  interview
+  accepted
+  waitlisted
+  rejected
+  withdrawn
+  discarded
+}
+
+enum EnrollmentState {
+  invited
+  confirmed
+  active
+  completed
+  dropped_out
+  terminated
+  expired
+}
+
+enum WaitlistState {
+  waiting
+  invited
+  enrolled
+  expired
+  withdrawn
+}
+
+enum TrainingSessionState {
+  scheduled
+  held
+  cancelled
+  closed
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  excused
+  late
+}
+
+enum ObjectionState {
+  open
+  upheld
+  rejected
+}
+
+enum InterviewState {
+  proposed
+  confirmed
+  reschedule_requested
+  completed
+  cancelled
+}
+
+/// The training plan. Public once `recruiting`, and everything a candidate needs to decide is a
+/// column rather than free text, because 07 lists them as mandatory disclosures.
+model Program {
+  id                  String @id @default(uuid()) @db.Uuid
+  organizationId      String @map("organization_id") @db.Uuid
+  /// The enablement project this programme belongs to, where there is one. A programme can exist
+  /// without one, but the money never moves through this table either way.
+  projectId           String? @map("project_id") @db.Uuid
+  slug                String @unique @db.VarChar(120)
+  title               String @db.VarChar(200)
+  summary             String @db.VarChar(2000)
+  /// The skills taught, which is what a candidate filters on.
+  skills              String[] @default([])
+  level               String @default("") @db.VarChar(60)
+  deliveryMode        ProgramDeliveryMode @default(in_person) @map("delivery_mode")
+  city                String @default("") @db.VarChar(100)
+  /// Total seats across every cohort. A cohort carries its own capacity as well.
+  capacity            Int
+  applyOpensAt        DateTime? @map("apply_opens_at") @db.Timestamptz(3)
+  applyClosesAt       DateTime? @map("apply_closes_at") @db.Timestamptz(3)
+  durationWeeks       Int @default(0) @map("duration_weeks")
+  hoursPerWeek        Int @default(0) @map("hours_per_week")
+  schedule            String @default("") @db.VarChar(1000)
+  /// Stated because 07 requires the attendance rule to be known before anyone applies, and because
+  /// a stipend tied to attendance cannot be fair if the rule appears afterwards.
+  attendancePolicy    String @default("") @map("attendance_policy") @db.VarChar(2000)
+  assessmentPolicy    String @default("") @map("assessment_policy") @db.VarChar(2000)
+  selectionMethod     String @default("") @map("selection_method") @db.VarChar(2000)
+  withdrawalPolicy    String @default("") @map("withdrawal_policy") @db.VarChar(2000)
+  accessibilityNote   String @default("") @map("accessibility_note") @db.VarChar(1000)
+  privacyNote         String @default("") @map("privacy_note") @db.VarChar(1000)
+  complaintsContact   String @default("") @map("complaints_contact") @db.VarChar(200)
+  /// A stipend is declared here and paid in PART-12; this build never moves the money.
+  stipendOffered      Boolean @default(false) @map("stipend_offered")
+  stipendAmountMinor  BigInt? @map("stipend_amount_minor")
+  stipendCurrency     String? @map("stipend_currency") @db.Char(3)
+  stipendConditions   String @default("") @map("stipend_conditions") @db.VarChar(1000)
+  /// 07: "10 jobs" must say whether it is a target or an obligation, on what criteria and when.
+  jobCommitmentKind   JobCommitmentKind @default(none) @map("job_commitment_kind")
+  jobCount            Int @default(0) @map("job_count")
+  jobCommitmentTerms  String @default("") @map("job_commitment_terms") @db.VarChar(2000)
+  /// 07 forbids an undocumented application fee. The column exists so the absence is a stated fact.
+  applicationFeeMinor BigInt @default(0) @map("application_fee_minor")
+  minimumAge          Int? @map("minimum_age")
+  maximumAge          Int? @map("maximum_age")
+  educationRequirement String @default("") @map("education_requirement") @db.VarChar(500)
+  state               ProgramState @default(draft)
+  stateReason         String @default("") @map("state_reason") @db.VarChar(200)
+  publishedAt         DateTime? @map("published_at") @db.Timestamptz(3)
+  currentReviewerId   String? @map("current_reviewer_id") @db.Uuid
+  createdBy           String @map("created_by") @db.Uuid
+  managerId           String @map("manager_id") @db.Uuid
+  version             Int @default(1)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  project             Project? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  creator             User @relation("ProgramCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  manager             User @relation("ProgramManagerUser", fields: [managerId], references: [id], onDelete: Restrict)
+  reviewer            User? @relation("ProgramReviewer", fields: [currentReviewerId], references: [id], onDelete: SetNull)
+  cohorts             Cohort[]
+  applications        Application[]
+  reviewDecisions     ProgramReviewDecision[]
+  bookmarks           Bookmark[]
+  jobs                Job[]
+  agreements          Agreement[]
+  @@index([organizationId, state])
+  @@index([state, applyClosesAt])
+  @@map("programs")
+}
+
+/// Append-only. An independent content reviewer judges the programme before it can recruit, and
+/// approving is not publishing: the operator still decides when applications open.
+model ProgramReviewDecision {
+  id           String @id @default(uuid()) @db.Uuid
+  programId    String @map("program_id") @db.Uuid
+  reviewerId   String @map("reviewer_id") @db.Uuid
+  outcome      ReviewOutcome
+  publicReason String @default("") @map("public_reason") @db.VarChar(1000)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  program      Program @relation(fields: [programId], references: [id], onDelete: Restrict)
+  reviewer     User @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@index([programId, createdAt])
+  @@map("program_review_decisions")
+}
+
+/// A group with its own seats and dates. Seats are held here, not on the programme, because two
+/// cohorts of the same programme fill independently.
+model Cohort {
+  id           String @id @default(uuid()) @db.Uuid
+  programId    String @map("program_id") @db.Uuid
+  name         String @db.VarChar(140)
+  capacity     Int
+  startAt      DateTime @map("start_at") @db.Timestamptz(3)
+  endAt        DateTime @map("end_at") @db.Timestamptz(3)
+  /// How long an invited candidate has to accept before the seat goes to the next on the waitlist.
+  acceptanceWindowHours Int @default(72) @map("acceptance_window_hours")
+  timezone     String @default("Asia/Hebron") @db.VarChar(60)
+  state        CohortState @default(planned)
+  version      Int @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  program      Program @relation(fields: [programId], references: [id], onDelete: Restrict)
+  applications Application[]
+  enrollments  Enrollment[]
+  sessions     TrainingSession[]
+  trainers     CohortTrainer[]
+  waitlist     WaitlistEntry[]
+  assessments  Assessment[]
+  @@index([programId, startAt])
+  stipendBatches      StipendBatch[]
+  @@map("cohorts")
+}
+
+/// A trainer's scope, and the only thing that grants it. 08-PERMISSION-EXTENSIONS: a Trainer sees
+/// their own cohorts, not the organisation's, so this row is checked on every trainer read.
+model CohortTrainer {
+  id         String @id @default(uuid()) @db.Uuid
+  cohortId   String @map("cohort_id") @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  assignedBy String @map("assigned_by") @db.Uuid
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  cohort     Cohort @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  user       User @relation("CohortTrainerUser", fields: [userId], references: [id], onDelete: Restrict)
+  assigner   User @relation("CohortTrainerAssigner", fields: [assignedBy], references: [id], onDelete: Restrict)
+  @@unique([cohortId, userId])
+  @@index([userId, revokedAt])
+  @@map("cohort_trainers")
+}
+
+/// What a candidate chooses to show, and to whom. The employer-facing view is built from an
+/// allowlist of these fields; nothing else on the person's account crosses into it.
+model CandidateProfile {
+  userId           String @id @map("user_id") @db.Uuid
+  headline         String @default("") @db.VarChar(200)
+  summary          String @default("") @db.VarChar(2000)
+  city             String @default("") @db.VarChar(100)
+  /// Free text rather than an enum: availability is a sentence in practice ("evenings", "from May").
+  availability     String @default("") @db.VarChar(200)
+  education        String @default("") @db.VarChar(1000)
+  experience       String @default("") @db.VarChar(2000)
+  skills           String[] @default([])
+  /// A reference to an uploaded CV. The document store is PART-13, so this is a name, not a link.
+  cvReference      String @default("") @map("cv_reference") @db.VarChar(200)
+  /// Explicit, revocable, and false by default. Nothing is shared with an operator without it.
+  shareWithOperators Boolean @default(false) @map("share_with_operators")
+  shareContact     Boolean @default(false) @map("share_contact")
+  version          Int @default(1)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user             User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@map("candidate_profiles")
+}
+
+/// A candidacy for one cohort. One per person per cohort, enforced by a unique index rather than a
+/// check in code, because 07 names duplicate applications as a thing to prevent outright.
+model Application {
+  id            String @id @default(uuid()) @db.Uuid
+  programId     String @map("program_id") @db.Uuid
+  cohortId      String @map("cohort_id") @db.Uuid
+  userId        String @map("user_id") @db.Uuid
+  /// Shown to the applicant so they can quote it. Short, and not a database identifier.
+  reference     String @unique @db.VarChar(20)
+  state         ApplicationState @default(draft)
+  /// The programme's own questions and the answers given, frozen into the record on submission.
+  answers       Json @default("{}")
+  motivation    String @default("") @db.VarChar(4000)
+  /// Consent to share the candidate profile with this operator, for this application only.
+  sharingConsent Boolean @default(false) @map("sharing_consent")
+  submittedAt   DateTime? @map("submitted_at") @db.Timestamptz(3)
+  decidedAt     DateTime? @map("decided_at") @db.Timestamptz(3)
+  withdrawnReason String @default("") @map("withdrawn_reason") @db.VarChar(1000)
+  version       Int @default(1)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  program       Program @relation(fields: [programId], references: [id], onDelete: Restrict)
+  cohort        Cohort @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  user          User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  reviews       ApplicationReview[]
+  decisions     ApplicationDecision[]
+  interviews    Interview[]
+  enrollment    Enrollment?
+  waitlistEntry WaitlistEntry?
+  @@unique([cohortId, userId])
+  @@index([programId, state])
+  @@index([userId, createdAt])
+  @@map("applications")
+}
+
+/// A reviewer's scored assessment of one application. Append-only, and private to the operator:
+/// PRG-03 shows the score, never the reviewer's note, to the candidate.
+model ApplicationReview {
+  id            String @id @default(uuid()) @db.Uuid
+  applicationId String @map("application_id") @db.Uuid
+  reviewerId    String @map("reviewer_id") @db.Uuid
+  /// Criterion name to score, so a rubric can change without rewriting past reviews.
+  scores        Json @default("{}")
+  total         Int @default(0)
+  scaleMax      Int @default(5) @map("scale_max")
+  note          String @default("") @db.VarChar(2000)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  reviewer      User @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@index([applicationId, createdAt])
+  @@map("application_reviews")
+}
+
+/// Append-only. The reason is what the candidate is shown, so it is written for them.
+model ApplicationDecision {
+  id            String @id @default(uuid()) @db.Uuid
+  applicationId String @map("application_id") @db.Uuid
+  deciderId     String @map("decider_id") @db.Uuid
+  outcome       ApplicationState
+  reason        String @default("") @db.VarChar(1000)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  decider       User @relation(fields: [deciderId], references: [id], onDelete: Restrict)
+  @@index([applicationId, createdAt])
+  @@map("application_decisions")
+}
+
+/// An appointment, with the timezone it was set in. A time without a zone is a time somebody will
+/// miss, and 07 requires a reschedule to be a request rather than a silent edit.
+/// An appointment for a programme application or a job application.
+///
+/// PART-11 gave it a second kind of owner rather than a second table, because the thing that makes
+/// an appointment correct — its timezone, and a reschedule being a request rather than a silent
+/// move — is the same whichever candidacy it belongs to. A CHECK constraint holds it to exactly one.
+model Interview {
+  id            String @id @default(uuid()) @db.Uuid
+  applicationId String? @map("application_id") @db.Uuid
+  jobApplicationId String? @map("job_application_id") @db.Uuid
+  scheduledAt   DateTime @map("scheduled_at") @db.Timestamptz(3)
+  durationMinutes Int @default(30) @map("duration_minutes")
+  timezone      String @default("Asia/Hebron") @db.VarChar(60)
+  mode          ProgramDeliveryMode @default(in_person)
+  location      String @default("") @db.VarChar(300)
+  state         InterviewState @default(proposed)
+  scheduledBy   String @map("scheduled_by") @db.Uuid
+  confirmedAt   DateTime? @map("confirmed_at") @db.Timestamptz(3)
+  version       Int @default(1)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  jobApplication JobApplication? @relation(fields: [jobApplicationId], references: [id], onDelete: Restrict)
+  scheduler     User @relation(fields: [scheduledBy], references: [id], onDelete: Restrict)
+  rescheduleRequests InterviewRescheduleRequest[]
+  @@index([applicationId, scheduledAt])
+  @@index([jobApplicationId, scheduledAt])
+  @@map("interviews")
+}
+
+/// A request, not a change. The operator still has to act on it, and the original time stands
+/// until they do — otherwise two people hold two different beliefs about when to turn up.
+model InterviewRescheduleRequest {
+  id           String @id @default(uuid()) @db.Uuid
+  interviewId  String @map("interview_id") @db.Uuid
+  requestedBy  String @map("requested_by") @db.Uuid
+  reason       String @db.VarChar(1000)
+  alternatives String @default("") @db.VarChar(1000)
+  resolvedAt   DateTime? @map("resolved_at") @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  interview    Interview @relation(fields: [interviewId], references: [id], onDelete: Restrict)
+  requester    User @relation(fields: [requestedBy], references: [id], onDelete: Restrict)
+  @@index([interviewId, createdAt])
+  @@map("interview_reschedule_requests")
+}
+
+/// A seat. Created `invited` by a decision and only becomes `confirmed` when the person accepts
+/// within the window; letting the window lapse frees the seat for the next on the waitlist.
+model Enrollment {
+  id            String @id @default(uuid()) @db.Uuid
+  cohortId      String @map("cohort_id") @db.Uuid
+  userId        String @map("user_id") @db.Uuid
+  applicationId String @unique @map("application_id") @db.Uuid
+  state         EnrollmentState @default(invited)
+  invitedAt     DateTime @default(now()) @map("invited_at") @db.Timestamptz(3)
+  invitationExpiresAt DateTime @map("invitation_expires_at") @db.Timestamptz(3)
+  confirmedAt   DateTime? @map("confirmed_at") @db.Timestamptz(3)
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz(3)
+  exitReason    String @default("") @map("exit_reason") @db.VarChar(1000)
+  version       Int @default(1)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cohort        Cohort @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  user          User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  attendance    Attendance[]
+  results       AssessmentResult[]
+  withdrawalRequests EnrollmentWithdrawalRequest[]
+  @@unique([cohortId, userId])
+  @@index([cohortId, state])
+  @@index([state, invitationExpiresAt])
+  stipendLines        StipendLine[]
+  certificate         Certificate?
+  @@map("enrollments")
+}
+
+/// The candidate asks to leave; the operator records the exit. Kept apart because 07 requires a
+/// withdrawal to be assessed against the programme's policy and any entitlement, not just applied.
+model EnrollmentWithdrawalRequest {
+  id           String @id @default(uuid()) @db.Uuid
+  enrollmentId String @map("enrollment_id") @db.Uuid
+  reason       String @db.VarChar(1000)
+  state        ObjectionState @default(open)
+  decidedBy    String? @map("decided_by") @db.Uuid
+  decisionReason String @default("") @map("decision_reason") @db.VarChar(1000)
+  decidedAt    DateTime? @map("decided_at") @db.Timestamptz(3)
+  version      Int @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  decider      User? @relation(fields: [decidedBy], references: [id], onDelete: SetNull)
+  @@index([enrollmentId, createdAt])
+  @@map("enrollment_withdrawal_requests")
+}
+
+/// A documented queue. Position is explicit so "the next one" is a fact somebody can check rather
+/// than whatever the query happened to order first.
+model WaitlistEntry {
+  id            String @id @default(uuid()) @db.Uuid
+  cohortId      String @map("cohort_id") @db.Uuid
+  applicationId String @unique @map("application_id") @db.Uuid
+  position      Int
+  state         WaitlistState @default(waiting)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cohort        Cohort @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  @@unique([cohortId, position])
+  @@index([cohortId, state, position])
+  @@map("waitlist_entries")
+}
+
+/// One meeting of a cohort. `closed` is what makes a later attendance change a revision.
+model TrainingSession {
+  id          String @id @default(uuid()) @db.Uuid
+  cohortId    String @map("cohort_id") @db.Uuid
+  title       String @db.VarChar(200)
+  startsAt    DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt      DateTime @map("ends_at") @db.Timestamptz(3)
+  timezone    String @default("Asia/Hebron") @db.VarChar(60)
+  mode        ProgramDeliveryMode @default(in_person)
+  location    String @default("") @db.VarChar(300)
+  state       TrainingSessionState @default(scheduled)
+  closedAt    DateTime? @map("closed_at") @db.Timestamptz(3)
+  createdBy   String @map("created_by") @db.Uuid
+  version     Int @default(1)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cohort      Cohort @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  creator     User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  attendance  Attendance[]
+  @@index([cohortId, startsAt])
+  @@map("training_sessions")
+}
+
+/// One effective record per trainee per session, which the unique index guarantees. A change after
+/// the session is closed is a revision with a reason, never an overwrite.
+model Attendance {
+  id           String @id @default(uuid()) @db.Uuid
+  sessionId    String @map("session_id") @db.Uuid
+  enrollmentId String @map("enrollment_id") @db.Uuid
+  status       AttendanceStatus
+  excuseNote   String @default("") @map("excuse_note") @db.VarChar(1000)
+  recordedBy   String @map("recorded_by") @db.Uuid
+  version      Int @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  session      TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  recorder     User @relation(fields: [recordedBy], references: [id], onDelete: Restrict)
+  revisions    AttendanceRevision[]
+  objections   AttendanceObjection[]
+  @@unique([sessionId, enrollmentId])
+  @@index([enrollmentId, createdAt])
+  @@map("attendance")
+}
+
+/// Append-only. What it was, what it became, who changed it and why — because an attendance record
+/// can decide whether somebody is paid, and a silent correction is indistinguishable from a lie.
+model AttendanceRevision {
+  id           String @id @default(uuid()) @db.Uuid
+  attendanceId String @map("attendance_id") @db.Uuid
+  fromStatus   AttendanceStatus @map("from_status")
+  toStatus     AttendanceStatus @map("to_status")
+  reason       String @db.VarChar(1000)
+  revisedBy    String @map("revised_by") @db.Uuid
+  /// True where the session was already closed, which 07 treats as needing a reason and a record.
+  afterClose   Boolean @default(false) @map("after_close")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Restrict)
+  reviser      User @relation(fields: [revisedBy], references: [id], onDelete: Restrict)
+  @@index([attendanceId, createdAt])
+  @@map("attendance_revisions")
+}
+
+/// The trainee disputes a record. It is reviewed; it never edits the record directly, and the
+/// person who made the record being disputed does not get to be the one who rules on it.
+model AttendanceObjection {
+  id           String @id @default(uuid()) @db.Uuid
+  attendanceId String @map("attendance_id") @db.Uuid
+  userId       String @map("user_id") @db.Uuid
+  reason       String @db.VarChar(1000)
+  state        ObjectionState @default(open)
+  decidedBy    String? @map("decided_by") @db.Uuid
+  decisionReason String @default("") @map("decision_reason") @db.VarChar(1000)
+  decidedAt    DateTime? @map("decided_at") @db.Timestamptz(3)
+  version      Int @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Restrict)
+  user         User @relation("AttendanceObjector", fields: [userId], references: [id], onDelete: Restrict)
+  decider      User? @relation("AttendanceObjectionDecider", fields: [decidedBy], references: [id], onDelete: SetNull)
+  @@index([attendanceId, createdAt])
+  @@index([state, createdAt])
+  @@map("attendance_objections")
+}
+
+/// A rubric. Immutable in practice once results exist against it, so a score can always be read
+/// against the criteria it was actually given under.
+model Assessment {
+  id         String @id @default(uuid()) @db.Uuid
+  cohortId   String @map("cohort_id") @db.Uuid
+  title      String @db.VarChar(200)
+  /// Criterion name to weight. Stored so a result can be read against the rubric it was scored on.
+  rubric     Json @default("{}")
+  /// The highest score one criterion can be given.
+  scaleMax   Int @default(5) @map("scale_max")
+  /// A total across every criterion, not a score on one of them. Its real ceiling is the scale times
+  /// the number of criteria, which only the service can count, so SQL checks only that it is not
+  /// negative.
+  passMark   Int @default(0) @map("pass_mark")
+  createdBy  String @map("created_by") @db.Uuid
+  version    Int @default(1)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cohort     Cohort @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  creator    User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  results    AssessmentResult[]
+  @@index([cohortId, createdAt])
+  @@map("assessments")
+}
+
+model AssessmentResult {
+  id           String @id @default(uuid()) @db.Uuid
+  assessmentId String @map("assessment_id") @db.Uuid
+  enrollmentId String @map("enrollment_id") @db.Uuid
+  scores       Json @default("{}")
+  total        Int @default(0)
+  note         String @default("") @db.VarChar(2000)
+  recordedBy   String @map("recorded_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  recorder     User @relation(fields: [recordedBy], references: [id], onDelete: Restrict)
+  @@unique([assessmentId, enrollmentId])
+  @@map("assessment_results")
+}
+
+// -----------------------------------------------------------------------------------------------
+// PART-11 — jobs, referrals, offers, placements and follow-up
+// (07-INCUBATION-EMPLOYMENT, 14-ANALYTICS-IMPACT)
+//
+// 07 is explicit that a job application has its own state machine and that being accepted onto
+// training is not being hired. That is why `JobApplication` is a separate table from `Application`
+// rather than a flag on it: the two can never be read as one queue by accident.
+//
+// And the rule 14 turns on: **a started placement is not an accepted offer**. Accepting is a
+// decision; starting is a fact somebody confirms. The tables keep them apart, and the impact
+// figures count only what was confirmed.
+// -----------------------------------------------------------------------------------------------
+
+enum JobState {
+  draft
+  review
+  open
+  paused
+  closed
+  filled
+  cancelled
+}
+
+enum ContractType {
+  full_time
+  part_time
+  fixed_term
+  apprenticeship
+  temporary
+}
+
+enum JobApplicationState {
+  draft
+  submitted
+  screening
+  shortlisted
+  interview
+  offered
+  hired
+  rejected
+  withdrawn
+}
+
+enum JobOfferState {
+  draft
+  sent
+  accepted
+  declined
+  withdrawn
+  expired
+}
+
+/// 07's placement machine, and the two states it exists to keep apart: `accepted` is the candidate
+/// saying yes, `started` is somebody confirming they actually turned up.
+enum PlacementState {
+  offered
+  accepted
+  start_pending
+  started
+  retained
+  ended
+  disputed
+}
+
+enum FollowupResult {
+  working
+  ended
+  unknown
+  disputed
+}
+
+/// Who says a placement started. Both sides, or an authorised reviewer looking at evidence.
+enum ConfirmationParty {
+  employer
+  candidate
+  reviewer
+}
+
+/// A real job. `programId` links it to the training it came out of, where there is one, but a job
+/// is never created by a programme: 07 keeps them separate all the way down.
+model Job {
+  id               String @id @default(uuid()) @db.Uuid
+  organizationId   String @map("organization_id") @db.Uuid
+  programId        String? @map("program_id") @db.Uuid
+  slug             String @unique @db.VarChar(120)
+  title            String @db.VarChar(200)
+  summary          String @db.VarChar(2000)
+  responsibilities String @default("") @db.VarChar(4000)
+  requirements     String @default("") @db.VarChar(4000)
+  skills           String[] @default([])
+  contractType     ContractType @default(full_time) @map("contract_type")
+  /// Months, for a fixed term. 07 requires the contract type to be stated, and a fixed term that
+  /// does not say how long is not a stated contract type.
+  contractMonths   Int? @map("contract_months")
+  deliveryMode     ProgramDeliveryMode @default(in_person) @map("delivery_mode")
+  city             String @default("") @db.VarChar(100)
+  hoursPerWeek     Int @default(0) @map("hours_per_week")
+  /// Pay is disclosed or explicitly not. A listing that simply omits it leaves the reader guessing,
+  /// so the absence is a stated fact with its own reason.
+  salaryDisclosed  Boolean @default(false) @map("salary_disclosed")
+  salaryMinMinor   BigInt? @map("salary_min_minor")
+  salaryMaxMinor   BigInt? @map("salary_max_minor")
+  salaryCurrency   String? @map("salary_currency") @db.Char(3)
+  salaryPeriod     String @default("") @map("salary_period") @db.VarChar(20)
+  salaryUndisclosedReason String @default("") @map("salary_undisclosed_reason") @db.VarChar(200)
+  /// 07 forbids a listing that asks a candidate for an undocumented fee. Zero is the only value.
+  applicationFeeMinor BigInt @default(0) @map("application_fee_minor")
+  closesAt         DateTime? @map("closes_at") @db.Timestamptz(3)
+  openings         Int @default(1)
+  state            JobState @default(draft)
+  stateReason      String @default("") @map("state_reason") @db.VarChar(200)
+  publishedAt      DateTime? @map("published_at") @db.Timestamptz(3)
+  createdBy        String @map("created_by") @db.Uuid
+  version          Int @default(1)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  program          Program? @relation(fields: [programId], references: [id], onDelete: Restrict)
+  creator          User @relation("JobCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  applications     JobApplication[]
+  referrals        JobReferral[]
+  placements       Placement[]
+  @@index([organizationId, state])
+  @@index([state, closesAt])
+  @@map("jobs")
+}
+
+/// A candidacy for a job. Its own table and its own states, because 07 says a job application has
+/// an independent machine and that training acceptance is not job acceptance.
+model JobApplication {
+  id             String @id @default(uuid()) @db.Uuid
+  jobId          String @map("job_id") @db.Uuid
+  userId         String @map("user_id") @db.Uuid
+  reference      String @unique @db.VarChar(20)
+  state          JobApplicationState @default(draft)
+  coverNote      String @default("") @map("cover_note") @db.VarChar(4000)
+  /// Consent to share the candidate profile with this employer, for this application only.
+  sharingConsent Boolean @default(false) @map("sharing_consent")
+  /// Set where the application came from a referral rather than the candidate applying directly.
+  referralId     String? @unique @map("referral_id") @db.Uuid
+  submittedAt    DateTime? @map("submitted_at") @db.Timestamptz(3)
+  decidedAt      DateTime? @map("decided_at") @db.Timestamptz(3)
+  withdrawnReason String @default("") @map("withdrawn_reason") @db.VarChar(1000)
+  version        Int @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job            Job @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  user           User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  referral       JobReferral? @relation(fields: [referralId], references: [id], onDelete: SetNull)
+  interviews     Interview[]
+  offers         JobOffer[]
+  @@unique([jobId, userId])
+  @@index([jobId, state])
+  @@index([userId, createdAt])
+  @@map("job_applications")
+}
+
+/// PRG-07.A05. An operator putting a trainee forward for a job.
+///
+/// 07: this needs the person's agreement to share their profile. The consent is recorded here with
+/// its own timestamp, because "we referred them" and "they agreed to be referred" are two facts and
+/// only the second makes the first legitimate.
+model JobReferral {
+  id             String @id @default(uuid()) @db.Uuid
+  jobId          String @map("job_id") @db.Uuid
+  userId         String @map("user_id") @db.Uuid
+  referredBy     String @map("referred_by") @db.Uuid
+  note           String @default("") @db.VarChar(1000)
+  /// Null until the candidate agrees. Nothing about them reaches the employer before that.
+  consentedAt    DateTime? @map("consented_at") @db.Timestamptz(3)
+  declinedAt     DateTime? @map("declined_at") @db.Timestamptz(3)
+  version        Int @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job            Job @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  user           User @relation("ReferredCandidate", fields: [userId], references: [id], onDelete: Restrict)
+  referrer       User @relation("JobReferrer", fields: [referredBy], references: [id], onDelete: Restrict)
+  application    JobApplication?
+  @@unique([jobId, userId])
+  @@index([userId, createdAt])
+  @@map("job_referrals")
+}
+
+/// A versioned offer. Immutable once sent: a change is a new version, so the candidate always
+/// knows which text they accepted.
+model JobOffer {
+  id               String @id @default(uuid()) @db.Uuid
+  jobApplicationId String @map("job_application_id") @db.Uuid
+  /// 1 for the first offer on this application, 2 for the next, and so on.
+  sequence         Int
+  state            JobOfferState @default(draft)
+  title            String @db.VarChar(200)
+  terms            String @db.VarChar(4000)
+  contractType     ContractType @default(full_time) @map("contract_type")
+  contractMonths   Int? @map("contract_months")
+  salaryMinor      BigInt? @map("salary_minor")
+  salaryCurrency   String? @map("salary_currency") @db.Char(3)
+  salaryPeriod     String @default("") @map("salary_period") @db.VarChar(20)
+  /// The date the employer proposes. Actual start is a separate, confirmed fact.
+  proposedStartDate DateTime @map("proposed_start_date") @db.Date
+  respondByAt      DateTime @map("respond_by_at") @db.Timestamptz(3)
+  /// SHA-256 over the terms as sent, so acceptance names the exact text.
+  termsChecksum    String @map("terms_checksum") @db.Char(64)
+  sentAt           DateTime? @map("sent_at") @db.Timestamptz(3)
+  respondedAt      DateTime? @map("responded_at") @db.Timestamptz(3)
+  declineReason    String @default("") @map("decline_reason") @db.VarChar(1000)
+  withdrawReason   String @default("") @map("withdraw_reason") @db.VarChar(1000)
+  createdBy        String @map("created_by") @db.Uuid
+  version          Int @default(1)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  jobApplication   JobApplication @relation(fields: [jobApplicationId], references: [id], onDelete: Restrict)
+  creator          User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  placement        Placement?
+  @@unique([jobApplicationId, sequence])
+  @@index([state, respondByAt])
+  @@map("job_offers")
+}
+
+/// The employment itself.
+///
+/// It is created when an offer is accepted and it starts life at `start_pending`, never `started`:
+/// JOB-01 is precisely that accepting an offer and turning up are different events, and 14 excludes
+/// `offer accepted` from the started count.
+model Placement {
+  id             String @id @default(uuid()) @db.Uuid
+  jobId          String @map("job_id") @db.Uuid
+  userId         String @map("user_id") @db.Uuid
+  offerId        String @unique @map("offer_id") @db.Uuid
+  state          PlacementState @default(start_pending)
+  /// What the offer proposed. Not evidence of anything having happened.
+  proposedStartDate DateTime @map("proposed_start_date") @db.Date
+  /// Set only when a start is actually confirmed. Every follow-up is counted from this date, not
+  /// from the offer and not from the application.
+  actualStartDate DateTime? @map("actual_start_date") @db.Date
+  startVerifiedAt DateTime? @map("start_verified_at") @db.Timestamptz(3)
+  endedAt        DateTime? @map("ended_at") @db.Timestamptz(3)
+  endReason      String @default("") @map("end_reason") @db.VarChar(1000)
+  disputeReason  String @default("") @map("dispute_reason") @db.VarChar(1000)
+  /// True where the person found the job themselves during follow-up rather than through this
+  /// programme. 14 requires the two to be reported separately, never added together.
+  selfFound      Boolean @default(false) @map("self_found")
+  version        Int @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job            Job @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  user           User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  offer          JobOffer @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  confirmations  PlacementStartConfirmation[]
+  followups      PlacementFollowup[]
+  reviews        PlacementReviewDecision[]
+  @@unique([jobId, userId])
+  @@index([state, actualStartDate])
+  @@map("placements")
+}
+
+/// One party saying the work actually began, and on what date.
+///
+/// A start is verified when both sides say so and agree on the date, or when an authorised reviewer
+/// records a decision against evidence. One side alone is a claim, not a fact.
+model PlacementStartConfirmation {
+  id          String @id @default(uuid()) @db.Uuid
+  placementId String @map("placement_id") @db.Uuid
+  party       ConfirmationParty
+  startDate   DateTime @map("start_date") @db.Date
+  evidenceRef String @default("") @map("evidence_ref") @db.VarChar(200)
+  confirmedBy String @map("confirmed_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  placement   Placement @relation(fields: [placementId], references: [id], onDelete: Restrict)
+  confirmer   User @relation(fields: [confirmedBy], references: [id], onDelete: Restrict)
+  @@unique([placementId, party])
+  @@map("placement_start_confirmations")
+}
+
+/// A checkpoint at 30 and 90 days from the **actual** start date.
+///
+/// `unknown` is a first-class result, not a gap: JOB-02 is that nobody replying means the outcome
+/// is unknown, and 14 requires it reported as its own percentage rather than folded into either
+/// success or failure.
+model PlacementFollowup {
+  id          String @id @default(uuid()) @db.Uuid
+  placementId String @map("placement_id") @db.Uuid
+  dayOffset   Int @map("day_offset")
+  dueAt       DateTime @map("due_at") @db.Date
+  result      FollowupResult @default(unknown)
+  source      String @default("") @db.VarChar(120)
+  evidenceRef String @default("") @map("evidence_ref") @db.VarChar(200)
+  note        String @default("") @db.VarChar(1000)
+  /// Null while the checkpoint is merely due. A due checkpoint nobody answered stays `unknown`.
+  recordedAt  DateTime? @map("recorded_at") @db.Timestamptz(3)
+  recordedBy  String? @map("recorded_by") @db.Uuid
+  version     Int @default(1)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  placement   Placement @relation(fields: [placementId], references: [id], onDelete: Restrict)
+  recorder    User? @relation(fields: [recordedBy], references: [id], onDelete: SetNull)
+  @@unique([placementId, dayOffset])
+  @@index([result, dueAt])
+  @@map("placement_followups")
+}
+
+/// Append-only. How a disagreement about a placement was settled, and by whom.
+model PlacementReviewDecision {
+  id          String @id @default(uuid()) @db.Uuid
+  placementId String @map("placement_id") @db.Uuid
+  reviewerId  String @map("reviewer_id") @db.Uuid
+  outcome     String @db.VarChar(40)
+  reason      String @db.VarChar(1000)
+  evidenceRef String @default("") @map("evidence_ref") @db.VarChar(200)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  placement   Placement @relation(fields: [placementId], references: [id], onDelete: Restrict)
+  reviewer    User @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@index([placementId, createdAt])
+  @@map("placement_review_decisions")
+}
+
+// ==================================================================================================
+// PART-12 — programme funding, incubation, assistance and volunteering
+//
+// Four separate things live below, and the whole point of the part is that they stay separate:
+//
+//  - **A grant is not equity.** A sponsor funding a programme, and an incubator giving a founder a
+//    grant, create no share, no commitment and no holding. 07: the platform takes no equity by
+//    default, and any incubator stake needs an explicit agreement on a separate investment path.
+//  - **A stipend is earned, then approved, then paid** — three events. The entitlement comes from
+//    attendance that is already settled; the approval is the existing payout chain with its own
+//    separation of duties; and the payment is money leaving, which this build only simulates.
+//  - **A certificate is a claim about a person** that can be wrong, so it can be revoked, and its
+//    public reference then says so rather than quietly disappearing.
+//  - **An assistance case is the most sensitive record in the product.** It exists only while the
+//    person consents to it being processed, and withdrawing that consent stops the processing
+//    without erasing the record of what was already done.
+// ==================================================================================================
+
+enum AgreementKind {
+  cash
+  in_kind
+  mixed
+}
+
+/// 08: an in-kind contribution is reported at a stated estimated value and never enters BankCash.
+enum AgreementState {
+  draft
+  pending_acceptance
+  active
+  completed
+  terminated
+  disputed
+}
+
+enum AgreementPartyRole {
+  sponsor
+  operator
+}
+
+/// A partnership or grant between two organisations (BUS-06).
+///
+/// Both sides accept a **named version** of the terms: acceptance records the checksum it was given,
+/// so "we agreed" always points at a specific text. It becomes active only when both have accepted
+/// the same one.
+model Agreement {
+  id               String @id @default(uuid()) @db.Uuid
+  /// The organisation that put the agreement forward. It is one of the two parties, never a third.
+  sponsorOrgId     String @map("sponsor_org_id") @db.Uuid
+  operatorOrgId    String @map("operator_org_id") @db.Uuid
+  /// What the money or the goods are for. A programme, a project, or neither.
+  programId        String? @map("program_id") @db.Uuid
+  projectId        String? @map("project_id") @db.Uuid
+  reference        String @unique @db.VarChar(20)
+  title            String @db.VarChar(200)
+  kind             AgreementKind @default(cash)
+  /// Cash committed, in integer minor units. Null for a purely in-kind agreement.
+  amountMinor      BigInt? @map("amount_minor")
+  currency         String? @db.Char(3)
+  /// 08: an in-kind contribution carries a stated estimated value, reported separately and never
+  /// added to cash.
+  inKindDescription String @default("") @map("in_kind_description") @db.VarChar(2000)
+  inKindValueMinor BigInt? @map("in_kind_value_minor")
+  purpose          String @db.VarChar(4000)
+  obligations      String @default("") @db.VarChar(4000)
+  /// What the sponsor may see about the people the money reaches. Named, because the default is
+  /// aggregate only: 12 forbids naming trainees or assistance applicants in a sponsor report.
+  reportingTerms   String @default("") @map("reporting_terms") @db.VarChar(2000)
+  /// What happens to money that was not spent. 07 requires this to be settled at close.
+  surplusTerms     String @default("") @map("surplus_terms") @db.VarChar(1000)
+  startsAt         DateTime? @map("starts_at") @db.Timestamptz(3)
+  endsAt           DateTime? @map("ends_at") @db.Timestamptz(3)
+  state            AgreementState @default(draft)
+  stateReason      String @default("") @map("state_reason") @db.VarChar(1000)
+  /// SHA-256 over the terms as last sent, so an acceptance names the exact text.
+  termsChecksum    String @default("") @map("terms_checksum") @db.Char(64)
+  sentAt           DateTime? @map("sent_at") @db.Timestamptz(3)
+  activatedAt      DateTime? @map("activated_at") @db.Timestamptz(3)
+  closedAt         DateTime? @map("closed_at") @db.Timestamptz(3)
+  /// Stated on the record itself: a grant is not an investment, and no share follows from it.
+  createsEquity    Boolean @default(false) @map("creates_equity")
+  createdBy        String @map("created_by") @db.Uuid
+  version          Int @default(1)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sponsorOrg       Organization @relation("AgreementSponsor", fields: [sponsorOrgId], references: [id], onDelete: Restrict)
+  operatorOrg      Organization @relation("AgreementOperator", fields: [operatorOrgId], references: [id], onDelete: Restrict)
+  program          Program? @relation(fields: [programId], references: [id], onDelete: Restrict)
+  project          Project? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  creator          User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  revisions        AgreementRevision[]
+  acceptances      AgreementAcceptance[]
+  milestones       AgreementMilestone[]
+  reports          AgreementReport[]
+  fundingIntents   AgreementFundingIntent[]
+  @@index([sponsorOrgId, state])
+  @@index([operatorOrgId, state])
+  @@map("agreements")
+}
+
+/// Append-only. Every version of the terms that was ever sent, with its checksum.
+model AgreementRevision {
+  id            String @id @default(uuid()) @db.Uuid
+  agreementId   String @map("agreement_id") @db.Uuid
+  sequence      Int
+  terms         String @db.VarChar(8000)
+  checksum      String @db.Char(64)
+  createdBy     String @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  agreement     Agreement @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  author        User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  @@unique([agreementId, sequence])
+  @@map("agreement_revisions")
+}
+
+/// One party saying yes to one named version. Append-only, one per party.
+model AgreementAcceptance {
+  id          String @id @default(uuid()) @db.Uuid
+  agreementId String @map("agreement_id") @db.Uuid
+  partyRole   AgreementPartyRole @map("party_role")
+  checksum    String @db.Char(64)
+  acceptedBy  String @map("accepted_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  agreement   Agreement @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  acceptor    User @relation(fields: [acceptedBy], references: [id], onDelete: Restrict)
+  @@unique([agreementId, partyRole])
+  @@map("agreement_acceptances")
+}
+
+enum AgreementMilestoneState {
+  planned
+  evidence_submitted
+  approved
+  changes_requested
+}
+
+/// A deliverable inside an agreement. Approving one is a judgement about evidence; it moves no
+/// money by itself, which is the whole reason it is separate from a payout.
+model AgreementMilestone {
+  id           String @id @default(uuid()) @db.Uuid
+  agreementId  String @map("agreement_id") @db.Uuid
+  sequence     Int
+  title        String @db.VarChar(200)
+  description  String @default("") @db.VarChar(2000)
+  dueAt        DateTime @map("due_at") @db.Date
+  /// The tranche this milestone releases, where the agreement works that way. Informational: it
+  /// creates no payout, and the reply says so.
+  amountMinor  BigInt? @map("amount_minor")
+  state        AgreementMilestoneState @default(planned)
+  evidenceRef  String @default("") @map("evidence_ref") @db.VarChar(200)
+  evidenceNote String @default("") @map("evidence_note") @db.VarChar(2000)
+  submittedAt  DateTime? @map("submitted_at") @db.Timestamptz(3)
+  decidedAt    DateTime? @map("decided_at") @db.Timestamptz(3)
+  version      Int @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  agreement    Agreement @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  decisions    AgreementMilestoneDecision[]
+  @@unique([agreementId, sequence])
+  @@index([agreementId, state])
+  @@map("agreement_milestones")
+}
+
+/// Append-only. Who judged a deliverable, on what evidence, and why.
+model AgreementMilestoneDecision {
+  id          String @id @default(uuid()) @db.Uuid
+  milestoneId String @map("milestone_id") @db.Uuid
+  reviewerId  String @map("reviewer_id") @db.Uuid
+  outcome     String @db.VarChar(30)
+  reason      String @db.VarChar(1000)
+  evidenceRef String @default("") @map("evidence_ref") @db.VarChar(200)
+  /// Always false. 08 keeps releasing money a separate, independently approved act.
+  releasedFunds Boolean @default(false) @map("released_funds")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  milestone   AgreementMilestone @relation(fields: [milestoneId], references: [id], onDelete: Restrict)
+  reviewer    User @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@index([milestoneId, createdAt])
+  @@map("agreement_milestone_decisions")
+}
+
+enum AgreementReportState {
+  draft
+  submitted
+  approved
+  changes_requested
+}
+
+/// What the operator reports back to the sponsor: money spent and outcomes reached.
+///
+/// 12 forbids naming trainees or assistance applicants in it, so the figures are counts and the
+/// projection is built field by field.
+model AgreementReport {
+  id             String @id @default(uuid()) @db.Uuid
+  agreementId    String @map("agreement_id") @db.Uuid
+  periodStart    DateTime @map("period_start") @db.Date
+  periodEnd      DateTime @map("period_end") @db.Date
+  narrative      String @default("") @db.VarChar(8000)
+  spentMinor     BigInt @default(0) @map("spent_minor")
+  /// Counts, never names. Checked by the service and by the test.
+  participantsReached Int @default(0) @map("participants_reached")
+  outcomesNote   String @default("") @map("outcomes_note") @db.VarChar(4000)
+  /// 14: a variance is stated rather than smoothed away.
+  varianceNote   String @default("") @map("variance_note") @db.VarChar(2000)
+  state          AgreementReportState @default(draft)
+  submittedAt    DateTime? @map("submitted_at") @db.Timestamptz(3)
+  decidedAt      DateTime? @map("decided_at") @db.Timestamptz(3)
+  decisionReason String @default("") @map("decision_reason") @db.VarChar(1000)
+  reviewerId     String? @map("reviewer_id") @db.Uuid
+  createdBy      String @map("created_by") @db.Uuid
+  version        Int @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  agreement      Agreement @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  reviewer       User? @relation("AgreementReportReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  author         User @relation("AgreementReportAuthor", fields: [createdBy], references: [id], onDelete: Restrict)
+  @@unique([agreementId, periodStart, periodEnd])
+  @@index([agreementId, state])
+  @@map("agreement_reports")
+}
+
+/// PRG-11.A01. A sponsor putting money behind an agreement.
+///
+/// It creates a payment intent on the same simulated rail every other payment in this build uses.
+/// It never creates a share: the reply says `createsEquity: false` and a CHECK holds the column to
+/// false, because "we funded them" and "we own part of them" are the two things 07 keeps apart.
+model AgreementFundingIntent {
+  id              String @id @default(uuid()) @db.Uuid
+  agreementId     String @map("agreement_id") @db.Uuid
+  paymentIntentId String? @unique @map("payment_intent_id") @db.Uuid
+  amountMinor     BigInt @map("amount_minor")
+  currency        String @db.Char(3)
+  note            String @default("") @db.VarChar(1000)
+  createsEquity   Boolean @default(false) @map("creates_equity")
+  createdBy       String @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  agreement       Agreement @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  paymentIntent   PaymentIntent? @relation(fields: [paymentIntentId], references: [id], onDelete: SetNull)
+  creator         User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  @@index([agreementId, createdAt])
+  @@map("agreement_funding_intents")
+}
+
+// --------------------------------------------------------------------------------------------------
+// PRG-06 — stipends and certificates
+// --------------------------------------------------------------------------------------------------
+
+enum StipendBatchState {
+  draft
+  requested
+  approved
+  paid
+  cancelled
+}
+
+/// A period's stipend for one cohort, assembled from attendance that is already settled.
+///
+/// The batch is the request; the money is a `Payout` with its own maker, its own independent
+/// approver and its own proof of payment. 07: no payment from a certificate button, and no payment
+/// before the attendance period is closed and its objections resolved.
+model StipendBatch {
+  id            String @id @default(uuid()) @db.Uuid
+  cohortId      String @map("cohort_id") @db.Uuid
+  periodStart   DateTime @map("period_start") @db.Date
+  periodEnd     DateTime @map("period_end") @db.Date
+  currency      String @db.Char(3)
+  totalMinor    BigInt @default(0) @map("total_minor")
+  state         StipendBatchState @default(draft)
+  stateReason   String @default("") @map("state_reason") @db.VarChar(1000)
+  /// The payout this batch was sent for. Null until it is sent, and one payout at most.
+  payoutId      String? @unique @map("payout_id") @db.Uuid
+  createdBy     String @map("created_by") @db.Uuid
+  version       Int @default(1)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cohort        Cohort @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  payout        Payout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  creator       User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  lines         StipendLine[]
+  @@index([cohortId, state])
+  @@map("stipend_batches")
+}
+
+/// One trainee's entitlement for one period.
+///
+/// **A period is never paid twice.** An exclusion constraint refuses any overlapping period for the
+/// same enrolment among lines that have not been cancelled, so a second batch covering the same
+/// days cannot be created at all — not by a second operator, not by a retry, not by direct SQL.
+model StipendLine {
+  id             String @id @default(uuid()) @db.Uuid
+  batchId        String @map("batch_id") @db.Uuid
+  enrollmentId   String @map("enrollment_id") @db.Uuid
+  periodStart    DateTime @map("period_start") @db.Date
+  periodEnd      DateTime @map("period_end") @db.Date
+  /// Sessions counted as attended in the period, and what the programme pays for each.
+  sessionsCounted Int @default(0) @map("sessions_counted")
+  sessionsHeld    Int @default(0) @map("sessions_held")
+  amountMinor    BigInt @map("amount_minor")
+  currency       String @db.Char(3)
+  /// How the figure was reached, in words, so a trainee can check it rather than take it on trust.
+  basis          String @default("") @db.VarChar(500)
+  cancelled      Boolean @default(false)
+  cancelReason   String @default("") @map("cancel_reason") @db.VarChar(1000)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batch          StipendBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  enrollment     Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  @@index([enrollmentId, periodStart])
+  @@map("stipend_lines")
+}
+
+enum CertificateState {
+  issued
+  revoked
+}
+
+/// A certificate, and its public verification reference.
+///
+/// 07: the public reference carries no national identifier, and a revoked certificate's reference
+/// stays resolvable and says it is no longer valid — a reference that simply stopped working would
+/// leave whoever holds a copy unable to find out why.
+model Certificate {
+  id            String @id @default(uuid()) @db.Uuid
+  enrollmentId  String @unique @map("enrollment_id") @db.Uuid
+  /// Short, quotable, and deliberately not the database identifier.
+  publicId      String @unique @map("public_id") @db.VarChar(24)
+  /// Printed on the certificate. A display name, never a national identifier.
+  holderName    String @map("holder_name") @db.VarChar(200)
+  programTitle  String @map("program_title") @db.VarChar(200)
+  issuerName    String @map("issuer_name") @db.VarChar(200)
+  completedAt   DateTime @map("completed_at") @db.Date
+  state         CertificateState @default(issued)
+  issuedBy      String @map("issued_by") @db.Uuid
+  issuedAt      DateTime @default(now()) @map("issued_at") @db.Timestamptz(3)
+  /// Private. The public check says only that it was revoked and when.
+  revokeReason  String @default("") @map("revoke_reason") @db.VarChar(1000)
+  revokeEvidence String @default("") @map("revoke_evidence") @db.VarChar(200)
+  revokedBy     String? @map("revoked_by") @db.Uuid
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+  version       Int @default(1)
+  enrollment    Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  issuer        User @relation("CertificateIssuer", fields: [issuedBy], references: [id], onDelete: Restrict)
+  revoker       User? @relation("CertificateRevoker", fields: [revokedBy], references: [id], onDelete: Restrict)
+  @@index([state, issuedAt])
+  @@map("certificates")
+}
+
+// --------------------------------------------------------------------------------------------------
+// PRG-10 / PER-16 — incubation
+// --------------------------------------------------------------------------------------------------
+
+enum ProposalState {
+  draft
+  submitted
+  review
+  accepted
+  rejected
+  active
+  closed
+  withdrawn
+}
+
+/// A founder's idea, private to them until they send it.
+///
+/// 07: the platform takes no equity for an idea being submitted, and nothing here creates a company
+/// or an account for anybody.
+model Proposal {
+  id             String @id @default(uuid()) @db.Uuid
+  ownerId        String @map("owner_id") @db.Uuid
+  /// The incubator it was sent to. Null while it is still a private draft.
+  organizationId String? @map("organization_id") @db.Uuid
+  reference      String @unique @db.VarChar(20)
+  title          String @db.VarChar(200)
+  summary        String @default("") @db.VarChar(4000)
+  problem        String @default("") @db.VarChar(4000)
+  stage          String @default("") @db.VarChar(60)
+  sector         String @default("") @db.VarChar(100)
+  city           String @default("") @db.VarChar(100)
+  /// What the founder is asking for. Support, not a valuation.
+  supportSought  String @default("") @map("support_sought") @db.VarChar(2000)
+  state          ProposalState @default(draft)
+  stateReason    String @default("") @map("state_reason") @db.VarChar(1000)
+  /// Consent to share the idea with this incubator, recorded on submission.
+  sharingConsent Boolean @default(false) @map("sharing_consent")
+  submittedAt    DateTime? @map("submitted_at") @db.Timestamptz(3)
+  decidedAt      DateTime? @map("decided_at") @db.Timestamptz(3)
+  closedAt       DateTime? @map("closed_at") @db.Timestamptz(3)
+  closeOutcome   String @default("") @map("close_outcome") @db.VarChar(40)
+  closeNote      String @default("") @map("close_note") @db.VarChar(2000)
+  /// The company the founder created afterwards, where they did. Created **by them**, never by a
+  /// process here, and carrying no automatic shareholding.
+  startupOrgId   String? @unique @map("startup_org_id") @db.Uuid
+  version        Int @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner          User @relation("ProposalOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  organization   Organization? @relation("ProposalIncubator", fields: [organizationId], references: [id], onDelete: Restrict)
+  startupOrg     Organization? @relation("ProposalStartup", fields: [startupOrgId], references: [id], onDelete: SetNull)
+  decisions      ProposalDecision[]
+  mentors        MentorAssignment[]
+  agreements     IncubationAgreement[]
+  milestones     IncubationMilestone[]
+  @@index([organizationId, state])
+  @@index([ownerId, createdAt])
+  @@map("proposals")
+}
+
+/// Append-only. Every decision on an idea, with the criteria it was judged against.
+model ProposalDecision {
+  id          String @id @default(uuid()) @db.Uuid
+  proposalId  String @map("proposal_id") @db.Uuid
+  reviewerId  String @map("reviewer_id") @db.Uuid
+  outcome     String @db.VarChar(30)
+  /// What the founder is shown.
+  reason      String @db.VarChar(2000)
+  criteria    String @default("") @db.VarChar(2000)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  reviewer    User @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@index([proposalId, createdAt])
+  @@map("proposal_decisions")
+}
+
+/// A mentor's reach is the ideas they were assigned, not the incubator's whole pipeline.
+model MentorAssignment {
+  id          String @id @default(uuid()) @db.Uuid
+  proposalId  String @map("proposal_id") @db.Uuid
+  mentorId    String @map("mentor_id") @db.Uuid
+  assignedBy  String @map("assigned_by") @db.Uuid
+  note        String @default("") @db.VarChar(1000)
+  endedAt     DateTime? @map("ended_at") @db.Timestamptz(3)
+  endReason   String @default("") @map("end_reason") @db.VarChar(1000)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  mentor      User @relation("MentorUser", fields: [mentorId], references: [id], onDelete: Restrict)
+  assigner    User @relation("MentorAssigner", fields: [assignedBy], references: [id], onDelete: Restrict)
+  @@unique([proposalId, mentorId])
+  @@index([mentorId, createdAt])
+  @@map("mentor_assignments")
+}
+
+enum IncubationAgreementState {
+  draft
+  offered
+  accepted
+  declined
+  withdrawn
+  closed
+}
+
+/// The incubation terms: what the founder gets, what they keep, and what the incubator does not get.
+///
+/// **`equityPercent` is not a field here.** 07 says the platform takes no shares by default and any
+/// incubator stake needs an explicit agreement on a separate investment path, so this record states
+/// the absence (`grantsEquity` is false, held there by a CHECK) rather than leaving a blank somebody
+/// could fill in later.
+model IncubationAgreement {
+  id             String @id @default(uuid()) @db.Uuid
+  proposalId     String @map("proposal_id") @db.Uuid
+  sequence       Int
+  title          String @db.VarChar(200)
+  terms          String @db.VarChar(8000)
+  /// Who owns what the founder makes. Stated, because leaving it unsaid is how founders lose it.
+  ipTerms        String @map("ip_terms") @db.VarChar(4000)
+  responsibilities String @default("") @db.VarChar(4000)
+  /// A grant, in integer minor units. It buys nothing and is not repayable unless the terms say so.
+  grantMinor     BigInt? @map("grant_minor")
+  currency       String? @db.Char(3)
+  grantConditions String @default("") @map("grant_conditions") @db.VarChar(2000)
+  /// Always false in this build. A stake needs a separate, explicit investment agreement.
+  grantsEquity   Boolean @default(false) @map("grants_equity")
+  durationMonths Int? @map("duration_months")
+  checksum       String @db.Char(64)
+  state          IncubationAgreementState @default(draft)
+  declineReason  String @default("") @map("decline_reason") @db.VarChar(1000)
+  offeredAt      DateTime? @map("offered_at") @db.Timestamptz(3)
+  respondedAt    DateTime? @map("responded_at") @db.Timestamptz(3)
+  createdBy      String @map("created_by") @db.Uuid
+  version        Int @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  proposal       Proposal @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  creator        User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  @@unique([proposalId, sequence])
+  @@map("incubation_agreements")
+}
+
+enum IncubationMilestoneState {
+  planned
+  evidence_submitted
+  approved
+  changes_requested
+}
+
+model IncubationMilestone {
+  id           String @id @default(uuid()) @db.Uuid
+  proposalId   String @map("proposal_id") @db.Uuid
+  sequence     Int
+  title        String @db.VarChar(200)
+  description  String @default("") @db.VarChar(2000)
+  dueAt        DateTime @map("due_at") @db.Date
+  state        IncubationMilestoneState @default(planned)
+  evidenceRef  String @default("") @map("evidence_ref") @db.VarChar(200)
+  evidenceNote String @default("") @map("evidence_note") @db.VarChar(4000)
+  submittedAt  DateTime? @map("submitted_at") @db.Timestamptz(3)
+  decidedAt    DateTime? @map("decided_at") @db.Timestamptz(3)
+  version      Int @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  proposal     Proposal @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  decisions    IncubationMilestoneDecision[]
+  @@unique([proposalId, sequence])
+  @@map("incubation_milestones")
+}
+
+/// Append-only.
+model IncubationMilestoneDecision {
+  id          String @id @default(uuid()) @db.Uuid
+  milestoneId String @map("milestone_id") @db.Uuid
+  reviewerId  String @map("reviewer_id") @db.Uuid
+  outcome     String @db.VarChar(30)
+  reason      String @db.VarChar(2000)
+  evidenceRef String @default("") @map("evidence_ref") @db.VarChar(200)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  milestone   IncubationMilestone @relation(fields: [milestoneId], references: [id], onDelete: Restrict)
+  reviewer    User @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@index([milestoneId, createdAt])
+  @@map("incubation_milestone_decisions")
+}
+
+// --------------------------------------------------------------------------------------------------
+// PRG-12 / PER-15 — assistance
+// --------------------------------------------------------------------------------------------------
+
+enum AssistanceState {
+  draft
+  submitted
+  in_review
+  awaiting_info
+  approved
+  rejected
+  delivered
+  closed
+  disputed
+  withdrawn
+}
+
+/// A request for help. The most sensitive record in the product.
+///
+/// It is processed only while the applicant consents. Withdrawing consent stops the processing
+/// without erasing what already happened: 12 keeps the audit record, and the case moves to a state
+/// that says plainly it cannot be assessed any further.
+model AssistanceCase {
+  id             String @id @default(uuid()) @db.Uuid
+  applicantId    String @map("applicant_id") @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  reference      String @unique @db.VarChar(20)
+  category       String @db.VarChar(60)
+  /// HighlySensitive. Never in any public or sponsor projection, and never in an export.
+  needSummary    String @map("need_summary") @db.VarChar(4000)
+  householdSize  Int? @map("household_size")
+  requestedMinor BigInt? @map("requested_minor")
+  currency       String? @db.Char(3)
+  state          AssistanceState @default(draft)
+  stateReason    String @default("") @map("state_reason") @db.VarChar(1000)
+  /// The person handling it. A case nobody owns is what 22's close definition forbids.
+  caseWorkerId   String? @map("case_worker_id") @db.Uuid
+  submittedAt    DateTime? @map("submitted_at") @db.Timestamptz(3)
+  decidedAt      DateTime? @map("decided_at") @db.Timestamptz(3)
+  closedAt       DateTime? @map("closed_at") @db.Timestamptz(3)
+  version        Int @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  applicant      User @relation("AssistanceApplicant", fields: [applicantId], references: [id], onDelete: Restrict)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  caseWorker     User? @relation("AssistanceCaseWorker", fields: [caseWorkerId], references: [id], onDelete: SetNull)
+  consents       AssistanceConsent[]
+  messages       AssistanceMessage[]
+  decisions      AssistanceDecision[]
+  deliveries     AssistanceDelivery[]
+  @@index([organizationId, state])
+  @@index([applicantId, createdAt])
+  @@map("assistance_cases")
+}
+
+/// Append-only. Consent given, and consent withdrawn, each with its own moment.
+///
+/// Two rows rather than one boolean, because "they consented" and "they later withdrew it" are two
+/// facts and a record that keeps only the current value cannot answer questions about the past.
+model AssistanceConsent {
+  id          String @id @default(uuid()) @db.Uuid
+  caseId      String @map("case_id") @db.Uuid
+  /// `granted` or `revoked`.
+  action      String @db.VarChar(10)
+  /// What the consent covers, in the words the applicant was shown.
+  scope       String @db.VarChar(1000)
+  reason      String @default("") @db.VarChar(1000)
+  actorId     String @map("actor_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  case        AssistanceCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  actor       User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([caseId, createdAt])
+  @@map("assistance_consents")
+}
+
+/// A private message on a case, in either direction. Never public, never in an export.
+model AssistanceMessage {
+  id          String @id @default(uuid()) @db.Uuid
+  caseId      String @map("case_id") @db.Uuid
+  /// `operator` or `applicant`.
+  author      String @db.VarChar(10)
+  body        String @db.VarChar(4000)
+  documentRef String @default("") @map("document_ref") @db.VarChar(200)
+  authorId    String @map("author_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  case        AssistanceCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  writer      User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  @@index([caseId, createdAt])
+  @@map("assistance_messages")
+}
+
+/// Append-only. An eligibility decision and the criteria behind it, never published.
+model AssistanceDecision {
+  id          String @id @default(uuid()) @db.Uuid
+  caseId      String @map("case_id") @db.Uuid
+  reviewerId  String @map("reviewer_id") @db.Uuid
+  outcome     String @db.VarChar(30)
+  /// Shown to the applicant.
+  reason      String @db.VarChar(2000)
+  /// The internal criteria. Not shown to the applicant and not exported.
+  criteria    String @default("") @db.VarChar(2000)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  case        AssistanceCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  reviewer    User @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  @@index([caseId, createdAt])
+  @@map("assistance_decisions")
+}
+
+/// Something actually handed over, and the applicant's own confirmation that it arrived.
+///
+/// The operator recording a delivery is a claim; the applicant confirming it is the fact — the same
+/// shape PART-11 uses for a start date, and for the same reason.
+model AssistanceDelivery {
+  id           String @id @default(uuid()) @db.Uuid
+  caseId       String @map("case_id") @db.Uuid
+  description  String @db.VarChar(1000)
+  /// Where the support came from. 22 forbids an unexplained balance, and an unattributed delivery
+  /// is the same problem one step earlier.
+  fundingSource String @map("funding_source") @db.VarChar(200)
+  amountMinor  BigInt? @map("amount_minor")
+  currency     String? @db.Char(3)
+  evidenceRef  String @default("") @map("evidence_ref") @db.VarChar(200)
+  deliveredAt  DateTime @map("delivered_at") @db.Date
+  recordedBy   String @map("recorded_by") @db.Uuid
+  confirmedAt  DateTime? @map("confirmed_at") @db.Timestamptz(3)
+  disputedAt   DateTime? @map("disputed_at") @db.Timestamptz(3)
+  disputeReason String @default("") @map("dispute_reason") @db.VarChar(1000)
+  version      Int @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  case         AssistanceCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  recorder     User @relation(fields: [recordedBy], references: [id], onDelete: Restrict)
+  @@index([caseId, createdAt])
+  @@map("assistance_deliveries")
+}
+
+// --------------------------------------------------------------------------------------------------
+// PRG-13 / PER-17 — volunteering
+// --------------------------------------------------------------------------------------------------
+
+enum VolunteerOpportunityState {
+  draft
+  open
+  paused
+  closed
+}
+
+model VolunteerOpportunity {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  slug           String @unique @db.VarChar(120)
+  title          String @db.VarChar(200)
+  summary        String @db.VarChar(2000)
+  tasks          String @db.VarChar(4000)
+  requirements   String @default("") @db.VarChar(2000)
+  /// A named person who is answerable for the volunteers. 07 requires a supervisor with clear
+  /// responsibility wherever people are placed with an organisation.
+  supervisorId   String @map("supervisor_id") @db.Uuid
+  city           String @default("") @db.VarChar(100)
+  deliveryMode   ProgramDeliveryMode @default(in_person) @map("delivery_mode")
+  capacity       Int @default(1)
+  hoursPerWeek   Int @default(0) @map("hours_per_week")
+  startsAt       DateTime? @map("starts_at") @db.Date
+  endsAt         DateTime? @map("ends_at") @db.Date
+  /// What happens if a volunteer pulls out, published before anybody applies.
+  withdrawalPolicy String @default("") @map("withdrawal_policy") @db.VarChar(1000)
+  state          VolunteerOpportunityState @default(draft)
+  stateReason    String @default("") @map("state_reason") @db.VarChar(200)
+  createdBy      String @map("created_by") @db.Uuid
+  version        Int @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  supervisor     User @relation("VolunteerSupervisor", fields: [supervisorId], references: [id], onDelete: Restrict)
+  creator        User @relation("VolunteerOpportunityCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  applications   VolunteerApplication[]
+  assignments    VolunteerAssignment[]
+  @@index([organizationId, state])
+  @@map("volunteer_opportunities")
+}
+
+enum VolunteerApplicationState {
+  submitted
+  accepted
+  rejected
+  withdrawn
+}
+
+model VolunteerApplication {
+  id            String @id @default(uuid()) @db.Uuid
+  opportunityId String @map("opportunity_id") @db.Uuid
+  userId        String @map("user_id") @db.Uuid
+  motivation    String @default("") @db.VarChar(2000)
+  availability  String @default("") @db.VarChar(500)
+  state         VolunteerApplicationState @default(submitted)
+  decisionReason String @default("") @map("decision_reason") @db.VarChar(1000)
+  decidedAt     DateTime? @map("decided_at") @db.Timestamptz(3)
+  version       Int @default(1)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  opportunity   VolunteerOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  user          User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@unique([opportunityId, userId])
+  @@index([userId, createdAt])
+  @@map("volunteer_applications")
+}
+
+enum VolunteerAssignmentState {
+  offered
+  accepted
+  declined
+  active
+  ended
+}
+
+model VolunteerAssignment {
+  id            String @id @default(uuid()) @db.Uuid
+  opportunityId String @map("opportunity_id") @db.Uuid
+  userId        String @map("user_id") @db.Uuid
+  task          String @db.VarChar(1000)
+  startsAt      DateTime @map("starts_at") @db.Date
+  endsAt        DateTime? @map("ends_at") @db.Date
+  state         VolunteerAssignmentState @default(offered)
+  endReason     String @default("") @map("end_reason") @db.VarChar(1000)
+  assignedBy    String @map("assigned_by") @db.Uuid
+  acceptedAt    DateTime? @map("accepted_at") @db.Timestamptz(3)
+  version       Int @default(1)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  opportunity   VolunteerOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  user          User @relation("VolunteerAssignee", fields: [userId], references: [id], onDelete: Restrict)
+  assigner      User @relation("VolunteerAssigner", fields: [assignedBy], references: [id], onDelete: Restrict)
+  hours         VolunteerHours[]
+  @@index([opportunityId, state])
+  @@index([userId, createdAt])
+  @@map("volunteer_assignments")
+}
+
+enum VolunteerHoursState {
+  submitted
+  approved
+  rejected
+}
+
+/// Hours a volunteer says they worked, and somebody else's approval of them.
+///
+/// **Nobody approves their own hours.** A CHECK constraint refuses a row whose approver is the
+/// volunteer, so the rule holds even if a future code path forgets it.
+model VolunteerHours {
+  id           String @id @default(uuid()) @db.Uuid
+  assignmentId String @map("assignment_id") @db.Uuid
+  workedOn     DateTime @map("worked_on") @db.Date
+  minutes      Int
+  note         String @default("") @db.VarChar(1000)
+  state        VolunteerHoursState @default(submitted)
+  approvedBy   String? @map("approved_by") @db.Uuid
+  approvedAt   DateTime? @map("approved_at") @db.Timestamptz(3)
+  decisionReason String @default("") @map("decision_reason") @db.VarChar(1000)
+  version      Int @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  assignment   VolunteerAssignment @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  approver     User? @relation("VolunteerHoursApprover", fields: [approvedBy], references: [id], onDelete: Restrict)
+  @@unique([assignmentId, workedOn])
+  @@index([state, createdAt])
+  @@map("volunteer_hours")
+}
+
+// --------------------------------------------------------------------------------------------------
+// PART-13 — support, notifications and operational delivery
+// --------------------------------------------------------------------------------------------------
+
+enum SupportTicketState {
+  open
+  assigned
+  awaiting_user
+  awaiting_internal
+  resolved
+  closed
+}
+
+enum SupportTicketPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+model SupportTicket {
+  id              String @id @default(uuid()) @db.Uuid
+  reference       String @unique @db.VarChar(24)
+  requesterId     String? @map("requester_id") @db.Uuid
+  requesterEmail  String? @map("requester_email") @db.VarChar(254)
+  organizationId  String? @map("organization_id") @db.Uuid
+  subjectType     String @map("subject_type") @db.VarChar(40)
+  subjectId       String? @map("subject_id") @db.Uuid
+  category        String @db.VarChar(40)
+  title           String @db.VarChar(200)
+  state           SupportTicketState @default(open)
+  priority        SupportTicketPriority @default(normal)
+  assigneeId      String? @map("assignee_id") @db.Uuid
+  nextActionAt    DateTime? @map("next_action_at") @db.Timestamptz(3)
+  resolutionCode  String @default("") @map("resolution_code") @db.VarChar(50)
+  resolution      String @default("") @db.VarChar(2000)
+  version         Int @default(1)
+  resolvedAt      DateTime? @map("resolved_at") @db.Timestamptz(3)
+  closedAt        DateTime? @map("closed_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  replies         SupportTicketReply[]
+  @@index([requesterId, createdAt])
+  @@index([state, priority, createdAt])
+  @@index([assigneeId, state])
+  @@map("support_tickets")
+}
+
+model SupportTicketReply {
+  id          String @id @default(uuid()) @db.Uuid
+  ticketId    String @map("ticket_id") @db.Uuid
+  authorId    String @map("author_id") @db.Uuid
+  authorKind  String @map("author_kind") @db.VarChar(20)
+  body        String @db.VarChar(4000)
+  internal    Boolean @default(false)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  @@index([ticketId, createdAt])
+  @@map("support_ticket_replies")
+}
+
+enum NotificationDeliveryState {
+  pending
+  processing
+  delivered
+  failed
+  dead_letter
+}
+
+enum ExportJobState {
+  pending
+  processing
+  ready
+  failed
+  expired
+  revoked
+}
+
+model ExportJob {
+  id            String @id @default(uuid()) @db.Uuid
+  ownerId       String @map("owner_id") @db.Uuid
+  kind          String @db.VarChar(50)
+  scope         Json
+  reason        String @default("") @db.VarChar(1000)
+  state         ExportJobState @default(pending)
+  attempts      Int @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  filename      String @default("") @db.VarChar(180)
+  mimeType      String @default("text/csv; charset=utf-8") @map("mime_type") @db.VarChar(100)
+  content       String @default("") @db.Text
+  lastErrorCode String @default("") @map("last_error_code") @db.VarChar(80)
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(3)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+  version       Int @default(1)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  @@index([state, nextAttemptAt])
+  @@index([ownerId, createdAt])
+  @@map("export_jobs")
+}
+
+model PublicReport {
+  id             String @id @default(uuid()) @db.Uuid
+  title          String @db.VarChar(200)
+  sourceType     String @map("source_type") @db.VarChar(40)
+  sourceId       String @map("source_id") @db.Uuid
+  version        Int
+  snapshot       Json
+  currency       String? @db.Char(3)
+  periodStart    DateTime? @map("period_start") @db.Date
+  periodEnd      DateTime? @map("period_end") @db.Date
+  filterDefinition String @default("") @map("filter_definition") @db.VarChar(1000)
+  publishedAt    DateTime @default(now()) @map("published_at") @db.Timestamptz(3)
+  createdBy      String @map("created_by") @db.Uuid
+  @@unique([sourceType, sourceId, version])
+  @@index([publishedAt])
+  @@map("public_reports")
+}
+
+model OperationalIncident {
+  id          String @id @default(uuid()) @db.Uuid
+  reference   String @unique @db.VarChar(40)
+  severity    String @db.VarChar(20)
+  state       String @default("open") @db.VarChar(20)
+  summary     String @db.VarChar(500)
+  redactedLog String @default("") @map("redacted_log") @db.Text
+  ownerId     String? @map("owner_id") @db.Uuid
+  openedAt    DateTime @default(now()) @map("opened_at") @db.Timestamptz(3)
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz(3)
+  @@index([state, severity, openedAt])
+  @@map("operational_incidents")
+}
+
+model RestoreDrill {
+  id              String @id @default(uuid()) @db.Uuid
+  performedBy     String @map("performed_by") @db.Uuid
+  environment     String @db.VarChar(40)
+  evidenceRef     String @map("evidence_ref") @db.VarChar(500)
+  measuredRpoMins Int @map("measured_rpo_mins")
+  measuredRtoMins Int @map("measured_rto_mins")
+  outcome         String @db.VarChar(20)
+  notes           String @default("") @db.VarChar(2000)
+  performedAt     DateTime @map("performed_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([performedAt])
+  @@map("restore_drills")
+}
+
+model FeatureFlagChangeRequest {
+  id          String @id @default(uuid()) @db.Uuid
+  flag        String @db.VarChar(80)
+  requestedBy String @map("requested_by") @db.Uuid
+  desired     Boolean
+  reason      String @db.VarChar(2000)
+  state       String @default("pending") @db.VarChar(20)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([flag, state, createdAt])
+  @@map("feature_flag_change_requests")
+}
+
+model UserNotification {
+  id          String @id @default(uuid()) @db.Uuid
+  recipientId String @map("recipient_id") @db.Uuid
+  eventType   String @map("event_type") @db.VarChar(80)
+  title       String @db.VarChar(200)
+  body        String @db.VarChar(1000)
+  safePath    String @map("safe_path") @db.VarChar(500)
+  dedupKey    String @unique @map("dedup_key") @db.VarChar(180)
+  readAt      DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([recipientId, readAt, createdAt])
+  @@map("user_notifications")
+}
+
+model NotificationPreference {
+  userId             String @id @map("user_id") @db.Uuid
+  emailReminders     Boolean @default(true) @map("email_reminders")
+  emailFollowUpdates Boolean @default(false) @map("email_follow_updates")
+  version            Int @default(1)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("notification_preferences")
+}
+
+model Follow {
+  id          String @id @default(uuid()) @db.Uuid
+  followerId  String @map("follower_id") @db.Uuid
+  subjectType String @map("subject_type") @db.VarChar(30)
+  subjectId   String @map("subject_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@unique([followerId, subjectType, subjectId])
+  @@index([subjectType, subjectId])
+  @@map("follows")
+}
+
+model NotificationOutbox {
+  id              String @id @default(uuid()) @db.Uuid
+  notificationId  String @unique @map("notification_id") @db.Uuid
+  channel         String @db.VarChar(20)
+  templateVersion Int @default(1) @map("template_version")
+  state           NotificationDeliveryState @default(pending)
+  attempts        Int @default(0)
+  nextAttemptAt   DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  lastErrorCode   String @default("") @map("last_error_code") @db.VarChar(80)
+  deliveredAt     DateTime? @map("delivered_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([state, nextAttemptAt])
+  @@map("notification_outbox")
+}
+
+model SubjectFreeze {
+  id          String @id @default(uuid()) @db.Uuid
+  subjectType String @map("subject_type") @db.VarChar(40)
+  subjectId   String @map("subject_id") @db.Uuid
+  scope       String @db.VarChar(20)
+  reason      String @db.VarChar(1000)
+  frozenBy    String @map("frozen_by") @db.Uuid
+  frozenAt    DateTime @default(now()) @map("frozen_at") @db.Timestamptz(3)
+  unfrozenBy  String? @map("unfrozen_by") @db.Uuid
+  unfrozenAt  DateTime? @map("unfrozen_at") @db.Timestamptz(3)
+  unfreezeReason String @default("") @map("unfreeze_reason") @db.VarChar(1000)
+  version     Int @default(1)
+  @@index([subjectType, subjectId, unfrozenAt])
+  @@map("subject_freezes")
+}

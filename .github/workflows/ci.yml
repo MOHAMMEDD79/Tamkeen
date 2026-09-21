@@ -1,0 +1,44 @@
+name: Foundation CI
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.4
+        env:
+          POSTGRES_USER: tamkeen
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: tamkeen_test
+        ports: ['55432:5432']
+        options: >-
+          --health-cmd "pg_isready -U tamkeen -d tamkeen_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.19.0'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm setup
+      - run: pnpm build
+      - run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://tamkeen:ci-only-password@127.0.0.1:55432/tamkeen_test
+          APP_ENV: test
+      - run: pnpm lint && pnpm typecheck && pnpm test
+      - run: pnpm test:integration
+        env:
+          DATABASE_URL: postgresql://tamkeen:ci-only-password@127.0.0.1:55432/tamkeen_test
+          APP_ENV: test
+      - run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgresql://tamkeen:ci-only-password@127.0.0.1:55432/tamkeen_test
+          APP_ENV: test
+      - run: pnpm demo:stories
+        env:
+          DATABASE_URL: postgresql://tamkeen:ci-only-password@127.0.0.1:55432/tamkeen_test
+          APP_ENV: test

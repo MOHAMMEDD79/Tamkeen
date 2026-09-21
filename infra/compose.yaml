@@ -1,0 +1,25 @@
+name: tamkeen-local
+services:
+  postgres:
+    image: postgres:18.4
+    environment:
+      POSTGRES_DB: tamkeen_demo
+      POSTGRES_USER: tamkeen
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a local password matching DATABASE_URL}
+    ports: ['127.0.0.1:55432:5432']
+    volumes: ['postgres-data:/var/lib/postgresql']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tamkeen -d tamkeen_demo']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  redis:
+    image: redis:8.2.1-alpine
+    profiles: ['extras']
+    ports: ['127.0.0.1:56379:6379']
+  mailpit:
+    image: axllent/mailpit:v1.27.4
+    profiles: ['extras']
+    ports: ['127.0.0.1:58025:8025', '127.0.0.1:51025:1025']
+volumes:
+  postgres-data:
