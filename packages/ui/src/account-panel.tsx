@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Banknote, ClipboardCheck, FileSearch, Gauge, Images, Inbox, Landmark, LayoutTemplate, LifeBuoy, ScrollText, ShieldCheck, TrendingUp, UsersRound } from 'lucide-react';
+import { Banknote, ClipboardCheck, FileSearch, Gauge, Images, Inbox, Landmark, LayoutTemplate, LifeBuoy, LogOut, ScrollText, ShieldCheck, TrendingUp, UsersRound } from 'lucide-react';
 import { localePath, type Locale } from './locale.js';
 
 /**
@@ -53,7 +53,11 @@ function readCache(): Me | null {
   } catch { return null; }
 }
 
-export function AccountPanel({ locale, path }: { locale: Locale; path: string }) {
+/**
+ * Who is signed in, from `/api/v1/me`, shown from a five-minute session cache first so a page does
+ * not flash signed-out while the request is in flight. `null` means signed out (or not known yet).
+ */
+function useMe(): Me | null {
   const [me, setMe] = useState<Me | null>(null);
   useEffect(() => {
     const cached = readCache();
@@ -71,7 +75,38 @@ export function AccountPanel({ locale, path }: { locale: Locale; path: string })
       .catch(() => undefined);
     return () => { active = false; };
   }, []);
+  return me;
+}
 
+/**
+ * The account corner of the public header. Public pages are rendered without knowing the visitor,
+ * so they start with "sign in / create account"; once the browser confirms a session, this swaps
+ * them for the visitor's name, a way back to their dashboard, and sign-out.
+ */
+export function HeaderAccount({ locale, signedOut }: { locale: Locale; signedOut: ReactNode }) {
+  const me = useMe();
+  if (!me) return <>{signedOut}</>;
+  const ar = locale === 'ar';
+  const signOut = () => {
+    try { window.sessionStorage.removeItem(CACHE_KEY); } catch { /* nothing cached */ }
+    void fetch('/api/v1/auth/sign-out', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      .finally(() => window.location.assign(localePath(locale, '/login')));
+  };
+  return (
+    <>
+      <a className="tmk-button tmk-button--primary tmk-header-account" href={localePath(locale, '/app')}>
+        <span className="tmk-header-account__avatar" aria-hidden="true">{(me.name.trim()[0] ?? '?').toUpperCase()}</span>
+        <span className="tmk-header-account__name">{ar ? 'لوحتي' : 'My dashboard'}</span>
+      </a>
+      <button type="button" className="tmk-button tmk-button--quiet" onClick={signOut} aria-label={ar ? `تسجيل الخروج من حساب ${me.name}` : `Sign out of ${me.name}`}>
+        <LogOut aria-hidden="true" size={18} />
+      </button>
+    </>
+  );
+}
+
+export function AccountPanel({ locale, path }: { locale: Locale; path: string }) {
+  const me = useMe();
   if (!me) return null;
   const ar = locale === 'ar';
   const links = STAFF_LINKS.filter(link => me.roles.includes(link.role));

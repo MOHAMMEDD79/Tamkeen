@@ -4,7 +4,7 @@ import { Bell, Briefcase, Building2, ChartColumn, ClipboardList, Compass, Globe,
 import { localePath, translator, type Locale, type StringKey } from './locale.js';
 import { ThemeToggle } from './theme-toggle.js';
 import { RevealOnScroll } from './motion.js';
-import { AccountPanel } from './account-panel.js';
+import { AccountPanel, HeaderAccount } from './account-panel.js';
 
 /**
  * The application shell: header, optional context sidebar, the main region and the footer.
@@ -31,7 +31,7 @@ export interface ShellNavItem { href: string; text: string; current?: boolean; i
 export interface ShellNavGroup { title?: string; items: ShellNavItem[] }
 
 /**
- * The brand mark: three rising bars — funding, delivery, result — on a teal square. The colours come
+ * The brand mark: three rising bars â€” funding, delivery, result â€” on a teal square. The colours come
  * from the theme, so the mark stays legible in dark mode; the tallest bar is amber in both.
  */
 export function Logo({ size = 32 }: { size?: number }) {
@@ -107,12 +107,13 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
   const publicLinks = PUBLIC_NAV.map(item => (
     <a key={item.path} className="tmk-nav__link" href={localePath(locale, item.path)} aria-current={isCurrent(path, item.path) ? 'page' : undefined}>{t(item.key)}</a>
   ));
+  // Public pages do not know the visitor at render time; HeaderAccount checks the session in the browser.
   const accountControls = signedIn
     ? userActions
-    : <>
+    : <HeaderAccount locale={locale} signedOut={<>
         <a className="tmk-button tmk-button--quiet" href={localePath(locale, '/login')}>{t('signIn')}</a>
         <a className="tmk-button tmk-button--primary" href={localePath(locale, '/register')}>{t('register')}</a>
-      </>;
+      </>} />;
   const appMode = Boolean(sidebar?.length || contexts?.length);
   const sidebarNav = (
     <>
@@ -183,7 +184,7 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
           {demoBanner ? (
             <p className="tmk-demo-banner" role="note">
               <i aria-hidden="true">!</i>
-              <span><strong>{t('demoDataTitle')}</strong> — {t('demoDataBody')}</span>
+              <span><strong>{t('demoDataTitle')}</strong> â€” {t('demoDataBody')}</span>
             </p>
           ) : null}
           {lead}
@@ -202,7 +203,7 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
       {demoBanner ? (
         <p className="tmk-demo-banner" role="note">
           <i aria-hidden="true">!</i>
-          <span><strong>{t('demoDataTitle')}</strong> — {t('demoDataBody')}</span>
+          <span><strong>{t('demoDataTitle')}</strong> â€” {t('demoDataBody')}</span>
         </p>
       ) : null}
       <header className="tmk-header">
@@ -266,7 +267,7 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
           </div>
         </div>
         <div className="tmk-footer__bottom">
-          <span>© {new Date().getUTCFullYear()} {t('brand')} · {t('footerRights')}</span>
+          <span>Â© {new Date().getUTCFullYear()} {t('brand')} Â· {t('footerRights')}</span>
           <a href={localePath(locale, '/policies/terms')}>{t('footerTerms')}</a>
         </div>
       </footer>

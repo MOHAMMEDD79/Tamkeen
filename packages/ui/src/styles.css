@@ -205,6 +205,8 @@ html[dir="ltr"] .tmk-sidebar__link:hover { transform: translateX(2px); }
 .tmk-account__who { display: grid; min-inline-size: 0; line-height: 1.4; }
 .tmk-account__who strong { color: var(--tmk-color-on-brand); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tmk-account__who span { font-size: 12px; color: rgb(255 255 255 / 0.6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tmk-header-account { gap: var(--tmk-space-8); padding-inline-start: var(--tmk-space-8); }
+.tmk-header-account__avatar { display: inline-grid; place-items: center; inline-size: 30px; block-size: 30px; border-radius: 10px; background: var(--tmk-color-accent); color: var(--tmk-color-on-warm); font-weight: 700; font-size: 14px; }
 .tmk-sidebar .tmk-account + .tmk-sidebar__group { margin-block-start: 0; padding-block-start: 0; border: 0; }
 
 .tmk-main {
