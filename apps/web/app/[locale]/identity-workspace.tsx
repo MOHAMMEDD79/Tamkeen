@@ -31,7 +31,7 @@ type BankChangeReview = { id: string; bankName: string; accountHolder: string; a
 const capabilityLabels = { Donor: 'متبرع', Beneficiary: 'مستفيد', JobSeeker: 'باحث عن عمل', Investor: 'مستثمر', Volunteer: 'متطوع' };
 const roleLabels: Record<string, string> = { Owner: 'مالك الجهة', OrgAdmin: 'إدارة الجهة', ProjectManager: 'إدارة المشاريع', Viewer: 'قراءة', Analyst: 'تحليل', FinanceMaker: 'طلب صرف', FinanceApprover: 'اعتماد صرف' };
 const platformRoleLabels: Record<string, string> = { Support: 'دعم', VerificationReviewer: 'مراجع توثيق', ContentReviewer: 'مراجع محتوى', FinanceOperator: 'مشغل مالي', RiskReviewer: 'مراجع مخاطر', PlatformAdmin: 'مدير منصة', Auditor: 'مدقق' };
-const errors: Record<string, string> = { unauthorized: 'سجّل الدخول للمتابعة.', request_rejected: 'تعذر تنفيذ الطلب. تحقق من تسجيل الدخول وصلاحيتك.', forbidden: 'لا تملك صلاحية تنفيذ هذا الإجراء.', invalid_input: 'راجع البيانات المطلوبة ثم أعد المحاولة.', conflict: 'تغير السجل أو يوجد طلب سابق. حدّث الصفحة قبل إعادة المحاولة.', not_found: 'المورد المطلوب غير موجود أو غير متاح لك.', mfa_unavailable: 'انتهى تحقق العملية أو أُلغي. ابدأ العملية من جديد.', transfer_unavailable: 'طلب نقل الملكية منتهٍ أو مستخدم أو غير متاح.', INVALID_CODE: 'رمز المصادقة غير صحيح.', INVALID_BACKUP_CODE: 'رمز الاسترداد غير صحيح أو مستخدم.', upload_unavailable: 'انتهت صلاحية الرفع أو استُخدمت من قبل. ابدأ رفعًا جديدًا.', upload_incomplete: 'لم يصل الملف كاملًا. ابدأ رفعًا جديدًا.', invitation_unavailable: 'الدعوة منتهية أو مستخدمة أو غير متاحة.', EMAIL_NOT_VERIFIED: 'تحقق من بريدك قبل تسجيل الدخول.', INVALID_EMAIL_OR_PASSWORD: 'البريد أو كلمة المرور غير صحيحة.' };
+const errors: Record<string, string> = { unauthorized: 'سجّل الدخول للمتابعة.', request_rejected: 'تعذر تنفيذ الطلب. تحقق من تسجيل الدخول وصلاحيتك.', forbidden: 'لا تملك صلاحية تنفيذ هذا الإجراء.', invalid_input: 'راجع البيانات المطلوبة ثم أعد المحاولة.', conflict: 'تغير السجل أو يوجد طلب سابق. حدّث الصفحة قبل إعادة المحاولة.', not_found: 'المورد المطلوب غير موجود أو غير متاح لك.', mfa_unavailable: 'انتهى تحقق العملية أو أُلغي. ابدأ العملية من جديد.', transfer_unavailable: 'طلب نقل الملكية منتهٍ أو مستخدم أو غير متاح.', INVALID_CODE: 'رمز المصادقة غير صحيح.', INVALID_BACKUP_CODE: 'رمز الاسترداد غير صحيح أو مستخدم.', upload_unavailable: 'انتهت صلاحية الرفع أو استُخدمت من قبل. ابدأ رفعًا جديدًا.', upload_incomplete: 'لم يصل الملف كاملًا. ابدأ رفعًا جديدًا.', invitation_unavailable: 'الدعوة منتهية أو مستخدمة أو غير متاحة.', EMAIL_NOT_VERIFIED: 'بريدك غير مؤكد بعد. أرسلنا إليه رمزًا من 6 أرقام؛ أدخله في صفحة «أدخل رمز التحقق».', INVALID_OTP: 'الرمز غير صحيح. راجع آخر رسالة وصلتك.', OTP_EXPIRED: 'انتهت صلاحية الرمز. اطلب رمزًا جديدًا.', TOO_MANY_ATTEMPTS: 'محاولات خاطئة كثيرة لهذا الرمز. اطلب رمزًا جديدًا.', INVALID_EMAIL_OR_PASSWORD: 'البريد أو كلمة المرور غير صحيحة.' };
 
 async function api(path: string, method = 'GET', body?: unknown) {
   const response = await fetch(`/api/v1${path}`, { method, credentials: 'include', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
@@ -93,6 +93,14 @@ function UnavailableAction({ id, label, note }: { id: string; label: string; not
   );
 }
 
+// One-time codes are digits only; `one-time-code` lets a phone offer the code from the email.
+function CodeField() {
+  return <label className="field">الرمز المكوّن من 6 أرقام<input required name="otp" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" dir="ltr" /></label>;
+}
+
+// The address the code was sent to, carried from sign-up to the code page without a URL parameter.
+const PENDING_EMAIL_KEY = 'tamkeen.pending-verification-email';
+
 function Field({ label, name, type = 'text', value, minLength }: { label: string; name: string; type?: string; value?: string; minLength?: number }) {
   return <label className="field">{label}<input required name={name} type={type} defaultValue={value} minLength={minLength} maxLength={type === 'password' ? 128 : 254} autoComplete={type === 'password' ? 'current-password' : type === 'email' ? 'email' : 'off'} dir={type === 'email' ? 'ltr' : undefined} /></label>;
 }
@@ -112,7 +120,9 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [returnTo, setReturnTo] = useState('/app');
-  const [verificationResult, setVerificationResult] = useState<'success' | 'error' | null>(null);
+  const [codeEmail, setCodeEmail] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [codeDone, setCodeDone] = useState(false);
   const [organizationDraft, setOrganizationDraft] = useState<OrganizationDraft>({});
   const [publicPreview, setPublicPreview] = useState<PublicOrganization | null>(null);
   const [verificationCase, setVerificationCase] = useState<VerificationCase | null>(null);
@@ -136,7 +146,7 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
     if (publicPage) {
       const search = new URLSearchParams(window.location.search);
       setReturnTo(safeReturnTo(search.get('returnTo')));
-      if (route === '/verify') setVerificationResult(search.get('success') === '1' ? 'success' : search.has('error') ? 'error' : null);
+      if (route === '/verify') { try { setCodeEmail(window.sessionStorage.getItem(PENDING_EMAIL_KEY) ?? ''); } catch { /* storage unavailable: the field starts empty */ } }
       setLoading(false); return;
     }
     (async () => {
@@ -228,29 +238,44 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
     const register = route === '/register';
     content = <><h1>{register ? 'حساب واحد، فرص متعددة' : 'مرحبًا بعودتك'}</h1><p>استخدم حسابك الشخصي للمساهمة والعمل وإدارة الجهات التي تنتمي إليها.</p><form onSubmit={form(async data => {
       if (register) {
-        await api('/auth/sign-up/email', 'POST', { name: data.get('name'), email: data.get('email'), password: data.get('password'), termsVersion: data.get('acceptTerms') ? CURRENT_TERMS_VERSION : '', callbackURL: `${window.location.origin}${L('/verify')}?success=1&returnTo=${encodeURIComponent(returnTo)}` });
-        setNotice('تم استلام طلب التسجيل. راجع بريدك الإلكتروني وافتح رابط التحقق ثم سجّل الدخول. قد تصل الرسالة إلى مجلد الرسائل غير المرغوب فيها.');
+        const email = String(data.get('email') ?? '').trim().toLowerCase();
+        await api('/auth/sign-up/email', 'POST', { name: data.get('name'), email, password: data.get('password'), termsVersion: data.get('acceptTerms') ? CURRENT_TERMS_VERSION : '' });
+        try { window.sessionStorage.setItem(PENDING_EMAIL_KEY, email); } catch { /* the code page asks for the address instead */ }
+        window.location.assign(L(`/verify?returnTo=${encodeURIComponent(returnTo)}`));
       } else { const login = await api('/auth/sign-in/email', 'POST', { email: data.get('email'), password: data.get('password') }) as { twoFactorRedirect?: boolean }; window.location.assign(L(login.twoFactorRedirect ? `/mfa/login?returnTo=${encodeURIComponent(returnTo)}` : returnTo)); }
     })}>{register && <Field label="اسمك" name="name" minLength={2} />}<Field label="البريد الإلكتروني" name="email" type="email" /><Field label="كلمة المرور — 12 حرفًا على الأقل" name="password" type="password" minLength={12} />
-      {register && <><p className="note">هذه بيئة تجربة محلية. لا تستخدم بيانات أو كلمة مرور تخص حسابًا حقيقيًا.</p><label className="check terms-consent"><input required type="checkbox" name="acceptTerms" />أوافق على <a href={L('/policies/terms')} target="_blank" rel="noreferrer">حدود وشروط النسخة التجريبية</a> (الإصدار {CURRENT_TERMS_VERSION}).</label></>}{submit(register ? 'إنشاء حساب' : 'تسجيل الدخول')}</form><nav className="inline-links"><a href={L(`${register ? '/login' : '/register'}?returnTo=${encodeURIComponent(returnTo)}`)}>{register ? 'لدي حساب' : 'أنشئ حسابًا'}</a><a href={L('/recover')}>استعادة كلمة المرور</a><a href={L('/verify')}>إعادة إرسال التحقق</a></nav></>;
+      {register && <><p className="note">هذه بيئة تجربة محلية. لا تستخدم بيانات أو كلمة مرور تخص حسابًا حقيقيًا.</p><label className="check terms-consent"><input required type="checkbox" name="acceptTerms" />أوافق على <a href={L('/policies/terms')} target="_blank" rel="noreferrer">حدود وشروط النسخة التجريبية</a> (الإصدار {CURRENT_TERMS_VERSION}).</label></>}{submit(register ? 'إنشاء حساب' : 'تسجيل الدخول')}</form><nav className="inline-links"><a href={L(`${register ? '/login' : '/register'}?returnTo=${encodeURIComponent(returnTo)}`)}>{register ? 'لدي حساب' : 'أنشئ حسابًا'}</a><a href={L('/recover')}>استعادة كلمة المرور</a><a href={L('/verify')}>أدخل رمز التحقق</a></nav></>;
   } else if (route === '/mfa/login') {
     content = <><h1>التحقق بخطوتين</h1><p>أدخل رمز تطبيق المصادقة لإكمال تسجيل الدخول.</p><form onSubmit={form(async data => { await api('/auth/two-factor/verify-totp', 'POST', { code: data.get('code'), trustDevice: false }); window.location.assign(L(returnTo)); })}><Field label="رمز المصادقة" name="code" /><button type="submit" disabled={busy}>تحقق وتابع</button></form><details><summary>استخدام رمز استرداد</summary><form onSubmit={form(async data => { await api('/auth/two-factor/verify-backup-code', 'POST', { code: data.get('code'), disableSession: false, trustDevice: false }); window.location.assign(L(returnTo)); })}><Field label="رمز الاسترداد" name="code" /><button type="submit" disabled={busy}>استخدام الرمز</button></form></details></>;
-  } else if (route === '/verify' && verificationResult) {
-    content = verificationResult === 'success'
-      ? <><h1>تم التحقق من بريدك</h1><p>أصبح حسابك جاهزًا لتسجيل الدخول. رابط التحقق أحادي الاستخدام.</p><a href={L(`/login?returnTo=${encodeURIComponent(returnTo)}`)}>تسجيل الدخول</a></>
-      : <><h1>تعذر استخدام رابط التحقق</h1><p>قد يكون الرابط منتهيًا أو مستخدمًا من قبل. اطلب رابط تحقق جديدًا.</p><a href={L('/verify')}>إرسال رابط جديد</a></>;
-  } else if (route === '/recover' || route === '/verify') {
-    content = <><h1>{route === '/recover' ? 'استعادة الوصول' : 'تحقق من بريدك'}</h1><form onSubmit={form(async data => {
-      await api(route === '/recover' ? '/auth/request-password-reset' : '/auth/send-verification-email', 'POST', { email: data.get('email'), redirectTo: `${window.location.origin}${L('/reset')}`, callbackURL: `${window.location.origin}${L('/login')}` });
-      setNotice('إذا كان البريد مسجّلًا ومؤهلًا لهذا الإجراء، ستصلك رسالة على بريدك الإلكتروني خلال دقائق.');
-    })}><Field label="البريد الإلكتروني" name="email" type="email" />{submit('إرسال رابط')}</form><a href={L('/login')}>العودة إلى الدخول</a></>;
-  } else if (route === '/reset') {
-    content = <><h1>كلمة مرور جديدة</h1><form onSubmit={form(async data => {
-      const token = new URLSearchParams(window.location.search).get('token');
-      if (!token) throw new Error('رابط الاسترداد غير صالح. اطلب رابطًا جديدًا.');
-      await api('/auth/reset-password', 'POST', { token, newPassword: data.get('password') });
-      setNotice('تغيرت كلمة المرور وأُلغيت الجلسات السابقة. يمكنك تسجيل الدخول الآن.');
-    })}><Field label="كلمة المرور الجديدة" name="password" type="password" minLength={12} />{submit('حفظ كلمة المرور')}</form><a href={L('/login')}>تسجيل الدخول</a></>;
+  } else if (route === '/verify') {
+    const resend = () => void action(async () => {
+      if (!codeEmail) throw new Error('أدخل بريدك الإلكتروني أولًا.');
+      await api('/auth/email-otp/send-verification-otp', 'POST', { email: codeEmail, type: 'email-verification' });
+      setNotice('إن كان البريد مسجّلًا وغير مؤكد فسيصله رمز جديد خلال ثوانٍ. الرمز السابق لم يعد صالحًا.');
+    });
+    content = codeDone
+      ? <><h1>تم تأكيد بريدك</h1><p>أصبح حسابك جاهزًا لتسجيل الدخول.</p><a href={L(`/login?returnTo=${encodeURIComponent(returnTo)}`)}>تسجيل الدخول</a></>
+      : <><h1>أدخل رمز التحقق</h1><p>أرسلنا رمزًا من 6 أرقام إلى بريدك الإلكتروني. يصل عادةً خلال ثوانٍ، وقد يذهب إلى مجلد الرسائل غير المرغوب فيها. ينتهي بعد 10 دقائق.</p><form onSubmit={form(async data => {
+        await api('/auth/email-otp/verify-email', 'POST', { email: codeEmail, otp: data.get('otp') });
+        try { window.sessionStorage.removeItem(PENDING_EMAIL_KEY); } catch { /* nothing to clear */ }
+        setCodeDone(true);
+      })}><label className="field">البريد الإلكتروني<input required name="email" type="email" dir="ltr" autoComplete="email" maxLength={254} value={codeEmail} onChange={event => setCodeEmail(event.target.value.trim().toLowerCase())} /></label><CodeField />{submit('تأكيد البريد')}</form><nav className="inline-links"><button type="button" className="link-button" disabled={busy} onClick={resend}>إرسال رمز جديد</button><a href={L('/login')}>العودة إلى الدخول</a></nav></>;
+  } else if (route === '/recover' || route === '/reset') {
+    const requestCode = () => action(async () => {
+      if (!codeEmail) throw new Error('أدخل بريدك الإلكتروني أولًا.');
+      await api('/auth/email-otp/request-password-reset', 'POST', { email: codeEmail });
+      setCodeSent(true);
+      setNotice('إن كان البريد مسجّلًا فسيصله رمز من 6 أرقام خلال ثوانٍ.');
+    });
+    const emailInput = <label className="field">البريد الإلكتروني<input required name="email" type="email" dir="ltr" autoComplete="email" maxLength={254} value={codeEmail} readOnly={codeSent} onChange={event => setCodeEmail(event.target.value.trim().toLowerCase())} /></label>;
+    content = codeDone
+      ? <><h1>تغيرت كلمة المرور</h1><p>أُلغيت جلساتك السابقة على كل الأجهزة. سجّل الدخول بكلمة المرور الجديدة.</p><a href={L('/login')}>تسجيل الدخول</a></>
+      : !codeSent
+        ? <><h1>استعادة الوصول</h1><p>أدخل بريد حسابك وسنرسل إليه رمزًا من 6 أرقام.</p><form onSubmit={event => { event.preventDefault(); void requestCode(); }}>{emailInput}{submit('إرسال الرمز')}</form><a href={L('/login')}>العودة إلى الدخول</a></>
+        : <><h1>كلمة مرور جديدة</h1><p>أدخل الرمز الذي وصلك على بريدك ثم اختر كلمة مرور جديدة. ينتهي الرمز بعد 10 دقائق.</p><form onSubmit={form(async data => {
+          await api('/auth/email-otp/reset-password', 'POST', { email: codeEmail, otp: data.get('otp'), password: data.get('password') });
+          setCodeDone(true);
+        })}>{emailInput}<CodeField /><Field label="كلمة المرور الجديدة — 12 حرفًا على الأقل" name="password" type="password" minLength={12} />{submit('حفظ كلمة المرور')}</form><nav className="inline-links"><button type="button" className="link-button" disabled={busy} onClick={() => void requestCode()}>إرسال رمز جديد</button><button type="button" className="link-button" disabled={busy} onClick={() => { setCodeSent(false); setNotice(''); }}>تغيير البريد</button></nav></>;
   } else if (route === '/policies/terms') {
     content = <><p className="eyebrow">الإصدار {CURRENT_TERMS_VERSION}</p><h1>شروط وحدود بيئة تمكين المحلية</h1><p>هذه النسخة مخصصة لاختبار الوظائف ببيانات تجريبية. لا تستقبل أموالًا ولا تنشئ ملكية أو التزامات استثمارية. تُسجل موافقة إنشاء الحساب على هذا الإصدار وتاريخه. الشروط والسياسات التشغيلية النهائية لم تعتمد بعد.</p><a href={L('/register')}>العودة إلى إنشاء الحساب</a></>;
   } else if (me && (route === '/app/security' || route === '/app/settings')) {

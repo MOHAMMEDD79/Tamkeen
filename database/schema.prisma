@@ -694,7 +694,10 @@ model LocalAuthMail {
   id        String @id @default(uuid()) @db.Uuid
   recipient String @db.VarChar(254)
   purpose   String @db.VarChar(32)
-  url       String
+  // A link (invitations, ownership transfers) or a one-time code (verification, password reset).
+  // The code is cleared once the message is delivered or expires.
+  url       String @default("")
+  code      String? @db.VarChar(12)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   // Outbox state for EMAIL_MODE=resend. Under local-outbox the worker marks rows local_only so a
   // later switch to resend never mails out a backlog of old links.

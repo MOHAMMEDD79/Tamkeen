@@ -8,6 +8,6 @@ if (!email) throw new Error('Usage: pnpm mail:local name@example.test');
 const db = createDatabase(config.databaseUrl);
 try {
   const messages = await db.localAuthMail.findMany({ where: { recipient: email }, orderBy: { createdAt: 'desc' }, take: 5 });
-  for (const mail of messages) console.log(`${mail.createdAt.toISOString()} | ${mail.purpose} | ${mail.state}\n${mail.url}\n`);
+  for (const mail of messages) console.log(`${mail.createdAt.toISOString()} | ${mail.purpose} | ${mail.state}\n${mail.code ?? mail.url}\n`);
   if (!messages.length) console.log('No local messages found for that address.');
 } finally { await db.$disconnect(); }

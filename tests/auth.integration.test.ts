@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
@@ -20,7 +20,7 @@ function totpFromUri(uri: string) {
   return ((digest.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).toString().padStart(6, '0');
 }
 
-test('registration, verification, hashed sessions, CSRF, reset and revocation over HTTP', async () => {
+test('registration, code verification, hashed sessions, CSRF, code reset and revocation over HTTP', async () => {
   const config = { ...loadConfig(process.env), emailMode: 'local-outbox' as const };
   const db = createDatabase(config.databaseUrl);
   const app = await createApp(config);
@@ -30,7 +30,6 @@ test('registration, verification, hashed sessions, CSRF, reset and revocation ov
   let organizationId: string | undefined;
   let uploadedStorageKey: string | undefined;
   let logoStorageKey: string | undefined;
-  let consumedVerificationIdentifier: string | undefined;
   try {
     await app.listen(0, '127.0.0.1');
     const base = await app.getUrl();
@@ -39,30 +38,33 @@ test('registration, verification, hashed sessions, CSRF, reset and revocation ov
     assert.equal(noConsent.status, 400);
     const oldConsent = await request('/auth/sign-up/email', { email, password, name: 'Integration User', termsVersion: 'old-version', callbackURL: `${config.appBaseUrl}/login` });
     assert.equal(oldConsent.status, 400);
-    const verificationCallback = `${config.appBaseUrl}/verify?success=1`;
-    const registered = await request('/auth/sign-up/email', { email, password, name: 'Integration User', termsVersion: CURRENT_TERMS_VERSION, callbackURL: verificationCallback });
+    const registered = await request('/auth/sign-up/email', { email, password, name: 'Integration User', termsVersion: CURRENT_TERMS_VERSION });
     assert.equal(registered.status, 200, await registered.text());
     const user = await db.user.findUniqueOrThrow({ where: { email } }); userId = user.id;
     assert.equal(user.emailVerified, false);
     assert.equal(user.termsVersion, CURRENT_TERMS_VERSION);
     assert.ok(user.termsAcceptedAt instanceof Date);
     assert.equal((await request('/auth/sign-in/email', { email, password })).status, 403);
-    const mailCount = await db.localAuthMail.count({ where: { recipient: email, purpose: 'verify' } });
-    assert.equal((await request('/auth/send-verification-email', { email, callbackURL: verificationCallback })).status, 200);
-    assert.equal(await db.localAuthMail.count({ where: { recipient: email, purpose: 'verify' } }), mailCount + 1);
-    const mail = await db.localAuthMail.findFirstOrThrow({ where: { recipient: email, purpose: 'verify' }, orderBy: { createdAt: 'desc' } });
-    const url = new URL(mail.url);
-    consumedVerificationIdentifier = `used-email-verification:${createHash('sha256').update(url.searchParams.get('token') ?? '').digest('hex')}`;
+    const latestCode = async (purpose: 'verify-code' | 'reset-code') => (await db.localAuthMail.findFirstOrThrow({ where: { recipient: email, purpose }, orderBy: { createdAt: 'desc' } })).code ?? '';
+    const signUpCode = await latestCode('verify-code');
+    assert.match(signUpCode, /^[0-9]{6}$/, 'sign-up queues a 6-digit code, not a link');
+    assert.equal((await db.localAuthMail.findFirstOrThrow({ where: { recipient: email, purpose: 'verify-code' } })).url, '');
+    assert.equal((await fetch(`${base}/api/v1/auth/verify-email?token=x`, { redirect: 'manual' })).status, 404, 'the link route is closed');
+    const mailCount = await db.localAuthMail.count({ where: { recipient: email, purpose: 'verify-code' } });
+    assert.equal((await request('/auth/email-otp/send-verification-otp', { email, type: 'email-verification' })).status, 200);
+    assert.equal(await db.localAuthMail.count({ where: { recipient: email, purpose: 'verify-code' } }), mailCount + 1);
+    const code = await latestCode('verify-code');
+    const wrongCode = code.slice(0, 5) + String((Number(code.at(-1)) + 1) % 10);
+    const wrong = await request('/auth/email-otp/verify-email', { email, otp: wrongCode });
+    assert.equal(wrong.status, 400);
+    assert.equal((await wrong.json()).code, 'INVALID_OTP');
     const verificationAttempts = await Promise.all([
-      fetch(`${base}${url.pathname}${url.search}`, { redirect: 'manual' }),
-      fetch(`${base}${url.pathname}${url.search}`, { redirect: 'manual' })
+      request('/auth/email-otp/verify-email', { email, otp: code }),
+      request('/auth/email-otp/verify-email', { email, otp: code })
     ]);
-    assert.equal(verificationAttempts.filter(response => response.headers.get('location') === verificationCallback).length, 1);
-    assert.equal(verificationAttempts.filter(response => /error=/.test(response.headers.get('location') ?? '')).length, 1);
+    assert.equal(verificationAttempts.filter(response => response.status === 200).length, 1, 'concurrent use of one code succeeds once');
     assert.equal((await db.user.findUniqueOrThrow({ where: { id: user.id } })).emailVerified, true);
-    const replay = await fetch(`${base}${url.pathname}${url.search}`, { redirect: 'manual' });
-    assert.equal(replay.status, 302);
-    assert.match(replay.headers.get('location') ?? '', /error=/);
+    assert.notEqual((await request('/auth/email-otp/verify-email', { email, otp: code })).status, 200, 'a used code cannot be replayed');
     const login = await request('/auth/sign-in/email', { email, password });
     assert.equal(login.status, 200);
     const cookie = login.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
@@ -113,14 +115,14 @@ test('registration, verification, hashed sessions, CSRF, reset and revocation ov
     assert.equal(cachedLogo.status, 304);
     assert.equal((await request('/me')).status, 401);
     assert.equal((await request('/me/context', { organizationId: null }, cookie, 'https://attacker.example')).status, 403);
-    const reset = await request('/auth/request-password-reset', { email, redirectTo: `${config.appBaseUrl}/reset` });
+    const reset = await request('/auth/email-otp/request-password-reset', { email });
     assert.equal(reset.status, 200);
-    const resetMail = await db.localAuthMail.findFirstOrThrow({ where: { recipient: email, purpose: 'reset' }, orderBy: { createdAt: 'desc' } });
-    const token = new URL(resetMail.url).searchParams.get('token');
+    const resetCode = await latestCode('reset-code');
+    assert.match(resetCode, /^[0-9]{6}$/);
     const newPassword = `Changed-${randomUUID()}`;
-    assert.equal((await request('/auth/reset-password', { token, newPassword })).status, 200);
-    assert.equal((await request('/me', undefined, cookie)).status, 401);
-    assert.notEqual((await request('/auth/reset-password', { token, newPassword })).status, 200);
+    assert.equal((await request('/auth/email-otp/reset-password', { email, otp: resetCode, password: newPassword })).status, 200);
+    assert.equal((await request('/me', undefined, cookie)).status, 401, 'a reset revokes existing sessions');
+    assert.notEqual((await request('/auth/email-otp/reset-password', { email, otp: resetCode, password: `Again-${randomUUID()}` })).status, 200, 'a used reset code cannot be replayed');
     assert.equal((await request('/auth/sign-in/email', { email, password })).status, 401);
     const relogin = await request('/auth/sign-in/email', { email, password: newPassword });
     assert.equal(relogin.status, 200);
@@ -146,7 +148,7 @@ test('registration, verification, hashed sessions, CSRF, reset and revocation ov
     assert.equal((await request('/me', undefined, verifiedCookie)).status, 200);
     assert.equal((await request('/auth/sign-out', {}, verifiedCookie)).status, 200);
     const limitedResetStatuses = [];
-    for (let attempt = 0; attempt < 3; attempt += 1) limitedResetStatuses.push((await request('/auth/request-password-reset', { email, redirectTo: `${config.appBaseUrl}/reset` })).status);
+    for (let attempt = 0; attempt < 3; attempt += 1) limitedResetStatuses.push((await request('/auth/email-otp/request-password-reset', { email })).status);
     assert.deepEqual(limitedResetStatuses, [200, 200, 429]);
   } finally {
     if (userId) {
@@ -170,7 +172,6 @@ test('registration, verification, hashed sessions, CSRF, reset and revocation ov
       await db.user.delete({ where: { id: userId } });
     }
     await db.localAuthMail.deleteMany({ where: { recipient: email } });
-    if (consumedVerificationIdentifier) await db.verification.deleteMany({ where: { identifier: consumedVerificationIdentifier } });
     if (uploadedStorageKey) await rm(resolve(process.cwd(), '.local', 'verification-files', 'clean', ...uploadedStorageKey.split('/')), { force: true });
     if (logoStorageKey) await rm(resolve(process.cwd(), '.local', 'organization-logos', 'public', ...logoStorageKey.split('/')), { force: true });
     await app.close(); await db.$disconnect();

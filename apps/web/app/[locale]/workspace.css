@@ -46,6 +46,11 @@ button:hover:not(:disabled) { background: var(--tmk-color-primary-hover); border
 button:disabled { opacity: 0.55; cursor: not-allowed; }
 button.secondary { background: var(--tmk-color-surface); color: var(--tmk-color-primary); border-color: var(--tmk-color-field-border); }
 button.secondary:hover:not(:disabled) { background: var(--tmk-color-primary-tint); }
+/* An action that sits among links (e.g. "send a new code") and should read like one. 24px keeps the target size. */
+button.link-button, button.link-button:hover:not(:disabled) {
+  min-block-size: 24px; padding: 0; background: none; border: 0; border-radius: 0;
+  color: var(--tmk-color-primary); font-weight: 400; text-decoration: underline; text-underline-offset: 4px;
+}
 
 /* Status text always pairs its colour with wording, so colour is never the only signal. */
 .status {

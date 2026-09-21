@@ -10,7 +10,7 @@ test('auth mail outbox: local mode never sends, resend mode sends once, retries,
   const recipient = `mail-${randomUUID()}@example.test`;
   try {
     await processAuthMailBatch(db, undefined); // settle anything already pending on this database
-    const local = await db.localAuthMail.create({ data: { recipient, purpose: 'verify', url: 'http://127.0.0.1:4000/v?token=local' } });
+    const local = await db.localAuthMail.create({ data: { recipient, purpose: 'verify-code', code: '111111' } });
     await processAuthMailBatch(db, undefined);
     assert.equal((await db.localAuthMail.findUniqueOrThrow({ where: { id: local.id } })).state, 'local_only');
 
@@ -19,7 +19,7 @@ test('auth mail outbox: local mode never sends, resend mode sends once, retries,
     await processAuthMailBatch(db, sender);
     assert.equal(sent.length, 0, 'switching to resend must not mail out the local backlog');
 
-    const live = await db.localAuthMail.create({ data: { recipient, purpose: 'reset', url: 'http://127.0.0.1:3000/reset?token=live' } });
+    const live = await db.localAuthMail.create({ data: { recipient, purpose: 'reset-code', code: '222222' } });
     await processAuthMailBatch(db, sender);
     await processAuthMailBatch(db, sender);
     assert.equal(sent.length, 1, 'a delivered row is never sent again');
@@ -27,6 +27,8 @@ test('auth mail outbox: local mode never sends, resend mode sends once, retries,
     const delivered = await db.localAuthMail.findUniqueOrThrow({ where: { id: live.id } });
     assert.equal(delivered.state, 'delivered');
     assert.ok(delivered.deliveredAt);
+    assert.equal(delivered.code, null, 'a delivered code is not kept in the outbox');
+    assert.ok(sent[0]!.message.text.includes('222222'));
 
     const flaky = await db.localAuthMail.create({ data: { recipient, purpose: 'invitation', url: 'http://127.0.0.1:3000/invitations/t' } });
     const now = new Date();
@@ -40,9 +42,10 @@ test('auth mail outbox: local mode never sends, resend mode sends once, retries,
     assert.equal(row.state, 'delivered');
     assert.equal(row.attempts, 2);
 
-    const stale = await db.localAuthMail.create({ data: { recipient, purpose: 'verify', url: 'http://127.0.0.1:4000/v?token=old', createdAt: new Date(Date.now() - 2 * 3600_000) } });
+    const stale = await db.localAuthMail.create({ data: { recipient, purpose: 'verify-code', code: '333333', createdAt: new Date(Date.now() - 11 * 60_000) } });
     await processAuthMailBatch(db, sender);
-    assert.equal((await db.localAuthMail.findUniqueOrThrow({ where: { id: stale.id } })).state, 'expired', 'an hour-old link is not worth sending');
+    assert.equal((await db.localAuthMail.findUniqueOrThrow({ where: { id: stale.id } })).state, 'expired', 'a code older than its 10-minute life is not sent');
+    assert.equal((await db.localAuthMail.findUniqueOrThrow({ where: { id: stale.id } })).code, null);
     assert.equal(sent.length, 2);
   } finally {
     await db.localAuthMail.deleteMany({ where: { recipient } });
