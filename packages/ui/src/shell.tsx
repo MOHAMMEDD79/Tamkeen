@@ -4,6 +4,7 @@ import { Bell, Briefcase, Building2, ChartColumn, ClipboardList, Compass, Gradua
 import { localePath, translator, type Locale, type StringKey } from './locale.js';
 import { ThemeToggle } from './theme-toggle.js';
 import { RevealOnScroll } from './motion.js';
+import { AccountPanel } from './account-panel.js';
 
 /**
  * The application shell: header, optional context sidebar, the main region and the footer.
@@ -100,7 +101,8 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
 }) {
   const t = translator(locale);
   const other: Locale = locale === 'ar' ? 'en' : 'ar';
-  const personal = path === '/app' || path.startsWith('/app/') || path === '/onboarding';
+  // Personal pages and staff pages share one sidebar: the account panel adds the staff sections.
+  const personal = path === '/app' || path.startsWith('/app/') || path === '/onboarding' || path.startsWith('/admin/');
   const sidebar = navigation?.length ? navigation : personal ? personalNavigation(locale, path) : undefined;
   const publicLinks = PUBLIC_NAV.map(item => (
     <a key={item.path} className="tmk-nav__link" href={localePath(locale, item.path)} aria-current={isCurrent(path, item.path) ? 'page' : undefined}>{t(item.key)}</a>
@@ -153,6 +155,7 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
       <div className={`tmk-shell__body${sidebar || contexts?.length ? ' tmk-shell__body--with-sidebar' : ''}`}>
         {sidebar || contexts?.length ? (
           <nav className="tmk-sidebar" aria-label={personal ? t('personalWorkspace') : t('workspace')}>
+            {personal ? <AccountPanel locale={locale} path={path} /> : null}
             {contexts?.length ? (
               <div className="tmk-sidebar__group">
                 <p className="tmk-sidebar__title" id="tmk-contexts-title">{t('navGroupOrganizations')}</p>

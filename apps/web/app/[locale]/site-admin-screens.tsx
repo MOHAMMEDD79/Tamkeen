@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
-import { Archive, Eye, EyeOff, ImagePlus, Inbox, LayoutTemplate, MailOpen, Plus, RotateCcw, Save, Trash2, Images } from 'lucide-react';
-import { AppShell, EmptyState, Notice, PageHeader, Skeleton, StatusBadge, formatDate, localePath, type Locale, type ShellNavGroup } from '@tamkeen/ui';
+import { Archive, Eye, EyeOff, ImagePlus, Inbox, MailOpen, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { AppShell, EmptyState, Notice, PageHeader, Skeleton, StatusBadge, formatDate, localePath, type Locale } from '@tamkeen/ui';
 
 /**
  * ADM site content: the platform admin controls every photo and line of marketing copy the public
@@ -62,21 +62,13 @@ export function SiteAdmin({ locale, mode }: { locale: Locale; mode: 'content' | 
   const L = (path: string) => localePath(locale, path);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const navigation: ShellNavGroup[] = [{
-    title: 'إدارة الموقع',
-    items: [
-      { href: L('/admin/site'), text: 'البانرات والأقسام', icon: LayoutTemplate, current: mode === 'content' },
-      { href: L('/admin/site/covers'), text: 'صور المشاريع', icon: Images, current: mode === 'covers' },
-      { href: L('/admin/messages'), text: 'رسائل التواصل', icon: Inbox, current: mode === 'messages' }
-    ]
-  }];
   const run = useCallback(async (work: () => Promise<string | void>) => {
     setError(''); setNotice('');
     try { const done = await work(); if (done) setNotice(done); }
     catch (e) { setError(e instanceof Error ? e.message : 'تعذر تنفيذ العملية.'); }
   }, []);
   return (
-    <AppShell locale={locale} path={mode === 'messages' ? '/admin/messages' : mode === 'covers' ? '/admin/site/covers' : '/admin/site'} signedIn navigation={navigation}
+    <AppShell locale={locale} path={mode === 'messages' ? '/admin/messages' : mode === 'covers' ? '/admin/site/covers' : '/admin/site'} signedIn
       userActions={<a className="tmk-button tmk-button--quiet" href={L('/app')}>لوحتي</a>}>
       {error ? <Notice tone="danger" live="assertive">{error}</Notice> : null}
       {notice ? <Notice tone="success">{notice}</Notice> : null}
