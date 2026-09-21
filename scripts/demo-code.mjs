@@ -6,6 +6,7 @@
  *   pnpm demo:code
  */
 
+import { Buffer } from 'node:buffer';
 import { createHmac } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 

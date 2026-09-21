@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { emailOTP, twoFactor } from 'better-auth/plugins';
-import { APIError } from 'better-auth/api';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { CURRENT_TERMS_VERSION, type RuntimeConfig } from '@tamkeen/config';
 import type { DatabaseClient } from '@tamkeen/database';
 import { hashedSessionAdapter } from './session-adapter.js';
@@ -43,6 +43,20 @@ export function createAuth(config: RuntimeConfig, db: DatabaseClient) {
     emailAndPassword: { enabled: true, requireEmailVerification: true, minPasswordLength: 12, revokeSessionsOnPasswordReset: true },
     // The email-otp plugin replaces sendVerificationEmail with a code; sign-up still triggers it.
     emailVerification: { sendOnSignUp: true, autoSignInAfterVerification: false },
+    /**
+     * The demo test accounts (`pnpm demo:accounts`) sign in without the six-digit code, on a local
+     * build only. They keep two-step verification switched on in the database, so the staff pages
+     * that require it still accept them and sensitive actions still ask for a code; only the
+     * sign-in prompt is skipped. `.test` is a reserved domain no real person can hold, and in
+     * staging or production this hook does nothing.
+     */
+    hooks: {
+      after: createAuthMiddleware(async context => {
+        if (context.path !== '/sign-in/email' || !['demo', 'test'].includes(config.environment)) return;
+        const signedIn = context.context.newSession;
+        if (signedIn?.user.email.endsWith('@tamkeen.test')) signedIn.user.twoFactorEnabled = false;
+      })
+    },
     rateLimit: { enabled: true, window: 60, max: 30, customRules: { '/sign-in/email': { window: 60, max: 10 }, '/email-otp/request-password-reset': { window: 60, max: 3 } } },
     databaseHooks: {
       user: { create: { before: async user => {
