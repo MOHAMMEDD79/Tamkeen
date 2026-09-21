@@ -229,7 +229,7 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
     content = <><h1>{register ? 'حساب واحد، فرص متعددة' : 'مرحبًا بعودتك'}</h1><p>استخدم حسابك الشخصي للمساهمة والعمل وإدارة الجهات التي تنتمي إليها.</p><form onSubmit={form(async data => {
       if (register) {
         await api('/auth/sign-up/email', 'POST', { name: data.get('name'), email: data.get('email'), password: data.get('password'), termsVersion: data.get('acceptTerms') ? CURRENT_TERMS_VERSION : '', callbackURL: `${window.location.origin}${L('/verify')}?success=1&returnTo=${encodeURIComponent(returnTo)}` });
-        setNotice('تم استلام طلب التسجيل. راجع رسالة التحقق في البريد المحلي ثم سجّل الدخول.');
+        setNotice('تم استلام طلب التسجيل. راجع بريدك الإلكتروني وافتح رابط التحقق ثم سجّل الدخول. قد تصل الرسالة إلى مجلد الرسائل غير المرغوب فيها.');
       } else { const login = await api('/auth/sign-in/email', 'POST', { email: data.get('email'), password: data.get('password') }) as { twoFactorRedirect?: boolean }; window.location.assign(L(login.twoFactorRedirect ? `/mfa/login?returnTo=${encodeURIComponent(returnTo)}` : returnTo)); }
     })}>{register && <Field label="اسمك" name="name" minLength={2} />}<Field label="البريد الإلكتروني" name="email" type="email" /><Field label="كلمة المرور — 12 حرفًا على الأقل" name="password" type="password" minLength={12} />
       {register && <><p className="note">هذه بيئة تجربة محلية. لا تستخدم بيانات أو كلمة مرور تخص حسابًا حقيقيًا.</p><label className="check terms-consent"><input required type="checkbox" name="acceptTerms" />أوافق على <a href={L('/policies/terms')} target="_blank" rel="noreferrer">حدود وشروط النسخة التجريبية</a> (الإصدار {CURRENT_TERMS_VERSION}).</label></>}{submit(register ? 'إنشاء حساب' : 'تسجيل الدخول')}</form><nav className="inline-links"><a href={L(`${register ? '/login' : '/register'}?returnTo=${encodeURIComponent(returnTo)}`)}>{register ? 'لدي حساب' : 'أنشئ حسابًا'}</a><a href={L('/recover')}>استعادة كلمة المرور</a><a href={L('/verify')}>إعادة إرسال التحقق</a></nav></>;
@@ -242,7 +242,7 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
   } else if (route === '/recover' || route === '/verify') {
     content = <><h1>{route === '/recover' ? 'استعادة الوصول' : 'تحقق من بريدك'}</h1><form onSubmit={form(async data => {
       await api(route === '/recover' ? '/auth/request-password-reset' : '/auth/send-verification-email', 'POST', { email: data.get('email'), redirectTo: `${window.location.origin}${L('/reset')}`, callbackURL: `${window.location.origin}${L('/login')}` });
-      setNotice('إذا كان البريد مسجّلًا ومؤهلًا لهذا الإجراء، ستجد رسالة في البريد المحلي.');
+      setNotice('إذا كان البريد مسجّلًا ومؤهلًا لهذا الإجراء، ستصلك رسالة على بريدك الإلكتروني خلال دقائق.');
     })}><Field label="البريد الإلكتروني" name="email" type="email" />{submit('إرسال رابط')}</form><a href={L('/login')}>العودة إلى الدخول</a></>;
   } else if (route === '/reset') {
     content = <><h1>كلمة مرور جديدة</h1><form onSubmit={form(async data => {

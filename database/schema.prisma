@@ -696,6 +696,14 @@ model LocalAuthMail {
   purpose   String @db.VarChar(32)
   url       String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  // Outbox state for EMAIL_MODE=resend. Under local-outbox the worker marks rows local_only so a
+  // later switch to resend never mails out a backlog of old links.
+  state         String @default("pending") @db.VarChar(20)
+  attempts      Int @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  lastErrorCode String @default("") @map("last_error_code") @db.VarChar(80)
+  deliveredAt   DateTime? @map("delivered_at") @db.Timestamptz(3)
+  @@index([state, nextAttemptAt])
   @@map("local_auth_mail")
 }
 

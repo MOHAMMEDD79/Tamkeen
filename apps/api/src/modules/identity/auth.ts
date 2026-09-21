@@ -14,7 +14,8 @@ export function createAuth(config: RuntimeConfig, db: DatabaseClient) {
     return { id: `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`, identifier: `used-email-verification:${hash}` };
   };
   const deliver = async (recipient: string, url: string, purpose: string) => {
-    if (config.emailMode !== 'local-outbox' || !['demo', 'test'].includes(config.environment)) throw new APIError('SERVICE_UNAVAILABLE', { message: 'Local mail adapter is not configured' });
+    // The row is the outbox: under resend the worker relays it, under local-outbox it stays local.
+    if (config.emailMode === 'mailpit' || !['demo', 'test'].includes(config.environment)) throw new APIError('SERVICE_UNAVAILABLE', { message: 'Mail adapter is not configured' });
     await db.localAuthMail.create({ data: { recipient, url, purpose } });
   };
   return betterAuth({

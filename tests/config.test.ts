@@ -18,6 +18,19 @@ test('refuses real payments, live email and provider secrets before adapters exi
     assert.throws(() => loadConfig({ ...safe, ...override }));
   }
 });
+test('resend is the one real email adapter, demo/test only, and needs a key and a sender', () => {
+  const key = 're_' + 'x'.repeat(24);
+  const resend = { ...safe, EMAIL_MODE: 'resend', RESEND_API_KEY: key, EMAIL_FROM: 'Tamkeen <onboarding@resend.dev>' };
+  const config = loadConfig(resend);
+  assert.equal(config.emailMode, 'resend');
+  assert.equal(config.resend?.from, 'Tamkeen <onboarding@resend.dev>');
+  assert.equal(loadConfig({ ...safe, EMAIL_MODE: 'local-outbox' }).resend, undefined);
+  assert.throws(() => loadConfig({ ...resend, APP_ENV: 'production' }));
+  assert.throws(() => loadConfig({ ...resend, RESEND_API_KEY: '' }));
+  assert.throws(() => loadConfig({ ...resend, EMAIL_FROM: 'Tamkeen <a@b.test>\r\nBcc: x@y.test' }), 'a sender with a line break could inject headers');
+  assert.throws(() => loadConfig({ ...resend, SENDGRID_API_KEY: 'private' }), 'a resend key does not unlock other providers');
+  assert.throws(() => loadConfig({ ...resend, RESEND_API_KEY: `${key}!` }), error => error instanceof Error && !error.message.includes('xxxx'));
+});
 test('refuses remote or production-named databases in demo', () => {
   for (const url of ['postgresql://x:secret@db.example.com/tamkeen_demo', 'postgresql://x:secret@127.0.0.1/tamkeen_prod', 'https://127.0.0.1/tamkeen_demo']) assert.throws(() => loadConfig({ ...safe, DATABASE_URL: url }));
 });

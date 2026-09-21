@@ -69,7 +69,7 @@ export class IdentityController {
 
   @Post('admin/team/invitations') async invitePlatformStaff(@Req() req: IncomingMessage, @Body() body: unknown) {
     const session = await this.session(req);
-    if (this.runtime.config.emailMode !== 'local-outbox') throw new ForbiddenException('Local delivery is not configured');
+    if (this.runtime.config.emailMode === 'mailpit') throw new ForbiddenException('Mail delivery is not configured');
     const input = z.object({ email: z.email(), roles: z.array(platformRole).min(1).max(7), grantExpiresAt: z.iso.datetime().transform(value => new Date(value)) }).strict().parse(body);
     return { data: await this.service.invitePlatformStaff(session.user.id, input, this.runtime.config.appBaseUrl) };
   }
@@ -192,7 +192,7 @@ export class IdentityController {
 
   @Post('orgs/:id/ownership-transfers') async createOwnershipTransfer(@Req() req: IncomingMessage, @Param('id') id: string, @Body() body: unknown) {
     const session = await this.session(req);
-    if (this.runtime.config.emailMode !== 'local-outbox') throw new ForbiddenException('Local delivery is not configured');
+    if (this.runtime.config.emailMode === 'mailpit') throw new ForbiddenException('Mail delivery is not configured');
     const input = z.object({ targetUserId: uuid, version: z.number().int().positive(), mfaChallengeId: uuid }).strict().parse(body);
     return { data: await this.service.createOwnershipTransfer(session.user.id, session.session.id, uuid.parse(id), input, this.runtime.config.appBaseUrl) };
   }
@@ -320,7 +320,7 @@ export class IdentityController {
 
   @Post('orgs/:id/invitations') async invite(@Req() req: IncomingMessage, @Param('id') id: string, @Body() body: unknown) {
     const session = await this.session(req);
-    if (this.runtime.config.emailMode !== 'local-outbox') throw new ForbiddenException('Local delivery is not configured');
+    if (this.runtime.config.emailMode === 'mailpit') throw new ForbiddenException('Mail delivery is not configured');
     const input = z.object({ email: z.email(), roles: z.array(role).min(1).max(10) }).strict().parse(body);
     const result = await this.service.invite(session.user.id, uuid.parse(id), input.email, input.roles, this.runtime.config.appBaseUrl);
     return { data: { id: result.id, expiresAt: result.expiresAt } };

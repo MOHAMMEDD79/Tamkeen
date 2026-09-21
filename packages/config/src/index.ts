@@ -9,7 +9,9 @@ export interface RuntimeConfig {
   apiBaseUrl: string;
   heartbeatMs: number;
   sessionSecret: string;
-  emailMode: 'mailpit' | 'local-outbox';
+  emailMode: 'mailpit' | 'local-outbox' | 'resend';
+  /** Present only when emailMode is 'resend'. Never log this object whole. */
+  resend?: { apiKey: string; from: string };
 }
 
 // Errors name configuration keys only; never include secret values or connection strings.
@@ -44,14 +46,26 @@ export function loadConfig(env: Record<string, string | undefined>): RuntimeConf
     if (!['127.0.0.1', 'localhost', '[::1]', 'postgres'].includes(database.hostname)) throw new Error('Local environment requires a local database');
     if (!/^\/tamkeen_(demo|test)$/.test(database.pathname)) throw new Error('Local database must be tamkeen_demo or tamkeen_test');
   }
-  // PART-01 intentionally has no live-money or email adapters. Fail closed in every environment.
-  if (required('PAYMENT_MODE') !== 'simulator' || !['mailpit', 'local-outbox'].includes(required('EMAIL_MODE'))) throw new Error('External providers are not implemented');
-  if (!local && env.EMAIL_MODE === 'local-outbox') throw new Error('Local outbox is forbidden outside demo/test');
+  // No live-money adapter exists. Fail closed in every environment.
+  // Resend is the one real email adapter, and only for demo/test: the outbox it relays from stores
+  // link tokens in plain text, which is acceptable for a local preview and not for production.
+  const emailMode = required('EMAIL_MODE');
+  if (required('PAYMENT_MODE') !== 'simulator' || !['mailpit', 'local-outbox', 'resend'].includes(emailMode)) throw new Error('External providers are not implemented');
+  if (!local && (emailMode === 'local-outbox' || emailMode === 'resend')) throw new Error(`EMAIL_MODE ${emailMode} is forbidden outside demo/test`);
   if (required('MONEY_ENABLED') !== 'false' || required('INVESTMENT_ENABLED') !== 'false') throw new Error('Financial features are not implemented');
-  const forbidden = Object.keys(env).some(key => /^(STRIPE|PAYPAL|ADYEN|PAYMENT|SMTP|SENDGRID|RESEND).*?(SECRET|TOKEN|KEY|PASSWORD)/i.test(key) && Boolean(env[key]));
+  const forbidden = Object.keys(env).some(key => /^(STRIPE|PAYPAL|ADYEN|PAYMENT|SMTP|SENDGRID|RESEND).*?(SECRET|TOKEN|KEY|PASSWORD)/i.test(key) && Boolean(env[key]) && !(key === 'RESEND_API_KEY' && emailMode === 'resend'));
   if (forbidden) throw new Error('External provider credentials are forbidden in foundation mode');
+  let resend: RuntimeConfig['resend'];
+  if (emailMode === 'resend') {
+    const apiKey = required('RESEND_API_KEY');
+    if (!/^re_[A-Za-z0-9_]{16,}$/.test(apiKey)) throw new Error('Invalid RESEND_API_KEY');
+    const from = required('EMAIL_FROM');
+    // "Name <address>" or a bare address; no line breaks, so the value cannot inject headers.
+    if (!/^([^<>\r\n]{1,64} <[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>|[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+)$/.test(from)) throw new Error('Invalid EMAIL_FROM');
+    resend = { apiKey, from };
+  }
   return {
-    environment: environment as AppEnvironment, databaseUrl, sessionSecret: secret, emailMode: env.EMAIL_MODE as 'mailpit' | 'local-outbox',
+    environment: environment as AppEnvironment, databaseUrl, sessionSecret: secret, emailMode: emailMode as RuntimeConfig['emailMode'], ...(resend ? { resend } : {}),
     apiPort: integer('API_PORT', 1, 65535), apiHost: required('API_HOST'),
     appBaseUrl: url('APP_BASE_URL'), apiBaseUrl: url('API_BASE_URL'),
     heartbeatMs: integer('WORKER_HEARTBEAT_MS', 1000, 60000)
