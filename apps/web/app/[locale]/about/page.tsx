@@ -145,7 +145,7 @@ export default async function About({ params }: { params: Promise<{ locale: stri
           {text.storyBody.map(paragraph => <p key={paragraph} style={{ fontSize: 17, color: 'var(--tmk-color-muted)' }}>{paragraph}</p>)}
         </div>
         <div className="tmk-split__media tmk-reveal" style={{ ['--reveal-delay' as string]: 1 }}>
-          <img src="/media/defaults/about-city.jpg" alt="" loading="lazy" />
+          <img src="/media/defaults/about-jerusalem.jpg" alt="" loading="lazy" />
           {orgList.length ? <div className="tmk-split__badge"><strong><CountUp value={orgList.length} /></strong><span>{text.numbers.organizations}</span></div> : null}
         </div>
       </section>

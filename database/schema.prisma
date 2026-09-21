@@ -399,6 +399,9 @@ model Organization {
   city            String @db.VarChar(100)
   status          OrganizationStatus @default(active)
   verification    VerificationState @default(not_started)
+  /// Shown in the public organisations directory. Test and demo organisations are kept (their
+  /// accounts still work) but unlisted, so visitors only see real ones.
+  publiclyListed  Boolean @default(true) @map("publicly_listed")
   version         Int @default(1)
   createdBy       String @map("created_by") @db.Uuid
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)

@@ -131,6 +131,9 @@ export class ProjectsService {
     const rows = await this.db.organization.findMany({
       where: {
         status: 'active',
+        // Unlisted (test and demo) organisations keep working and keep their profile page; they are
+        // only left out of the directory.
+        publiclyListed: true,
         ...(filters.country ? { country: filters.country } : {}),
         // PUB-04.A02: an expired verification is not a verified organisation.
         ...(filters.verifiedOnly ? { verification: 'verified' as const } : {}),

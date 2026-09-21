@@ -30,6 +30,7 @@
     "demo:enablement": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-enablement.ts",
     "demo:code": "node scripts/demo-code.mjs",
     "demo:accounts": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-accounts.ts",
+    "orgs:real": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/real-organizations.ts",
     "admin:grant": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/grant-platform-admin.ts",
     "dev:session": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/dev-session.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
