@@ -598,8 +598,17 @@ html[dir="ltr"] .tmk-track:hover .tmk-track__cta svg { transform: translateX(6px
 .tmk-impact::before { content: ''; position: absolute; inset-block-start: -30%; inset-inline-start: -10%; inline-size: 600px; block-size: 600px; border-radius: 50%; background: radial-gradient(circle, rgb(10 122 104 / 0.55), transparent 70%); }
 .tmk-impact::after { content: ''; position: absolute; inset-block-end: -40%; inset-inline-end: -5%; inline-size: 500px; block-size: 500px; border-radius: 50%; background: radial-gradient(circle, rgb(245 165 36 / 0.18), transparent 70%); }
 .tmk-impact__inner { position: relative; z-index: 1; max-inline-size: var(--tmk-layout-content-max); margin-inline: auto; padding-inline: var(--tmk-layout-gutter); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--tmk-space-32); }
-.tmk-impact__item strong { display: block; font-size: clamp(40px, 5vw, 64px); line-height: 1; font-weight: 700; color: var(--tmk-color-highlight); letter-spacing: -0.03em; }
-.tmk-impact__item span { display: block; margin-block-start: var(--tmk-space-12); color: var(--tmk-color-on-brand-muted); font-size: 16px; }
+.tmk-impact__item { display: grid; justify-items: start; gap: var(--tmk-space-12); }
+/* An icon in a glass disc, so each figure is recognisable before it is read. */
+.tmk-impact__icon {
+  display: inline-grid; place-items: center; inline-size: 60px; block-size: 60px; border-radius: 18px;
+  background: rgb(255 255 255 / 0.08); border: 1px solid rgb(255 255 255 / 0.16); color: var(--tmk-color-highlight);
+  transition: transform var(--tmk-motion-base) var(--tmk-motion-easing-out), background-color var(--tmk-motion-base) var(--tmk-motion-easing);
+}
+.tmk-impact__item:hover .tmk-impact__icon { transform: translateY(-4px) rotate(-6deg); background: var(--tmk-color-accent); color: var(--tmk-color-on-warm); }
+.tmk-impact__item > strong { display: block; font-size: clamp(40px, 5vw, 64px); line-height: 1; font-weight: 700; color: var(--tmk-color-on-brand); letter-spacing: -0.03em; }
+/* Only the label: the number's own spans live inside <strong> and must keep its size. */
+.tmk-impact__item > span:last-child { display: block; color: var(--tmk-color-on-brand-muted); font-size: 16px; }
 
 /* Project cards: a cover photo, the category over it, then funding progress and the action. */
 .tmk-projects { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: var(--tmk-space-24); }

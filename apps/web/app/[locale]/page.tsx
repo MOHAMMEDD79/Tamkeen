@@ -1,4 +1,4 @@
-import { BadgeCheck, Building2, CircleCheck, Eye, FileCheck2, HandCoins, HandHeart, Landmark, Rocket, Scale, ShieldCheck, Sprout } from 'lucide-react';
+import { BadgeCheck, Building2, CircleCheck, Eye, FileCheck2, FolderKanban, HandCoins, HandHeart, Landmark, MapPin, Rocket, Scale, ShieldCheck, Sprout } from 'lucide-react';
 import { AppShell, CountUp, localePath, type Locale } from '@tamkeen/ui';
 import { readPublic, type PublicOrganizationSummary, type PublicProjectCard } from '../../lib/server-api';
 import { readSiteContent, withFunding, type SiteItem } from '../../lib/site-content';
@@ -161,16 +161,20 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       <section className="tmk-impact tmk-reveal" aria-label={text.impactKicker}>
         <div className="tmk-impact__inner">
           {[
-            { value: projectList.length, label: text.impact.projects },
-            { value: verified, label: text.impact.verified },
-            { value: contributions, label: text.impact.contributions },
-            { value: cities, label: text.impact.cities }
-          ].map(entry => (
-            <div className="tmk-impact__item" key={entry.label}>
-              <strong><CountUp value={entry.value} /></strong>
-              <span>{entry.label}</span>
-            </div>
-          ))}
+            { value: projectList.length, label: text.impact.projects, icon: FolderKanban },
+            { value: verified, label: text.impact.verified, icon: BadgeCheck },
+            { value: contributions, label: text.impact.contributions, icon: HandCoins },
+            { value: cities, label: text.impact.cities, icon: MapPin }
+          ].map(entry => {
+            const Icon = entry.icon;
+            return (
+              <div className="tmk-impact__item" key={entry.label}>
+                <span className="tmk-impact__icon"><Icon aria-hidden="true" size={28} /></span>
+                <strong><CountUp value={entry.value} /></strong>
+                <span>{entry.label}</span>
+              </div>
+            );
+          })}
         </div>
       </section>
 

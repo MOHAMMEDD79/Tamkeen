@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { BadgeCheck, CircleCheck, Eye, HandHeart, Handshake, Rocket, Scale, ShieldCheck, Sprout, Target } from 'lucide-react';
+import { BadgeCheck, Building2, CircleCheck, Eye, FolderKanban, HandHeart, Handshake, Layers, Rocket, Scale, ShieldCheck, Sprout, Target } from 'lucide-react';
 import { AppShell, CountUp, isLocale, localePath, type Locale } from '@tamkeen/ui';
 import { CURRENT_TERMS_VERSION } from '@tamkeen/config';
 import { DownloadButton } from '../download-button';
@@ -190,13 +190,20 @@ export default async function About({ params }: { params: Promise<{ locale: stri
       <section className="tmk-impact tmk-reveal" aria-label={text.kicker}>
         <div className="tmk-impact__inner">
           {[
-            { value: projects.ok ? projects.data.length : 0, label: text.numbers.projects },
-            { value: orgList.length, label: text.numbers.organizations },
-            { value: orgList.filter(org => org.verified).length, label: text.numbers.verified },
-            { value: 3, label: text.numbers.tracks }
-          ].map(entry => (
-            <div className="tmk-impact__item" key={entry.label}><strong><CountUp value={entry.value} /></strong><span>{entry.label}</span></div>
-          ))}
+            { value: projects.ok ? projects.data.length : 0, label: text.numbers.projects, icon: FolderKanban },
+            { value: orgList.length, label: text.numbers.organizations, icon: Building2 },
+            { value: orgList.filter(org => org.verified).length, label: text.numbers.verified, icon: BadgeCheck },
+            { value: 3, label: text.numbers.tracks, icon: Layers }
+          ].map(entry => {
+            const Icon = entry.icon;
+            return (
+              <div className="tmk-impact__item" key={entry.label}>
+                <span className="tmk-impact__icon"><Icon aria-hidden="true" size={28} /></span>
+                <strong><CountUp value={entry.value} /></strong>
+                <span>{entry.label}</span>
+              </div>
+            );
+          })}
         </div>
       </section>
 
