@@ -1,12 +1,18 @@
 import type { ReactNode } from 'react';
-import { localePath, translator, type Locale } from './locale.js';
+import type { LucideIcon } from 'lucide-react';
+import { Bell, Briefcase, Building2, ChartColumn, ClipboardList, Compass, GraduationCap, HandCoins, HandHeart, LayoutDashboard, LifeBuoy, Lightbulb, Menu, Settings, TrendingUp, Users } from 'lucide-react';
+import { localePath, translator, type Locale, type StringKey } from './locale.js';
 
 /**
- * The application shell: header, optional context sidebar, and the main region.
+ * The application shell: header, optional context sidebar, the main region and the footer.
  *
  * The active context name is always visible (02-IDENTITY requires it above any page carrying a
  * financial action), and the language control preserves the current path so switching locale is
  * navigation, not a reset.
+ *
+ * The header carries the public navigation on every page, and any page under `/app` gets the
+ * personal navigation automatically, so the 50-odd screens that render this shell stay consistent
+ * without each one assembling its own menu.
  */
 
 export interface ShellContext {
@@ -18,8 +24,64 @@ export interface ShellContext {
   current: boolean;
 }
 
-export interface ShellNavItem { href: string; text: string; current?: boolean }
+export interface ShellNavItem { href: string; text: string; current?: boolean; icon?: LucideIcon }
 export interface ShellNavGroup { title?: string; items: ShellNavItem[] }
+
+/** The brand mark: three rising bars in a rounded square — funding, delivery, result. */
+export function Logo({ size = 36 }: { size?: number }) {
+  return (
+    <svg className="tmk-logo" width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="tmk-logo-fill" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#0B8C83" />
+          <stop offset="1" stopColor="#063B38" />
+        </linearGradient>
+      </defs>
+      <rect width="40" height="40" rx="11" fill="url(#tmk-logo-fill)" />
+      <rect x="9" y="22" width="5.5" height="9" rx="2.2" fill="#FFFFFF" opacity="0.7" />
+      <rect x="17.25" y="16" width="5.5" height="15" rx="2.2" fill="#FFFFFF" opacity="0.85" />
+      <rect x="25.5" y="9" width="5.5" height="22" rx="2.2" fill="#E3B04B" />
+    </svg>
+  );
+}
+
+const PUBLIC_NAV: Array<{ path: string; key: StringKey }> = [
+  { path: '/explore', key: 'navExplore' },
+  { path: '/organizations', key: 'navOrganizations' },
+  { path: '/invest', key: 'navInvest' },
+  { path: '/opportunities', key: 'navOpportunities' },
+  { path: '/impact', key: 'navImpact' }
+];
+
+const PERSONAL_NAV: Array<{ titleKey: StringKey; items: Array<{ path: string; key: StringKey; icon: LucideIcon }> }> = [
+  { titleKey: 'navGroupActivity', items: [
+    { path: '/app', key: 'navDashboard', icon: LayoutDashboard },
+    { path: '/app/contributions', key: 'navContributions', icon: HandHeart },
+    { path: '/app/investments', key: 'navInvestments', icon: TrendingUp },
+    { path: '/app/applications', key: 'navApplications', icon: GraduationCap }
+  ] },
+  { titleKey: 'navGroupWork', items: [
+    { path: '/app/jobs', key: 'navJobs', icon: Briefcase },
+    { path: '/app/assistance', key: 'navAssistance', icon: HandCoins },
+    { path: '/app/proposals', key: 'navProposals', icon: Lightbulb },
+    { path: '/app/volunteering', key: 'navVolunteering', icon: Users }
+  ] },
+  { titleKey: 'navGroupAccount', items: [
+    { path: '/app/notifications', key: 'notifications', icon: Bell },
+    { path: '/app/tickets', key: 'navSupport', icon: LifeBuoy },
+    { path: '/app/settings', key: 'navSettings', icon: Settings }
+  ] }
+];
+
+const isCurrent = (path: string, target: string) => target === '/app' ? path === '/app' : path === target || path.startsWith(`${target}/`);
+
+function personalNavigation(locale: Locale, path: string): ShellNavGroup[] {
+  const t = translator(locale);
+  return PERSONAL_NAV.map(group => ({
+    title: t(group.titleKey),
+    items: group.items.map(item => ({ href: localePath(locale, item.path), text: t(item.key), icon: item.icon, current: isCurrent(path, item.path) }))
+  }));
+}
 
 export function AppShell({ locale, path, children, navigation, contexts, activeContextName, signedIn = false, demoBanner = false, userActions }: {
   locale: Locale;
@@ -36,6 +98,17 @@ export function AppShell({ locale, path, children, navigation, contexts, activeC
 }) {
   const t = translator(locale);
   const other: Locale = locale === 'ar' ? 'en' : 'ar';
+  const personal = path === '/app' || path.startsWith('/app/') || path === '/onboarding';
+  const sidebar = navigation?.length ? navigation : personal ? personalNavigation(locale, path) : undefined;
+  const publicLinks = PUBLIC_NAV.map(item => (
+    <a key={item.path} className="tmk-nav__link" href={localePath(locale, item.path)} aria-current={isCurrent(path, item.path) ? 'page' : undefined}>{t(item.key)}</a>
+  ));
+  const accountControls = signedIn
+    ? userActions
+    : <>
+        <a className="tmk-button tmk-button--quiet" href={localePath(locale, '/login')}>{t('signIn')}</a>
+        <a className="tmk-button tmk-button--primary" href={localePath(locale, '/register')}>{t('register')}</a>
+      </>;
   return (
     <div className="tmk-shell">
       <a className="tmk-skip-link" href="#tmk-main">{t('skipToContent')}</a>
@@ -46,37 +119,60 @@ export function AppShell({ locale, path, children, navigation, contexts, activeC
         </p>
       ) : null}
       <header className="tmk-header">
-        <a className="tmk-header__brand" href={localePath(locale, '/')}>{t('brand')}</a>
-        {activeContextName ? <span className="tmk-badge tmk-badge--neutral"><i className="tmk-badge__icon" aria-hidden="true">•</i>{activeContextName}</span> : null}
-        <span className="tmk-header__spacer" />
-        <a className="tmk-button tmk-button--quiet" href={localePath(other, path)} lang={other} hrefLang={other} aria-label={t('changeLanguageLabel')}>{t('changeLanguage')}</a>
-        {signedIn
-          ? userActions
-          : <a className="tmk-button tmk-button--secondary" href={localePath(locale, '/login')}>{t('signIn')}</a>}
+        <div className="tmk-header__inner">
+          <a className="tmk-header__brand" href={localePath(locale, '/')}>
+            <Logo />
+            <span>{t('brand')}</span>
+          </a>
+          <nav className="tmk-nav" aria-label={t('mainNavigation')}>{publicLinks}</nav>
+          {activeContextName ? <span className="tmk-header__context"><Building2 aria-hidden="true" size={16} />{activeContextName}</span> : null}
+          <span className="tmk-header__spacer" />
+          <div className="tmk-header__actions">
+            <a className="tmk-button tmk-button--quiet tmk-header__lang" href={localePath(other, path)} lang={other} hrefLang={other} aria-label={t('changeLanguageLabel')}>{t('changeLanguage')}</a>
+            {accountControls}
+          </div>
+          {/* A disclosure, not a script: the menu works before hydration and without JavaScript. */}
+          <details className="tmk-mobile-menu">
+            <summary className="tmk-button tmk-button--secondary" aria-label={t('openMenu')}><Menu aria-hidden="true" size={20} /></summary>
+            <div className="tmk-mobile-menu__panel">
+              <nav aria-label={t('mainNavigation')}>{publicLinks}</nav>
+              <div className="tmk-mobile-menu__actions">
+                <a className="tmk-button tmk-button--quiet" href={localePath(other, path)} lang={other} hrefLang={other}>{t('changeLanguage')}</a>
+                {accountControls}
+              </div>
+            </div>
+          </details>
+        </div>
       </header>
-      <div className="tmk-shell__body">
-        {navigation?.length || contexts?.length ? (
-          <nav className="tmk-sidebar" aria-label={t('mainNavigation')}>
+      <div className={`tmk-shell__body${sidebar || contexts?.length ? ' tmk-shell__body--with-sidebar' : ''}`}>
+        {sidebar || contexts?.length ? (
+          <nav className="tmk-sidebar" aria-label={personal ? t('personalWorkspace') : t('workspace')}>
             {contexts?.length ? (
               <div className="tmk-sidebar__group">
-                <p className="tmk-sidebar__title" id="tmk-contexts-title">{t('workspace')}</p>
+                <p className="tmk-sidebar__title" id="tmk-contexts-title">{t('navGroupOrganizations')}</p>
                 <div className="tmk-sidebar__nav">
                   {contexts.map(context => (
                     <a key={context.id} className="tmk-sidebar__link" href={context.href} aria-current={context.current ? 'page' : undefined}>
-                      {context.name}
-                      <span className="tmk-field__hint"> · {context.kind}</span>
+                      <Building2 aria-hidden="true" size={18} className="tmk-sidebar__icon" />
+                      <span className="tmk-sidebar__text">{context.name}<span className="tmk-sidebar__kind">{context.kind}</span></span>
                     </a>
                   ))}
                 </div>
               </div>
             ) : null}
-            {navigation?.map((group, index) => (
+            {sidebar?.map((group, index) => (
               <div className="tmk-sidebar__group" key={group.title ?? index}>
                 {group.title ? <p className="tmk-sidebar__title">{group.title}</p> : null}
                 <div className="tmk-sidebar__nav">
-                  {group.items.map(item => (
-                    <a key={item.href} className="tmk-sidebar__link" href={item.href} aria-current={item.current ? 'page' : undefined}>{item.text}</a>
-                  ))}
+                  {group.items.map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <a key={item.href} className="tmk-sidebar__link" href={item.href} aria-current={item.current ? 'page' : undefined}>
+                        {Icon ? <Icon aria-hidden="true" size={18} className="tmk-sidebar__icon" /> : null}
+                        <span className="tmk-sidebar__text">{item.text}</span>
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -86,6 +182,37 @@ export function AppShell({ locale, path, children, navigation, contexts, activeC
           <div className="tmk-main__inner">{children}</div>
         </main>
       </div>
+      <footer className="tmk-footer">
+        <div className="tmk-footer__inner">
+          <div className="tmk-footer__brand">
+            <a className="tmk-header__brand tmk-footer__logo" href={localePath(locale, '/')}><Logo /><span>{t('brand')}</span></a>
+            <p>{t('footerAbout')}</p>
+          </div>
+          <div>
+            <p className="tmk-footer__title">{t('footerExplore')}</p>
+            <ul>
+              <li><a href={localePath(locale, '/explore')}><Compass aria-hidden="true" size={16} />{t('navExplore')}</a></li>
+              <li><a href={localePath(locale, '/organizations')}><Building2 aria-hidden="true" size={16} />{t('navOrganizations')}</a></li>
+              <li><a href={localePath(locale, '/invest')}><TrendingUp aria-hidden="true" size={16} />{t('navInvest')}</a></li>
+              <li><a href={localePath(locale, '/opportunities')}><Briefcase aria-hidden="true" size={16} />{t('navOpportunities')}</a></li>
+              <li><a href={localePath(locale, '/impact')}><ChartColumn aria-hidden="true" size={16} />{t('navImpact')}</a></li>
+            </ul>
+          </div>
+          <div>
+            <p className="tmk-footer__title">{t('footerAccount')}</p>
+            <ul>
+              <li><a href={localePath(locale, '/app')}><LayoutDashboard aria-hidden="true" size={16} />{t('navDashboard')}</a></li>
+              <li><a href={localePath(locale, '/app/contributions')}><HandHeart aria-hidden="true" size={16} />{t('navContributions')}</a></li>
+              <li><a href={localePath(locale, '/app/tickets')}><LifeBuoy aria-hidden="true" size={16} />{t('navSupport')}</a></li>
+              <li><a href={localePath(locale, '/about')}><ClipboardList aria-hidden="true" size={16} />{t('navAbout')}</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="tmk-footer__bottom">
+          <span>© {new Date().getUTCFullYear()} {t('brand')} · {t('footerRights')}</span>
+          <a href={localePath(locale, '/policies/terms')}>{t('footerTerms')}</a>
+        </div>
+      </footer>
     </div>
   );
 }

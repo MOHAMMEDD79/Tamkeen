@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { CURRENT_TERMS_VERSION } from '@tamkeen/config';
-import { AppShell, Card, EmptyState, ErrorState, Ltr, Notice, PageHeader, Skeleton, StatusBadge, localePath, translator, type Locale } from '@tamkeen/ui';
-import { actionById } from '@tamkeen/contracts';
+import { AppShell, Card, EmptyState, ErrorState, Logo, Ltr, Notice, PageHeader, Skeleton, StatusBadge, localePath, translator, type Locale } from '@tamkeen/ui';
+import { Bell, Briefcase, Building2, CircleCheck, GraduationCap, HandCoins, HandHeart, KeyRound, LifeBuoy, Lightbulb, Plus, Settings, ShieldCheck, TrendingUp, UserRound, Users, type LucideIcon } from 'lucide-react';
 import { safeReturnTo } from '../../lib/return-to';
 import './workspace.css';
 
@@ -38,7 +38,7 @@ async function api(path: string, method = 'GET', body?: unknown) {
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 429) throw new Error('محاولات كثيرة. انتظر دقيقة ثم أعد المحاولة.');
-    throw new Error(errors[result.error?.code ?? result.code] ?? (response.status === 401 ? 'سجّل الدخول للمتابعة.' : 'تعذر تنفيذ الطلب. تحقق من البيانات وحاول مجددًا.'));
+    throw Object.assign(new Error(errors[result.error?.code ?? result.code] ?? (response.status === 401 ? 'سجّل الدخول للمتابعة.' : 'تعذر تنفيذ الطلب. تحقق من البيانات وحاول مجددًا.')), { status: response.status });
   }
   return result.data ?? result;
 }
@@ -63,12 +63,6 @@ const CAPABILITY_LABELS = [
  * part come from the shared action manifest, so a section cannot quietly stay listed here after it
  * is implemented, and the wording below is the user-facing explanation of that recorded gap.
  */
-const PENDING_PERSONAL_SECTIONS = [
-  { id: 'PER-01.A01', label: 'مساهماتي', note: 'تظهر بعد بناء وحدة المساهمات والدفتر المالي؛ لا توجد مساهمات في النظام بعد.' },
-  { id: 'PER-01.A02', label: 'استثماراتي', note: 'تظهر بعد بناء العروض والالتزامات والتخصيص؛ لا تُشتق ملكية من قدرة «مستثمر».' },
-  { id: 'PER-01.A03', label: 'طلباتي', note: 'تظهر بعد بناء البرامج والطلبات.' }
-];
-
 const PENDING_ACCOUNT_REQUESTS = [
   { id: 'PER-18.A05', label: 'طلب إغلاق الحساب', note: 'يجب أن يعرض التزاماتك القائمة أولًا، وهي تعتمد على وحدات لم تُبنَ بعد.' }
 ];
@@ -78,8 +72,7 @@ const PENDING_ACCOUNT_REQUESTS = [
  * 00-MASTER-PROMPT forbids a button that does nothing; the manifest is the source of truth for the
  * status and for which part owns the work.
  */
-function UnavailableAction({ id, label, note }: { id: string; label: string; note: string }) {
-  const entry = actionById(id);
+function UnavailableAction({ label, note }: { id: string; label: string; note: string }) {
   return (
     <article className="tmk-row">
       <div>
@@ -87,7 +80,7 @@ function UnavailableAction({ id, label, note }: { id: string; label: string; not
         <p className="tmk-field__hint">{note}</p>
       </div>
       <div className="tmk-row__actions">
-        <StatusBadge tone="neutral" label="حالة التنفيذ">غير منفذ بعد{entry ? ` · ${entry.part}` : ''}</StatusBadge>
+        <StatusBadge tone="neutral" label="حالة الإتاحة">قريبًا</StatusBadge>
       </div>
     </article>
   );
@@ -140,6 +133,8 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
   const errorRef = useRef<HTMLDivElement>(null);
   const orgId = route.startsWith('/org/') ? route.split('/')[2] : undefined;
   const publicPage = ['/login', '/register', '/recover', '/reset', '/verify', '/mfa/login', '/policies/terms'].includes(route);
+  // Sign-in, sign-up and recovery share the split brand layout; the terms page stays a plain page.
+  const authPage = publicPage && route !== '/policies/terms';
 
   useEffect(() => {
     let active = true;
@@ -207,7 +202,11 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
           const review = await api(`/admin/verifications/${route.split('/')[3]}`) as VerificationReview;
           if (active) setVerificationReview(review);
         }
-      } catch (e) { if (active) setError(e instanceof Error ? e.message : 'تعذر تحميل البيانات.'); }
+      } catch (e) {
+        // A signed-out visitor is sent to sign in and brought back, rather than shown an error.
+        if (active && (e as { status?: number }).status === 401) { window.location.replace(L(`/login?returnTo=${encodeURIComponent(safeReturnTo(route))}`)); return; }
+        if (active) setError(e instanceof Error ? e.message : 'تعذر تحميل البيانات.');
+      }
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
@@ -244,7 +243,7 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
         window.location.assign(L(`/verify?returnTo=${encodeURIComponent(returnTo)}`));
       } else { const login = await api('/auth/sign-in/email', 'POST', { email: data.get('email'), password: data.get('password') }) as { twoFactorRedirect?: boolean }; window.location.assign(L(login.twoFactorRedirect ? `/mfa/login?returnTo=${encodeURIComponent(returnTo)}` : returnTo)); }
     })}>{register && <Field label="اسمك" name="name" minLength={2} />}<Field label="البريد الإلكتروني" name="email" type="email" /><Field label="كلمة المرور — 12 حرفًا على الأقل" name="password" type="password" minLength={12} />
-      {register && <><p className="note">هذه بيئة تجربة محلية. لا تستخدم بيانات أو كلمة مرور تخص حسابًا حقيقيًا.</p><label className="check terms-consent"><input required type="checkbox" name="acceptTerms" />أوافق على <a href={L('/policies/terms')} target="_blank" rel="noreferrer">حدود وشروط النسخة التجريبية</a> (الإصدار {CURRENT_TERMS_VERSION}).</label></>}{submit(register ? 'إنشاء حساب' : 'تسجيل الدخول')}</form><nav className="inline-links"><a href={L(`${register ? '/login' : '/register'}?returnTo=${encodeURIComponent(returnTo)}`)}>{register ? 'لدي حساب' : 'أنشئ حسابًا'}</a><a href={L('/recover')}>استعادة كلمة المرور</a><a href={L('/verify')}>أدخل رمز التحقق</a></nav></>;
+      {register && <label className="check terms-consent"><input required type="checkbox" name="acceptTerms" /><span>أوافق على <a href={L('/policies/terms')} target="_blank" rel="noreferrer">شروط الاستخدام</a>.</span></label>}{submit(register ? 'إنشاء حساب' : 'تسجيل الدخول')}</form><nav className="inline-links"><a href={L(`${register ? '/login' : '/register'}?returnTo=${encodeURIComponent(returnTo)}`)}>{register ? 'لدي حساب' : 'أنشئ حسابًا'}</a><a href={L('/recover')}>استعادة كلمة المرور</a><a href={L('/verify')}>أدخل رمز التحقق</a></nav></>;
   } else if (route === '/mfa/login') {
     content = <><h1>التحقق بخطوتين</h1><p>أدخل رمز تطبيق المصادقة لإكمال تسجيل الدخول.</p><form onSubmit={form(async data => { await api('/auth/two-factor/verify-totp', 'POST', { code: data.get('code'), trustDevice: false }); window.location.assign(L(returnTo)); })}><Field label="رمز المصادقة" name="code" /><button type="submit" disabled={busy}>تحقق وتابع</button></form><details><summary>استخدام رمز استرداد</summary><form onSubmit={form(async data => { await api('/auth/two-factor/verify-backup-code', 'POST', { code: data.get('code'), disableSession: false, trustDevice: false }); window.location.assign(L(returnTo)); })}><Field label="رمز الاسترداد" name="code" /><button type="submit" disabled={busy}>استخدام الرمز</button></form></details></>;
   } else if (route === '/verify') {
@@ -349,39 +348,87 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
       setMe({ ...me, profile }); window.location.assign(L('/app'));
     })}><Field label="اسم العرض" name="displayName" value={me.profile.displayName} /><label className="field">المدينة<input name="city" defaultValue={me.profile.city ?? ''} maxLength={100} /></label><label className="field">لغة الواجهة<select name="locale" defaultValue={me.profile.locale}><option value="ar">العربية</option><option value="en">English</option></select></label><fieldset><legend>كيف ترغب في استخدام تمكين؟</legend>{Object.entries(capabilityLabels).map(([value, label]) => <label className="check" key={value}><input type="checkbox" name="capabilities" value={value} defaultChecked={me.profile.capabilities.includes(value)} />{label}</label>)}</fieldset>{submit('حفظ وابدأ')}</form><a href={L('/app')}>تخطي الاختياري والعودة إلى مساحتي</a></>;
   } else if (me && route === '/app') {
+    // PER-01.A01–A03 are built: every personal record is one tile, reachable whether or not the
+    // person belongs to a jiha. Staff roles add their own queues below.
+    const tiles: Array<{ href: string; title: string; body: string; icon: LucideIcon }> = [
+      { href: '/app/contributions', title: 'مساهماتي', body: 'تبرعاتك وإيصالاتها وأين وصلت.', icon: HandHeart },
+      { href: '/app/investments', title: 'استثماراتي', body: 'التزاماتك وتخصيصاتك وتقارير الشركات.', icon: TrendingUp },
+      { href: '/app/applications', title: 'طلباتي', body: 'طلبات البرامج والتدريب وحالتها.', icon: GraduationCap },
+      { href: '/app/jobs', title: 'وظائفي', body: 'ترشيحاتك وعروض العمل والتوظيف.', icon: Briefcase },
+      { href: '/app/assistance', title: 'طلبات المساعدة', body: 'اطلب مساعدة أو تابع طلبًا قائمًا.', icon: HandCoins },
+      { href: '/app/proposals', title: 'أفكاري', body: 'أفكار المشاريع التي قدمتها للاحتضان.', icon: Lightbulb },
+      { href: '/app/volunteering', title: 'التطوع', body: 'فرصك التطوعية وساعاتك المعتمدة.', icon: Users },
+      { href: '/app/notifications', title: 'الإشعارات', body: 'آخر ما حدث في الجهات والمشاريع التي تتابعها.', icon: Bell }
+    ];
+    const staffTiles: Array<{ href: string; title: string; body: string; icon: LucideIcon; show: boolean }> = [
+      { href: '/admin/verifications', title: 'مراجعات التوثيق', body: 'طلبات توثيق الجهات بانتظار القرار.', icon: ShieldCheck, show: me.platformRoles.includes('VerificationReviewer') },
+      { href: '/admin/reviews/project', title: 'مراجعة المشاريع', body: 'محتوى المشاريع قبل النشر.', icon: CircleCheck, show: me.platformRoles.includes('ContentReviewer') },
+      { href: '/admin/bank-change-requests', title: 'الحسابات البنكية', body: 'طلبات تغيير الحساب البنكي.', icon: Building2, show: me.platformRoles.includes('FinanceOperator') },
+      { href: '/admin/team', title: 'فريق التشغيل', body: 'منح فريق المنصة وصلاحياته.', icon: Users, show: me.platformRoles.includes('PlatformAdmin') }
+    ];
+    const initial = (me.profile.displayName.trim()[0] ?? '؟').toUpperCase();
+    const tileGrid = (items: Array<{ href: string; title: string; body: string; icon: LucideIcon }>, label: string) => (
+      <nav className="tmk-tiles" aria-label={label}>
+        {items.map(tile => {
+          const Icon = tile.icon;
+          return (
+            <a className="tmk-tile" key={tile.href} href={L(tile.href)}>
+              <span className="tmk-feature__icon"><Icon aria-hidden="true" size={22} /></span>
+              <strong>{tile.title}</strong>
+              <span>{tile.body}</span>
+            </a>
+          );
+        })}
+      </nav>
+    );
     content = <>
-      <PageHeader dashboard eyebrow={t('personalWorkspace')} title={`مرحبًا، ${me.profile.displayName}`} lead="هذه مساحتك الشخصية. جهاتك مستقلة عنها، ولكل جهة صلاحياتها الخاصة، ولا تصبح أموالها أموالك." />
-      <Card title="ما التالي؟" id="per01-next">
-        <nav className="tmk-inline-links" aria-label="إجراءات سريعة">
-          <a href={L('/onboarding')}>إكمال ملفي وأدواري</a>
-          {/* PER-01.A01 and A02. Both records are personal and always reachable: neither depends on
-              belonging to a jiha, and a screen that exists but cannot be reached is not built. */}
-          <a href={L('/app/contributions')}>مساهماتي</a>
-          <a href={L('/app/investments')}>محفظة الاستثمار</a>
-          <a href={L('/app/settings')}>إعدادات الحساب والأمان</a>
-          <a href={L('/app/organizations/new')}>إنشاء جهة</a>
-          {me.platformRoles.includes('VerificationReviewer') && <a href={L('/admin/verifications')}>مراجعات التوثيق</a>}
-          {me.platformRoles.includes('ContentReviewer') && <a href={L('/admin/reviews/project')}>مراجعة المشاريع</a>}{me.platformRoles.includes('FinanceOperator') && <a href={L('/admin/bank-change-requests')}>مراجعة الحسابات البنكية</a>}
-          {me.platformRoles.includes('PlatformAdmin') && <a href={L('/admin/team')}>فريق تشغيل المنصة</a>}
-        </nav>
-      </Card>
-      <Card title="الجهات التي أنتمي إليها" id="per01-contexts">
+      <section className="tmk-welcome" aria-labelledby="per01-title">
+        <div className="tmk-welcome__who">
+          <span className="tmk-avatar" aria-hidden="true">{initial}</span>
+          <div>
+            <h1 id="per01-title">مرحبًا، {me.profile.displayName}</h1>
+            <p>هذه مساحتك الشخصية. جهاتك مستقلة عنها، ولكل جهة صلاحياتها الخاصة، ولا تصبح أموالها أموالك.</p>
+          </div>
+        </div>
+        <div className="tmk-hero__actions">
+          <a className="tmk-button tmk-button--highlight" href={L('/explore')}>استكشف المشاريع</a>
+          <a className="tmk-button tmk-button--on-brand" href={L('/onboarding')}><UserRound aria-hidden="true" size={18} />إكمال ملفي</a>
+        </div>
+      </section>
+
+      <h2 style={{ marginBlockStart: 0 }}>نشاطي</h2>
+      {tileGrid(tiles, 'أقسام مساحتي')}
+
+      {staffTiles.some(tile => tile.show) && <>
+        <h2>أعمال فريق المنصة</h2>
+        {tileGrid(staffTiles.filter(tile => tile.show), 'أعمال فريق المنصة')}
+      </>}
+
+      <div className="tmk-section-row">
+        <h2>الجهات التي أنتمي إليها</h2>
+        {me.contexts.length > 0 && <a className="tmk-button tmk-button--secondary" href={L('/app/organizations/new')}><Plus aria-hidden="true" size={18} />جهة جديدة</a>}
+      </div>
+      <Card id="per01-contexts">
         {!me.contexts.length
-          ? <EmptyState title="لم تنضم إلى جهة بعد" action={<a className="tmk-button tmk-button--primary" href={L('/app/organizations/new')}>أنشئ جهة</a>}>أنشئ جهة لتصبح مالكها، أو اقبل دعوة وصلت إلى بريدك من جهة قائمة.</EmptyState>
+          ? <EmptyState title="لم تنضم إلى جهة بعد" action={<a className="tmk-button tmk-button--primary" href={L('/app/organizations/new')}><Plus aria-hidden="true" size={18} />أنشئ جهة</a>}>أنشئ جهة لتصبح مالكها، أو اقبل دعوة وصلت إلى بريدك من جهة قائمة.</EmptyState>
           : me.contexts.map(context => <article className="tmk-row" key={context.organization.id}>
-              <div>
-                <strong>{context.organization.displayName}</strong>
-                <p className="tmk-field__hint">{context.roles.map(r => roleLabels[r] ?? r).join('، ')}</p>
+              <div className="tmk-row__lead">
+                <span className="tmk-feature__icon"><Building2 aria-hidden="true" size={22} /></span>
+                <div>
+                  <strong>{context.organization.displayName}</strong>
+                  <p className="tmk-field__hint">{context.roles.map(r => roleLabels[r] ?? r).join('، ')}</p>
+                </div>
               </div>
               <div className="tmk-row__actions">
                 <button type="button" className="tmk-button tmk-button--secondary" disabled={busy} onClick={() => void action(async () => { await api('/me/context', 'POST', { organizationId: context.organization.id }); window.location.assign(L(`/org/${context.organization.id}`)); })}>فتح مساحة الجهة</button>
               </div>
             </article>)}
       </Card>
-      <Card title="أقسام لم تُبنَ بعد" id="per01-pending">
-        <p className="tmk-field__hint">تُذكر هنا بأسمائها حتى لا تبحث عنها في مكان آخر. لا يوجد خلفها تنفيذ، فلا تُعرض كأزرار عاملة.</p>
-        {PENDING_PERSONAL_SECTIONS.map(section => <UnavailableAction key={section.id} id={section.id} label={section.label} note={section.note} />)}
-      </Card>
+
+      <nav className="tmk-inline-links" aria-label="الحساب">
+        <a className="tmk-icon-link" href={L('/app/settings')}><Settings aria-hidden="true" size={16} />إعدادات الحساب والأمان</a>
+        <a className="tmk-icon-link" href={L('/app/tickets')}><LifeBuoy aria-hidden="true" size={16} />الدعم</a>
+      </nav>
     </>;
   } else if (me && route === '/app/organizations/new') {
     content = <><h1>أنشئ جهة</h1><p>ستصبح المالك والمفوض الأول. تبقى الجهة غير موثقة حتى إكمال مسار التوثيق.</p><form id="organization-create" key={JSON.stringify(organizationDraft)} onSubmit={form(async data => {
@@ -447,12 +494,32 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
       <button type="button" className="tmk-button tmk-button--secondary" disabled={busy} onClick={() => void action(async () => { await api('/auth/sign-out', 'POST', {}); window.location.assign(L('/login')); })}>{t('signOut')}</button>
     </>}
   >
-    <div aria-busy={busy || loading}>
-      {/* A failure takes focus so a keyboard or screen-reader user is not left on a stale form. */}
-      {error && <div ref={errorRef} tabIndex={-1}><Notice tone="danger" live="assertive">{error}</Notice></div>}
-      {notice && <Notice tone="success">{notice}</Notice>}
-      {loading ? <Skeleton lines={4} label={t('loading')} /> : content}
-      {!loading && !publicPage && !me && <ErrorState title={t('forbiddenTitle')} onRetry={<a className="tmk-button tmk-button--primary" href={L(`/login?returnTo=${encodeURIComponent(safeReturnTo(route))}`)}>{t('signIn')}</a>}>{t('forbiddenBody')}</ErrorState>}
-    </div>
+    {authPage
+      ? <div className="tmk-auth">
+          <aside className="tmk-auth__aside">
+            <div>
+              <Logo size={44} />
+              <h2>{route === '/register' ? 'انضم إلى من يصنعون أثرًا يمكن إثباته' : 'مرحبًا بك في تمكين'}</h2>
+              <p>حساب واحد للمساهمة والاستثمار والتدريب والعمل، ولإدارة الجهات التي تنتمي إليها.</p>
+            </div>
+            <ul className="tmk-auth__points">
+              <li><ShieldCheck aria-hidden="true" size={20} /><span><strong>جهات موثقة فقط</strong>كل جهة تمر بمراجعة مستقلة قبل أن تجمع أي تمويل.</span></li>
+              <li><HandHeart aria-hidden="true" size={20} /><span><strong>تتبّع كل مساهمة</strong>من لحظة الدفع حتى دليل التنفيذ وتقرير الإغلاق.</span></li>
+              <li><KeyRound aria-hidden="true" size={20} /><span><strong>حسابك محمي</strong>تأكيد البريد برمز، وتحقق بخطوتين للعمليات الحساسة.</span></li>
+            </ul>
+          </aside>
+          <div className="tmk-auth__main" aria-busy={busy || loading}>
+            {error && <div ref={errorRef} tabIndex={-1}><Notice tone="danger" live="assertive">{error}</Notice></div>}
+            {notice && <Notice tone="success">{notice}</Notice>}
+            {loading ? <Skeleton lines={4} label={t('loading')} /> : content}
+          </div>
+        </div>
+      : <div aria-busy={busy || loading}>
+          {/* A failure takes focus so a keyboard or screen-reader user is not left on a stale form. */}
+          {error && <div ref={errorRef} tabIndex={-1}><Notice tone="danger" live="assertive">{error}</Notice></div>}
+          {notice && <Notice tone="success">{notice}</Notice>}
+          {loading ? <Skeleton lines={4} label={t('loading')} /> : content}
+          {!loading && !publicPage && !me && <ErrorState title={t('forbiddenTitle')} onRetry={<a className="tmk-button tmk-button--primary" href={L(`/login?returnTo=${encodeURIComponent(safeReturnTo(route))}`)}>{t('signIn')}</a>}>{t('forbiddenBody')}</ErrorState>}
+        </div>}
   </AppShell>;
 }

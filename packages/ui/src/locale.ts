@@ -112,7 +112,35 @@ export const strings = {
     en: 'This screen shows synthetic data for design review only. There is no implementation, money or real record behind it.'
   },
   notImplemented: { ar: 'غير منفذ بعد', en: 'Not implemented yet' },
-  designReview: { ar: 'مراجعة تصميم', en: 'Design review' }
+  designReview: { ar: 'مراجعة تصميم', en: 'Design review' },
+  tagline: { ar: 'تمويل يصل، وأثر يُثبت', en: 'Funding that arrives, impact that is proven' },
+  register: { ar: 'إنشاء حساب', en: 'Create account' },
+  openMenu: { ar: 'القائمة', en: 'Menu' },
+  navExplore: { ar: 'المشاريع', en: 'Projects' },
+  navOrganizations: { ar: 'الجهات', en: 'Organisations' },
+  navInvest: { ar: 'الاستثمار', en: 'Invest' },
+  navOpportunities: { ar: 'الفرص', en: 'Opportunities' },
+  navImpact: { ar: 'الأثر', en: 'Impact' },
+  navAbout: { ar: 'عن تمكين', en: 'About' },
+  navDashboard: { ar: 'لوحتي', en: 'Dashboard' },
+  navContributions: { ar: 'مساهماتي', en: 'My contributions' },
+  navInvestments: { ar: 'استثماراتي', en: 'My investments' },
+  navApplications: { ar: 'طلباتي', en: 'My applications' },
+  navJobs: { ar: 'وظائفي', en: 'My jobs' },
+  navAssistance: { ar: 'طلبات المساعدة', en: 'Assistance' },
+  navProposals: { ar: 'أفكاري', en: 'My ideas' },
+  navVolunteering: { ar: 'التطوع', en: 'Volunteering' },
+  navSupport: { ar: 'الدعم', en: 'Support' },
+  navSettings: { ar: 'الحساب والأمان', en: 'Account & security' },
+  navGroupActivity: { ar: 'نشاطي', en: 'My activity' },
+  navGroupWork: { ar: 'العمل والمجتمع', en: 'Work & community' },
+  navGroupAccount: { ar: 'الحساب', en: 'Account' },
+  navGroupOrganizations: { ar: 'جهاتي', en: 'My organisations' },
+  footerAbout: { ar: 'منصة تربط التمويل بالجهة المنفذة وبنتيجة موثقة، عبر العمل الخيري والاستثمار والتدريب إلى العمل.', en: 'A platform that links funding to the organisation delivering it and to a documented result, across charity, investment and training into work.' },
+  footerExplore: { ar: 'استكشف', en: 'Explore' },
+  footerAccount: { ar: 'حسابك', en: 'Your account' },
+  footerRights: { ar: 'جميع الحقوق محفوظة', en: 'All rights reserved' },
+  footerTerms: { ar: 'الشروط', en: 'Terms' }
 } as const satisfies Dictionary;
 
 export type StringKey = keyof typeof strings;

@@ -1,10 +1,27 @@
 {
-  "name": "@tamkeen/ui", "private": true, "type": "module", "version": "0.1.0",
+  "name": "@tamkeen/ui",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
     "./styles.css": "./src/styles.css"
   },
-  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" },
-  "peerDependencies": { "react": "19.3.0" },
-  "devDependencies": { "@types/react": "19.3.0", "react": "19.3.0" }
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "react": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "react": "19.3.0"
+  },
+  "dependencies": {
+    "lucide-react": "1.47.0"
+  }
 }

@@ -1,7 +1,12 @@
 import type { Metadata, Viewport } from 'next';
+import { IBM_Plex_Sans_Arabic } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { DEFAULT_LOCALE, LOCALES, directionOf, isLocale, tokensCss } from '@tamkeen/ui';
 import '@tamkeen/ui/styles.css';
+
+// Self-hosted by next/font at build time (SIL OFL 1.1): the browser never calls a font CDN.
+// It covers Latin as well, so English pages share the same voice. The variable feeds the token layer.
+const brandFont = IBM_Plex_Sans_Arabic({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700'], variable: '--tmk-font-brand', display: 'swap' });
 
 // Both locales are known at build time, so each shell is prerendered rather than negotiated twice.
 export function generateStaticParams() {
@@ -15,7 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   const arabic = locale !== 'en';
   return {
-    title: arabic ? 'تمكين — نسخة محلية تجريبية' : 'Tamkeen — local preview',
+    title: arabic ? 'تمكين — تمويل يصل، وأثر يُثبت' : 'Tamkeen — funding that arrives, impact that is proven',
     description: arabic
       ? 'منصة تربط التمويل بالتنفيذ وبنتيجة موثقة عبر العمل الخيري والاستثمار والتدريب إلى العمل.'
       : 'A platform linking funding to delivery and to a documented result across charity, investment and training to work.',
@@ -28,7 +33,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   return (
-    <html lang={locale} dir={directionOf(locale)}>
+    <html lang={locale} dir={directionOf(locale)} className={brandFont.variable}>
       <head>
         {/* The token layer is generated from tokens.ts so the stylesheet can never drift from it. */}
         <style id="tamkeen-tokens" dangerouslySetInnerHTML={{ __html: tokensCss() }} />

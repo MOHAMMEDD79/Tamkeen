@@ -26,7 +26,11 @@ const textPairs: Array<[string, string, string]> = [
   ['warning text on its tint', color.warning, color.warningTint],
   ['danger text on its tint', color.danger, color.dangerTint],
   ['info text on its tint', color.info, color.infoTint],
-  ['danger outline button on surface', color.danger, color.surface]
+  ['danger outline button on surface', color.danger, color.surface],
+  ['white text on the deep brand ground', color.onAccent, color.brandDeep],
+  ['secondary text on the deep brand ground', color.onBrandMuted, color.brandDeep],
+  ['highlight text on the deep brand ground', color.highlight, color.brandDeep],
+  ['label on a highlight button', color.brandDeep, color.highlight]
 ];
 
 /** 1.4.11 applies to control boundaries and to the focus indicator, at 3:1. */
