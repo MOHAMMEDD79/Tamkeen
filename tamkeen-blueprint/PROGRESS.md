@@ -21,6 +21,13 @@
 | PART-13 | LOCAL_VERIFIED | [تقرير QA](../docs/qa/part-13/README.md) + `tests/operations.integration.test.ts` | دعم وإشعارات وتدقيق وتجميد، قوائم الإدارة والتشغيل، تقارير أثر وexports آمنة، ومستندات غرفة بيانات مفحوصة ومدققة التنزيل |
 | PART-14 | LOCAL_VERIFIED | [تقرير QA](../docs/qa/part-14/README.md)، [دليل التشغيل](../docs/operations/RUNBOOK.md)، [بوابات الإطلاق](../docs/operations/LAUNCH-GATES.md) | build/lint/types و72 unit و18 integration و9 critical E2E وقصص demo وتمرين استعادة وبوابة RTL/mobile؛ ليست جاهزية إنتاجية وPART-02 مستقل |
 
+## إعادة تحقق مستقلة — 2026-09-21
+
+- أُعيد تشغيل بوابة PART-14 من جلسة مستقلة للتحقق من ادعاءات PART-12..14: `pnpm lint` و`pnpm typecheck` و`pnpm build` نجحت، `pnpm test` نجح 72/72، و`pnpm db:migrate` لم يجد migrations معلقة، و`pnpm test:integration` نجح 18/18 على PostgreSQL المحلية الفعلية (ملفات `test:e2e` التسعة جزء منها).
+- المستودع لم يكن فيه أي commit، و`.git` مملوك لمستخدم Windows آخر (CodexSandboxOffline). أضيف استثناء `safe.directory` وأُنشئ أول commit `564802b` بلقطة الحالة.
+- PART-12 بلا تقرير QA في `docs/qa/part-12` خلافًا لبقية الأجزاء.
+- لم تُجر البوابة البصرية لـPART-02 في هذه الجلسة: إضافة Chrome غير متصلة. تبقى نقطة الاستئناف كما هي.
+
 ## تسليم PART-14 — 2026-09-21
 
 - اكتملت بوابة التكامل المحلية: build وlint وtypecheck نجحت، ونجحت 72/72 وحدة و18/18 تكامل و9/9 رحلات حرجة على PostgreSQL فعلية.
