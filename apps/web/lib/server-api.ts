@@ -53,6 +53,8 @@ export interface PublicOrganizationSummary {
 export interface PublicProjectCard {
   slug: string; title: string; summary: string; type: string; state: string;
   publishedAt: string | null;
+  /** Admin-set cover photo; null means the web shows the default photo for the project type. */
+  coverUrl?: string | null;
   organization: PublicOrganizationSummary;
   location: PublicLocation;
 }

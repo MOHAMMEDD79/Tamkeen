@@ -15,6 +15,7 @@ import { OrgJobOffers, OrgJobs, OrgPlacements } from '../employment-operator-scr
 import { MyAssistance, MyProposals, MyVolunteering } from '../enablement-screens';
 import { OrgAgreements, OrgAssistance, OrgProgramOutcomes, OrgProposals, OrgSponsorships, OrgVolunteering } from '../enablement-operator-screens';
 import { AdminOperations, ExportTracker, MyNotifications, OperationsDashboard, SupportTickets } from '../operations-screens';
+import { SiteAdmin } from '../site-admin-screens';
 import {
   adminDisbursement, adminInvestmentReview, checkout, isWorkspaceRoute,
   myInvestmentDetail, orgInvestorRelations,
@@ -62,6 +63,9 @@ export default async function Page({ params, searchParams }: {
   if (route === '/admin/tickets') return <AdminOperations locale={locale} mode="tickets" />;
   if (route === '/admin/audit') return <AdminOperations locale={locale} mode="audit" />;
   if (route === '/admin/operations') return <OperationsDashboard locale={locale} />;
+  if (route === '/admin/site') return <SiteAdmin locale={locale} mode="content" />;
+  if (route === '/admin/site/covers') return <SiteAdmin locale={locale} mode="covers" />;
+  if (route === '/admin/messages') return <SiteAdmin locale={locale} mode="messages" />;
 
   // Longest-first among the /org/.../projects/... family, so /finance is not taken as a detail page.
   const finance = orgProjectFinance.exec(route);

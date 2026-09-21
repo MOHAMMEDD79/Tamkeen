@@ -33,7 +33,9 @@ const textPairs = (c: Palette): Array<[string, string, string]> => [
   ['danger outline button on surface', c.danger, c.surface],
   ['text on the inverse ground', c.onBrand, c.brandDeep],
   ['secondary text on the inverse ground', c.onBrandMuted, c.brandDeep],
-  ['highlight numeral on the inverse ground', c.highlight, c.brandDeep]
+  ['highlight numeral on the inverse ground', c.highlight, c.brandDeep],
+  ['label on an amber action button', c.onWarm, c.accent],
+  ['label on a hovered amber action button', c.onWarm, c.accentHover]
 ];
 
 /** 1.4.11 applies to control boundaries and to the focus indicator, at 3:1. */
@@ -45,7 +47,7 @@ const uiPairs = (c: Palette): Array<[string, string, string]> => [
   ['focus ring on canvas', c.focus, c.canvas],
   ['focus ring on primary tint', c.focus, c.primaryTint],
   ['meter fill on its track', c.primary, c.surfaceSunken],
-  ['highlight mark on surface', c.highlight, c.surface]
+  ['amber button against the deep ground', c.accent, c.brandDeep]
 ];
 
 test('every text colour pair that ships meets WCAG 2.2 AA at 4.5:1, in both themes', () => {

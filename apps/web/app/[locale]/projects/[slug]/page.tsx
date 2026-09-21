@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
-import { AppShell, Card, DataTable, EmptyState, MoneyAmount, Notice, PageHeader, ProgressWithLabel, StatusBadge, Stat, formatDate, isLocale, localePath, type Locale } from '@tamkeen/ui';
+import { AppShell, Card, DataTable, EmptyState, MoneyAmount, Notice, ProgressWithLabel, StatusBadge, Stat, formatDate, isLocale, localePath, type Locale } from '@tamkeen/ui';
 import { pathSegment, readPublic, type PublicContributor, type PublicProjectDetail } from '../../../../lib/server-api';
 import { ReadError, cityName, stateLabel, trackLabel } from '../../public-parts';
 import { FollowButton } from '../../follow-button';
+import { coverFor } from '../../../../lib/site-content';
+import { PageHero } from '../../marketing';
 
 /** PUB-06. A project that is not published returns 404: absence, not a forbidden page. */
 
@@ -29,7 +31,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ locale
   if (!result.ok && result.status === 404) notFound();
 
   return (
-    <AppShell locale={locale} path={`/projects/${slug}`}>
+    <AppShell locale={locale} path={`/projects/${slug}`}
+      lead={result.ok ? (
+        <PageHero image={coverFor(result.data)} kicker={`${trackLabel(result.data.type, locale)} · ${cityName(result.data.location, locale)} · ${result.data.organization.displayName}`} title={result.data.title} lead={result.data.summary}>
+          <div className="tmk-carousel__actions" style={{ marginBlockStart: 24 }}>
+            <FollowButton subjectType="project" subjectSlug={result.data.slug} label={ar ? 'تابع التحديثات' : 'Follow updates'} />
+          </div>
+        </PageHero>
+      ) : undefined}>
       {!result.ok ? <ReadError locale={locale} result={result} /> : (() => {
         const project = result.data;
         return (
@@ -41,13 +50,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ locale
                 <li><span aria-current="page">{project.title}</span></li>
               </ol>
             </nav>
-
-            <PageHeader
-              eyebrow={`${trackLabel(project.type, locale)} · ${cityName(project.location, locale)}`}
-              title={project.title}
-              lead={project.summary}
-              actions={<FollowButton subjectType="project" subjectSlug={project.slug} label={ar ? 'تابع التحديثات' : 'Follow updates'} />}
-            />
 
             <p className="tmk-row__actions">
               <StatusBadge tone={project.state === 'completed' ? 'success' : project.state === 'paused' ? 'warning' : 'info'}>

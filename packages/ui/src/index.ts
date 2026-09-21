@@ -3,3 +3,4 @@ export * from './locale.js';
 export * from './components.js';
 export * from './shell.js';
 export * from './theme-toggle.js';
+export * from './motion.js';

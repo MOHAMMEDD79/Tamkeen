@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Bell, Briefcase, Building2, ChartColumn, ClipboardList, Compass, GraduationCap, HandCoins, HandHeart, LayoutDashboard, LifeBuoy, Lightbulb, Menu, Settings, TrendingUp, Users } from 'lucide-react';
+import { Bell, Briefcase, Building2, ChartColumn, ClipboardList, Compass, GraduationCap, HandCoins, HandHeart, LayoutDashboard, LifeBuoy, Lightbulb, Mail, Menu, Settings, TrendingUp, Users } from 'lucide-react';
 import { localePath, translator, type Locale, type StringKey } from './locale.js';
 import { ThemeToggle } from './theme-toggle.js';
+import { RevealOnScroll } from './motion.js';
 
 /**
  * The application shell: header, optional context sidebar, the main region and the footer.
@@ -29,9 +30,8 @@ export interface ShellNavItem { href: string; text: string; current?: boolean; i
 export interface ShellNavGroup { title?: string; items: ShellNavItem[] }
 
 /**
- * The brand mark: three rising bars — funding, delivery, result — on an ink square. The ground and
- * bars read their colours from the theme, so the mark inverts cleanly in dark mode; the tallest bar
- * carries the ochre seal colour in both.
+ * The brand mark: three rising bars — funding, delivery, result — on a teal square. The colours come
+ * from the theme, so the mark stays legible in dark mode; the tallest bar is amber in both.
  */
 export function Logo({ size = 32 }: { size?: number }) {
   return (
@@ -46,10 +46,11 @@ export function Logo({ size = 32 }: { size?: number }) {
 
 const PUBLIC_NAV: Array<{ path: string; key: StringKey }> = [
   { path: '/explore', key: 'navExplore' },
-  { path: '/organizations', key: 'navOrganizations' },
   { path: '/invest', key: 'navInvest' },
   { path: '/opportunities', key: 'navOpportunities' },
-  { path: '/impact', key: 'navImpact' }
+  { path: '/organizations', key: 'navOrganizations' },
+  { path: '/about', key: 'navAbout' },
+  { path: '/contact-us', key: 'navContact' }
 ];
 
 const PERSONAL_NAV: Array<{ titleKey: StringKey; items: Array<{ path: string; key: StringKey; icon: LucideIcon }> }> = [
@@ -82,11 +83,13 @@ function personalNavigation(locale: Locale, path: string): ShellNavGroup[] {
   }));
 }
 
-export function AppShell({ locale, path, children, navigation, contexts, activeContextName, signedIn = false, demoBanner = false, userActions }: {
+export function AppShell({ locale, path, children, lead, navigation, contexts, activeContextName, signedIn = false, demoBanner = false, userActions }: {
   locale: Locale;
   /** Locale-free path, used so the language switch lands on the same page. */
   path: string;
   children: ReactNode;
+  /** Full-width content between the header and the page column: a banner or carousel. */
+  lead?: ReactNode;
   navigation?: ShellNavGroup[];
   contexts?: ShellContext[];
   activeContextName?: string;
@@ -110,6 +113,7 @@ export function AppShell({ locale, path, children, navigation, contexts, activeC
       </>;
   return (
     <div className="tmk-shell">
+      <RevealOnScroll />
       <a className="tmk-skip-link" href="#tmk-main">{t('skipToContent')}</a>
       {demoBanner ? (
         <p className="tmk-demo-banner" role="note">
@@ -145,6 +149,7 @@ export function AppShell({ locale, path, children, navigation, contexts, activeC
           </details>
         </div>
       </header>
+      {lead}
       <div className={`tmk-shell__body${sidebar || contexts?.length ? ' tmk-shell__body--with-sidebar' : ''}`}>
         {sidebar || contexts?.length ? (
           <nav className="tmk-sidebar" aria-label={personal ? t('personalWorkspace') : t('workspace')}>
@@ -206,6 +211,7 @@ export function AppShell({ locale, path, children, navigation, contexts, activeC
               <li><a href={localePath(locale, '/app/contributions')}><HandHeart aria-hidden="true" size={16} />{t('navContributions')}</a></li>
               <li><a href={localePath(locale, '/app/tickets')}><LifeBuoy aria-hidden="true" size={16} />{t('navSupport')}</a></li>
               <li><a href={localePath(locale, '/about')}><ClipboardList aria-hidden="true" size={16} />{t('navAbout')}</a></li>
+              <li><a href={localePath(locale, '/contact-us')}><Mail aria-hidden="true" size={16} />{t('navContact')}</a></li>
             </ul>
           </div>
         </div>

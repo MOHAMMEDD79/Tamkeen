@@ -8,49 +8,54 @@
  *
  * Colour never carries meaning alone (03): every status pairs a colour with a label and an icon.
  *
- * The visual idea is a ledger: warm paper, ink, hairline rules and tabular figures. Depth comes from
- * rules and spacing, not from gradients or heavy shadows, because what this product sells is a
- * record that can be checked.
+ * The visual idea: warm, photo-led and alive. Real photography carries the emotion, the deep teal
+ * carries trust, and amber marks the moments that matter (contribute, invest, apply). Motion is
+ * used to reveal and to count, and always stops for people who prefer reduced motion.
  */
 
 export type Palette = Record<keyof typeof color, string>;
 
 export const color = {
-  /** Page ground: warm paper rather than a cold grey. */
-  canvas: '#F7F6F2',
+  /** Page ground: a clean, very light mint-white. */
+  canvas: '#F6F9F8',
   /** Cards, forms, table surfaces. */
   surface: '#FFFFFF',
-  /** A surface set into another, e.g. a table header or a quiet panel. */
-  surfaceSunken: '#F0EEE8',
-  /** Primary text: near-black ink. */
-  ink: '#17191C',
+  /** A surface set into another: a table header, a quiet band, a chip. */
+  surfaceSunken: '#ECF3F1',
+  /** Primary text. */
+  ink: '#0F1F1C',
   /** Secondary text. Still AA against canvas, surface and the sunken surface. */
-  muted: '#5B6068',
-  /** Brand teal: links, the active marker, meters. */
-  primary: '#0B6B5D',
-  primaryHover: '#08574C',
+  muted: '#52615D',
+  /** Brand teal: links, primary buttons, progress. */
+  primary: '#0A7A68',
+  primaryHover: '#07604F',
   /** Tint behind a primary-flavoured block. */
-  primaryTint: '#E4F0EC',
-  /** The inverse ground: footer and the ledger panel's header band. */
-  brandDeep: '#101816',
-  /** Text on the inverse ground. */
+  primaryTint: '#E1F3EE',
+  /** The deep brand ground: hero overlays, bands, footer. */
+  brandDeep: '#062925',
+  /** Text on the deep ground. */
   onBrand: '#FFFFFF',
-  /** Secondary text on the inverse ground. */
-  onBrandMuted: '#A7B3AF',
-  /** Ochre used for small marks only: a seal, a rule, a numeral. Never body text on a light ground. */
-  highlight: '#B7852A',
+  /** Secondary text on the deep ground. */
+  onBrandMuted: '#B7D6CF',
+  /** Warm amber for the actions that move money or change a life: contribute, invest, apply. */
+  accent: '#F5A524',
+  accentHover: '#E08E0B',
+  /** Label on an amber button: dark, because white on amber fails contrast. */
+  onWarm: '#1C1405',
+  /** Amber for small marks on the deep ground (a number, a rule). */
+  highlight: '#F5A524',
   /** Hairline separator. Decorative only; never the sole boundary of a control. */
-  border: '#E4E1D9',
+  border: '#DDE7E4',
   /** Boundary of an interactive control: 3:1 against every background it sits on (WCAG 1.4.11). */
-  fieldBorder: '#7A7F86',
-  success: '#17663F',
-  successTint: '#E8F4EC',
+  fieldBorder: '#7A8A86',
+  success: '#12703F',
+  successTint: '#E4F5EA',
   warning: '#8A4B08',
-  warningTint: '#FBF1E3',
+  warningTint: '#FDF1DE',
   danger: '#B42318',
-  dangerTint: '#FCEDEB',
+  dangerTint: '#FDECEA',
   info: '#1D4F91',
-  infoTint: '#EAF1FB',
+  infoTint: '#E8F0FC',
   /** Focus indicator. Distinct from primary so focus reads on primary surfaces. */
   focus: '#2F62D8',
   /** Label on a filled primary or danger button. */
@@ -58,27 +63,30 @@ export const color = {
 } as const;
 
 /**
- * The dark theme is designed, not inverted: a charcoal ground with a faint green cast, surfaces that
- * step up in lightness instead of casting shadows, and a lighter teal so links and filled buttons
- * keep their contrast. A filled primary button carries dark text here.
+ * The dark theme is designed, not inverted: a deep green-black ground, surfaces that step up in
+ * lightness instead of casting shadows, and a lighter teal so links and filled buttons keep their
+ * contrast. A filled primary button carries dark text here; amber keeps its dark label in both.
  */
 export const darkColor: Palette = {
-  canvas: '#0E1110',
-  surface: '#151918',
-  surfaceSunken: '#1B201F',
-  ink: '#ECEEEC',
-  muted: '#A2A9A6',
-  primary: '#5CC9B3',
-  primaryHover: '#7DD8C5',
-  primaryTint: '#15302B',
-  brandDeep: '#090B0A',
-  onBrand: '#ECEEEC',
-  onBrandMuted: '#A2A9A6',
-  highlight: '#DDB15C',
-  border: '#272D2B',
-  fieldBorder: '#6C7471',
+  canvas: '#0B1211',
+  surface: '#111A18',
+  surfaceSunken: '#172321',
+  ink: '#EAF1EF',
+  muted: '#9FB0AB',
+  primary: '#3FC7AE',
+  primaryHover: '#6BD8C3',
+  primaryTint: '#12302B',
+  brandDeep: '#051513',
+  onBrand: '#EAF1EF',
+  onBrandMuted: '#A6BDB7',
+  accent: '#F7B447',
+  accentHover: '#FAC56E',
+  onWarm: '#1C1405',
+  highlight: '#F7B447',
+  border: '#22302D',
+  fieldBorder: '#667C77',
   success: '#5FD39A',
-  successTint: '#12281D',
+  successTint: '#10271C',
   warning: '#F0B660',
   warningTint: '#2C2112',
   danger: '#F28B80',
@@ -86,20 +94,20 @@ export const darkColor: Palette = {
   info: '#8DB6F7',
   infoTint: '#132338',
   focus: '#8DB0FF',
-  onAccent: '#08201B'
+  onAccent: '#06201B'
 };
 
 /** 4-based spacing scale (03). Keys are the pixel value so call sites stay readable. */
 export const space = { 4: '4px', 8: '8px', 12: '12px', 16: '16px', 24: '24px', 32: '32px', 48: '48px', 64: '64px' } as const;
 
-export const radius = { field: '8px', card: '12px', dialog: '16px', pill: '999px' } as const;
+export const radius = { field: '12px', card: '20px', dialog: '28px', pill: '999px' } as const;
 
-/** Elevation is reserved for things that float: menus, dialogs, the ledger panel. */
+/** Soft elevation: cards rest on `sm`, lift to `md` on hover; menus and dialogs float on `lg`. */
 export const shadow = {
-  sm: '0 1px 2px rgb(0 0 0 / 0.04)',
-  md: '0 6px 20px rgb(0 0 0 / 0.08)',
-  lg: '0 24px 60px rgb(0 0 0 / 0.14)',
-  focus: '0 0 0 3px rgb(47 98 216 / 0.25)'
+  sm: '0 1px 2px rgb(15 31 28 / 0.05), 0 2px 6px rgb(15 31 28 / 0.04)',
+  md: '0 10px 30px rgb(15 31 28 / 0.08), 0 2px 6px rgb(15 31 28 / 0.05)',
+  lg: '0 30px 70px rgb(6 41 37 / 0.20), 0 8px 20px rgb(15 31 28 / 0.08)',
+  focus: '0 0 0 4px rgb(47 98 216 / 0.22)'
 } as const;
 
 export const typography = {
@@ -116,9 +124,9 @@ export const typography = {
   bodyLine: '1.7',
   captionSize: '13.5px',
   captionLine: '1.6',
-  h1Size: 'clamp(28px, 3.6vw, 40px)',
+  h1Size: 'clamp(30px, 4vw, 46px)',
   /** The home page headline only. */
-  displaySize: 'clamp(36px, 5.4vw, 64px)',
+  displaySize: 'clamp(38px, 6vw, 76px)',
   /** Dashboards use a calmer h1 so data, not the heading, leads the page (03). */
   h1DashboardSize: 'clamp(24px, 2.6vw, 30px)',
   h2Size: '22px',
@@ -128,16 +136,17 @@ export const typography = {
 
 export const layout = {
   /** Public content column (03). */
-  contentMax: '1240px',
+  contentMax: '1280px',
   /** Reading column for prose and forms. */
   proseMax: '680px',
   sidebarWidth: '240px',
-  headerHeight: '64px',
+  headerHeight: '76px',
   /** Side gutter that keeps content clear of the viewport edge at 360px. */
   gutter: '20px'
 } as const;
 
-export const motion = { fast: '120ms', base: '200ms', easing: 'cubic-bezier(0.2, 0, 0.2, 1)' } as const;
+/** `slow` is for scroll reveals and image zooms; `easing-out` settles movement gently at its end. */
+export const motion = { fast: '120ms', base: '200ms', slow: '700ms', easing: 'cubic-bezier(0.2, 0, 0.2, 1)', easingOut: 'cubic-bezier(0.16, 1, 0.3, 1)' } as const;
 
 /** Breakpoints the acceptance gate names explicitly (PART-03). */
 export const breakpoint = { phone: 360, tablet: 768, desktop: 1440 } as const;

@@ -26,7 +26,10 @@ export const staticRoutes = [
   // personal records; the organisation's side of each lives under /org.
   '/app/assistance', '/app/proposals', '/app/volunteering',
   // PART-13. Personal notifications/support and the scoped platform queues.
-  '/app/notifications', '/app/saved', '/app/tickets', '/contact', '/admin/tickets', '/admin/audit', '/admin/operations'
+  '/app/notifications', '/app/saved', '/app/tickets', '/contact', '/admin/tickets', '/admin/audit', '/admin/operations',
+  // The platform admin's control of the public site: banners, track panels, project covers, and
+  // what visitors send through Contact us.
+  '/admin/site', '/admin/site/covers', '/admin/messages'
 ];
 
 /** ORG-06 and ORG-07 have their own component, so they are matched before the workspace routes. */
