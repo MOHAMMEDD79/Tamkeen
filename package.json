@@ -28,6 +28,7 @@
     "demo:program": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-program.ts",
     "demo:employment": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-employment.ts",
     "demo:enablement": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-enablement.ts",
+    "demo:code": "node scripts/demo-code.mjs",
     "demo:accounts": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-accounts.ts",
     "admin:grant": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/grant-platform-admin.ts",
     "dev:session": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/dev-session.ts",
