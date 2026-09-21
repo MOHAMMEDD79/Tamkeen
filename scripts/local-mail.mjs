@@ -2,7 +2,7 @@ import { createDatabase } from '@tamkeen/database';
 import { loadConfig } from '@tamkeen/config';
 
 const config = loadConfig(process.env);
-if (!['demo', 'test'].includes(config.environment) || !['local-outbox', 'resend'].includes(config.emailMode)) throw new Error('This tool is local-only');
+if (!['demo', 'test'].includes(config.environment) || config.emailMode === 'mailpit') throw new Error('This tool is local-only');
 const email = process.argv[2]?.trim().toLowerCase();
 if (!email) throw new Error('Usage: pnpm mail:local name@example.test');
 const db = createDatabase(config.databaseUrl);

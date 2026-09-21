@@ -31,6 +31,18 @@ test('resend is the one real email adapter, demo/test only, and needs a key and 
   assert.throws(() => loadConfig({ ...resend, SENDGRID_API_KEY: 'private' }), 'a resend key does not unlock other providers');
   assert.throws(() => loadConfig({ ...resend, RESEND_API_KEY: `${key}!` }), error => error instanceof Error && !error.message.includes('xxxx'));
 });
+test('smtp mode needs host, TLS port, user, password and sender, and stays demo/test only', () => {
+  const smtp = { ...safe, EMAIL_MODE: 'smtp', SMTP_HOST: 'smtp.gmail.com', SMTP_PORT: '465', SMTP_USER: 'me@gmail.com', SMTP_PASSWORD: 'abcd efgh ijkl mnop', EMAIL_FROM: 'Tamkeen <me@gmail.com>' };
+  const config = loadConfig(smtp);
+  assert.equal(config.emailMode, 'smtp');
+  assert.equal(config.smtp?.password, 'abcdefghijklmnop', 'a Gmail app password pasted with spaces still works');
+  assert.equal(config.resend, undefined);
+  assert.throws(() => loadConfig({ ...smtp, APP_ENV: 'production' }));
+  assert.throws(() => loadConfig({ ...smtp, SMTP_PORT: '25' }), 'plain-text SMTP would expose link tokens');
+  assert.throws(() => loadConfig({ ...smtp, SMTP_PASSWORD: '' }));
+  assert.throws(() => loadConfig({ ...smtp, RESEND_API_KEY: 're_' + 'x'.repeat(24) }), 'an smtp password does not unlock other providers');
+  assert.throws(() => loadConfig({ ...safe, SMTP_PASSWORD: 'secret' }), 'a stray smtp password is refused outside smtp mode');
+});
 test('refuses remote or production-named databases in demo', () => {
   for (const url of ['postgresql://x:secret@db.example.com/tamkeen_demo', 'postgresql://x:secret@127.0.0.1/tamkeen_prod', 'https://127.0.0.1/tamkeen_demo']) assert.throws(() => loadConfig({ ...safe, DATABASE_URL: url }));
 });

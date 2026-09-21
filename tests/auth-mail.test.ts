@@ -1,6 +1,22 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildAuthMail, resendSender } from '../apps/worker/src/auth-mail.js';
+import { buildAuthMail, resendSender, smtpSender } from '../apps/worker/src/auth-mail.js';
+
+const smtpConfig = { host: 'smtp.gmail.com', port: 465, user: 'me@gmail.com', password: 'app-password', from: 'Tamkeen <me@gmail.com>' };
+
+test('smtp sender sends from the configured address with a stable Message-ID', async () => {
+  const sent: Record<string, unknown>[] = [];
+  const send = smtpSender(smtpConfig, { sendMail: (async (options: Record<string, unknown>) => { sent.push(options); return {}; }) as never });
+  await send(buildAuthMail({ recipient: 'anyone@example.test', purpose: 'verify', url: 'https://x.test/v' }), 'tamkeen-auth-mail-1');
+  assert.equal(sent[0]!.to, 'anyone@example.test');
+  assert.equal(sent[0]!.from, 'Tamkeen <me@gmail.com>');
+  assert.equal(sent[0]!.messageId, '<tamkeen-auth-mail-1@tamkeen.local>');
+});
+
+test('smtp failures keep only the response code, never the server text', async () => {
+  const send = smtpSender(smtpConfig, { sendMail: (async () => { throw Object.assign(new Error('535 Username me@gmail.com and Password not accepted'), { responseCode: 535, code: 'EAUTH' }); }) as never });
+  await assert.rejects(send(buildAuthMail({ recipient: 'a@example.test', purpose: 'reset', url: 'https://x.test/r' }), 'k'), (error: Error) => error.name === 'Smtp535' && !error.message.includes('gmail'));
+});
 
 test('auth mail is Arabic RTL, carries the link, and escapes it in HTML', () => {
   const mail = buildAuthMail({ recipient: 'a@example.test', purpose: 'verify', url: 'http://127.0.0.1:4000/api/v1/auth/verify-email?token=a"b<c' });

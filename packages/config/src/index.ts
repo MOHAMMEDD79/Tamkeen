@@ -9,9 +9,11 @@ export interface RuntimeConfig {
   apiBaseUrl: string;
   heartbeatMs: number;
   sessionSecret: string;
-  emailMode: 'mailpit' | 'local-outbox' | 'resend';
+  emailMode: 'mailpit' | 'local-outbox' | 'resend' | 'smtp';
   /** Present only when emailMode is 'resend'. Never log this object whole. */
   resend?: { apiKey: string; from: string };
+  /** Present only when emailMode is 'smtp'. Never log this object whole. */
+  smtp?: { host: string; port: number; user: string; password: string; from: string };
 }
 
 // Errors name configuration keys only; never include secret values or connection strings.
@@ -47,25 +49,40 @@ export function loadConfig(env: Record<string, string | undefined>): RuntimeConf
     if (!/^\/tamkeen_(demo|test)$/.test(database.pathname)) throw new Error('Local database must be tamkeen_demo or tamkeen_test');
   }
   // No live-money adapter exists. Fail closed in every environment.
-  // Resend is the one real email adapter, and only for demo/test: the outbox it relays from stores
-  // link tokens in plain text, which is acceptable for a local preview and not for production.
+  // Resend and SMTP are the real email adapters, and only for demo/test: the outbox they relay from
+  // stores link tokens in plain text, which is acceptable for a local preview and not for production.
   const emailMode = required('EMAIL_MODE');
-  if (required('PAYMENT_MODE') !== 'simulator' || !['mailpit', 'local-outbox', 'resend'].includes(emailMode)) throw new Error('External providers are not implemented');
-  if (!local && (emailMode === 'local-outbox' || emailMode === 'resend')) throw new Error(`EMAIL_MODE ${emailMode} is forbidden outside demo/test`);
+  if (required('PAYMENT_MODE') !== 'simulator' || !['mailpit', 'local-outbox', 'resend', 'smtp'].includes(emailMode)) throw new Error('External providers are not implemented');
+  if (!local && emailMode !== 'mailpit') throw new Error(`EMAIL_MODE ${emailMode} is forbidden outside demo/test`);
   if (required('MONEY_ENABLED') !== 'false' || required('INVESTMENT_ENABLED') !== 'false') throw new Error('Financial features are not implemented');
-  const forbidden = Object.keys(env).some(key => /^(STRIPE|PAYPAL|ADYEN|PAYMENT|SMTP|SENDGRID|RESEND).*?(SECRET|TOKEN|KEY|PASSWORD)/i.test(key) && Boolean(env[key]) && !(key === 'RESEND_API_KEY' && emailMode === 'resend'));
+  const allowedSecret = (key: string) => (key === 'RESEND_API_KEY' && emailMode === 'resend') || (key === 'SMTP_PASSWORD' && emailMode === 'smtp');
+  const forbidden = Object.keys(env).some(key => /^(STRIPE|PAYPAL|ADYEN|PAYMENT|SMTP|SENDGRID|RESEND).*?(SECRET|TOKEN|KEY|PASSWORD)/i.test(key) && Boolean(env[key]) && !allowedSecret(key));
   if (forbidden) throw new Error('External provider credentials are forbidden in foundation mode');
+  const sender = (): string => {
+    const from = required('EMAIL_FROM');
+    // "Name <address>" or a bare address; no line breaks, so the value cannot inject headers.
+    if (!/^([^<>\r\n]{1,64} <[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>|[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+)$/.test(from)) throw new Error('Invalid EMAIL_FROM');
+    return from;
+  };
   let resend: RuntimeConfig['resend'];
   if (emailMode === 'resend') {
     const apiKey = required('RESEND_API_KEY');
     if (!/^re_[A-Za-z0-9_]{16,}$/.test(apiKey)) throw new Error('Invalid RESEND_API_KEY');
-    const from = required('EMAIL_FROM');
-    // "Name <address>" or a bare address; no line breaks, so the value cannot inject headers.
-    if (!/^([^<>\r\n]{1,64} <[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>|[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+)$/.test(from)) throw new Error('Invalid EMAIL_FROM');
-    resend = { apiKey, from };
+    resend = { apiKey, from: sender() };
+  }
+  let smtp: RuntimeConfig['smtp'];
+  if (emailMode === 'smtp') {
+    const host = required('SMTP_HOST');
+    if (!/^[a-z0-9.-]+$/i.test(host)) throw new Error('Invalid SMTP_HOST');
+    const port = integer('SMTP_PORT', 1, 65535);
+    if (port !== 465 && port !== 587) throw new Error('SMTP_PORT must be 465 or 587: mail links carry tokens and must not travel in clear text');
+    const user = required('SMTP_USER');
+    // Gmail shows app passwords in groups of four with spaces; accept them as pasted.
+    const password = required('SMTP_PASSWORD').replace(/\s+/g, '');
+    smtp = { host, port, user, password, from: sender() };
   }
   return {
-    environment: environment as AppEnvironment, databaseUrl, sessionSecret: secret, emailMode: emailMode as RuntimeConfig['emailMode'], ...(resend ? { resend } : {}),
+    environment: environment as AppEnvironment, databaseUrl, sessionSecret: secret, emailMode: emailMode as RuntimeConfig['emailMode'], ...(resend ? { resend } : {}), ...(smtp ? { smtp } : {}),
     apiPort: integer('API_PORT', 1, 65535), apiHost: required('API_HOST'),
     appBaseUrl: url('APP_BASE_URL'), apiBaseUrl: url('API_BASE_URL'),
     heartbeatMs: integer('WORKER_HEARTBEAT_MS', 1000, 60000)

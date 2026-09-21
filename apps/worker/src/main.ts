@@ -2,14 +2,14 @@ import { loadConfig } from '@tamkeen/config';
 import { createDatabase } from '@tamkeen/database';
 import { processNotificationBatch } from './notifications.js';
 import { processExportBatch } from './exports.js';
-import { processAuthMailBatch, resendSender } from './auth-mail.js';
+import { configuredSender, processAuthMailBatch } from './auth-mail.js';
 
 const config = loadConfig(process.env);
 const db = createDatabase(config.databaseUrl);
 let stopping = false;
 let pending: Promise<void> | undefined;
 let mailPending: Promise<void> | undefined;
-const sendMail = config.resend ? resendSender(config.resend) : undefined;
+const sendMail = configuredSender(config);
 
 async function heartbeat() {
   await db.workerHeartbeat.upsert({ where: { workerId: 'foundation-worker' }, create: { workerId: 'foundation-worker', lastSeen: new Date() }, update: { lastSeen: new Date() } });

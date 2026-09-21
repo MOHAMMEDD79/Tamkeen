@@ -1,5 +1,17 @@
 {
-  "name": "@tamkeen/worker", "private": true, "type": "module", "version": "0.1.0",
-  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "dev": "node --import ../../scripts/tsx-user-shim.mjs --import tsx --watch src/main.ts", "start": "node dist/main.js" },
-  "dependencies": { "@tamkeen/config": "workspace:*", "@tamkeen/database": "workspace:*" }
+  "name": "@tamkeen/worker",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "node --import ../../scripts/tsx-user-shim.mjs --import tsx --watch src/main.ts",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@tamkeen/config": "workspace:*",
+    "@tamkeen/database": "workspace:*",
+    "nodemailer": "^10.0.10"
+  }
 }

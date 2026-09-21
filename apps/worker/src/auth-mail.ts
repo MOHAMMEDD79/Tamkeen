@@ -1,4 +1,5 @@
 import type { RuntimeConfig } from '@tamkeen/config';
+import { createTransport, type Transporter } from 'nodemailer';
 import type { DatabaseClient } from '@tamkeen/database';
 
 export interface AuthMailMessage { to: string; subject: string; text: string; html: string }
@@ -54,8 +55,34 @@ export function resendSender(resend: NonNullable<RuntimeConfig['resend']>, fetch
   };
 }
 
+export function smtpSender(smtp: NonNullable<RuntimeConfig['smtp']>, transport: Pick<Transporter, 'sendMail'> = createTransport({
+  host: smtp.host, port: smtp.port, secure: smtp.port === 465, requireTLS: true,
+  auth: { user: smtp.user, pass: smtp.password },
+  connectionTimeout: 15_000, greetingTimeout: 15_000, socketTimeout: 30_000
+})): AuthMailSender {
+  return async (message, idempotencyKey) => {
+    try {
+      // SMTP has no idempotency key; a stable Message-ID lets the receiving server spot a duplicate.
+      await transport.sendMail({ from: smtp.from, to: message.to, subject: message.subject, text: message.text, html: message.html, messageId: `<${idempotencyKey}@tamkeen.local>` });
+    } catch (cause) {
+      // Keep only the SMTP code: server responses can echo the recipient or the account name.
+      const code = cause && typeof cause === 'object' && 'responseCode' in cause ? String(cause.responseCode) : cause && typeof cause === 'object' && 'code' in cause ? String(cause.code) : 'unknown';
+      const error = new Error(`smtp_${code}`);
+      error.name = `Smtp${code.replace(/[^A-Za-z0-9]/g, '')}`.slice(0, 80);
+      throw error;
+    }
+  };
+}
+
+/** The sender for the configured mode, or undefined when mail must stay on this machine. */
+export function configuredSender(config: RuntimeConfig): AuthMailSender | undefined {
+  if (config.resend) return resendSender(config.resend);
+  if (config.smtp) return smtpSender(config.smtp);
+  return undefined;
+}
+
 /**
- * Relays pending auth mail. With no sender (any mode but resend) pending rows are marked
+ * Relays pending auth mail. With no sender (local-outbox) pending rows are marked
  * local_only, so they stay readable through `pnpm mail:local` and are never sent later.
  */
 export async function processAuthMailBatch(db: DatabaseClient, send: AuthMailSender | undefined, now = new Date(), limit = 25) {
