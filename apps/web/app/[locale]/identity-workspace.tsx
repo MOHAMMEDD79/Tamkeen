@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { CURRENT_TERMS_VERSION } from '@tamkeen/config';
-import { AppShell, Card, EmptyState, ErrorState, Logo, Ltr, Notice, PageHeader, Skeleton, StatusBadge, localePath, translator, type Locale } from '@tamkeen/ui';
-import { Bell, Briefcase, Building2, CircleCheck, GraduationCap, HandCoins, HandHeart, KeyRound, LifeBuoy, Lightbulb, Plus, Settings, ShieldCheck, TrendingUp, UserRound, Users, type LucideIcon } from 'lucide-react';
+import { AppShell, Card, EmptyState, ErrorState, Ltr, MoneyAmount, Notice, PageHeader, Skeleton, StatusBadge, formatDate, localePath, translator, type Locale } from '@tamkeen/ui';
+import { Bell, Briefcase, Building2, ChevronLeft, ChevronRight, CircleCheck, GraduationCap, HandCoins, HandHeart, KeyRound, LifeBuoy, Lightbulb, Plus, Settings, ShieldCheck, TrendingUp, UserRound, Users, type LucideIcon } from 'lucide-react';
 import { safeReturnTo } from '../../lib/return-to';
 import './workspace.css';
 
@@ -114,6 +114,8 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
   const [notice, setNotice] = useState('');
   const [returnTo, setReturnTo] = useState('/app');
   const [codeEmail, setCodeEmail] = useState('');
+  // PER-01 figures. `null` fields mean that read failed, which the page shows as a dash, not a zero.
+  const [summary, setSummary] = useState<{ given: Array<{ currency: string; minor: string }>; contributions: number | null; applications: number | null; unread: number | null } | null>(null);
   const [codeSent, setCodeSent] = useState(false);
   const [codeDone, setCodeDone] = useState(false);
   const [organizationDraft, setOrganizationDraft] = useState<OrganizationDraft>({});
@@ -149,6 +151,23 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
         const current = await api('/me') as Me;
         if (!active) return;
         setMe(current);
+        if (route === '/app') {
+          const [contributions, applications, notifications] = await Promise.allSettled([
+            api('/me/contributions') as Promise<Array<{ state: string; amountMinor: string; refundedMinor: string; currency: string }>>,
+            api('/me/applications') as Promise<unknown[]>,
+            api('/me/notifications') as Promise<Array<{ readAt: string | null }>>
+          ]);
+          // Net of refunds, per currency, in integer minor units: amounts are never added as floats.
+          const totals = new Map<string, bigint>();
+          const settled = contributions.status === 'fulfilled' ? contributions.value.filter(row => row.state === 'succeeded' || row.state === 'partially_refunded') : [];
+          for (const row of settled) totals.set(row.currency, (totals.get(row.currency) ?? BigInt(0)) + BigInt(row.amountMinor) - BigInt(row.refundedMinor || '0'));
+          if (active) setSummary({
+            given: [...totals].sort((a, b) => (b[1] > a[1] ? 1 : -1)).map(([currency, minor]) => ({ currency, minor: minor.toString() })),
+            contributions: contributions.status === 'fulfilled' ? settled.length : null,
+            applications: applications.status === 'fulfilled' ? applications.value.length : null,
+            unread: notifications.status === 'fulfilled' ? notifications.value.filter(item => !item.readAt).length : null
+          });
+        }
         if (route === '/app/security' || route === '/app/settings') {
           const sessions = await api('/sessions') as AccountSession[];
           if (active) setAccountSessions(sessions);
@@ -348,60 +367,82 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
       setMe({ ...me, profile }); window.location.assign(L('/app'));
     })}><Field label="اسم العرض" name="displayName" value={me.profile.displayName} /><label className="field">المدينة<input name="city" defaultValue={me.profile.city ?? ''} maxLength={100} /></label><label className="field">لغة الواجهة<select name="locale" defaultValue={me.profile.locale}><option value="ar">العربية</option><option value="en">English</option></select></label><fieldset><legend>كيف ترغب في استخدام تمكين؟</legend>{Object.entries(capabilityLabels).map(([value, label]) => <label className="check" key={value}><input type="checkbox" name="capabilities" value={value} defaultChecked={me.profile.capabilities.includes(value)} />{label}</label>)}</fieldset>{submit('حفظ وابدأ')}</form><a href={L('/app')}>تخطي الاختياري والعودة إلى مساحتي</a></>;
   } else if (me && route === '/app') {
-    // PER-01.A01–A03 are built: every personal record is one tile, reachable whether or not the
-    // person belongs to a jiha. Staff roles add their own queues below.
-    const tiles: Array<{ href: string; title: string; body: string; icon: LucideIcon }> = [
-      { href: '/app/contributions', title: 'مساهماتي', body: 'تبرعاتك وإيصالاتها وأين وصلت.', icon: HandHeart },
-      { href: '/app/investments', title: 'استثماراتي', body: 'التزاماتك وتخصيصاتك وتقارير الشركات.', icon: TrendingUp },
-      { href: '/app/applications', title: 'طلباتي', body: 'طلبات البرامج والتدريب وحالتها.', icon: GraduationCap },
-      { href: '/app/jobs', title: 'وظائفي', body: 'ترشيحاتك وعروض العمل والتوظيف.', icon: Briefcase },
-      { href: '/app/assistance', title: 'طلبات المساعدة', body: 'اطلب مساعدة أو تابع طلبًا قائمًا.', icon: HandCoins },
-      { href: '/app/proposals', title: 'أفكاري', body: 'أفكار المشاريع التي قدمتها للاحتضان.', icon: Lightbulb },
-      { href: '/app/volunteering', title: 'التطوع', body: 'فرصك التطوعية وساعاتك المعتمدة.', icon: Users },
-      { href: '/app/notifications', title: 'الإشعارات', body: 'آخر ما حدث في الجهات والمشاريع التي تتابعها.', icon: Bell }
+    // PER-01.A01–A03 are built: every personal record is one row in the index, reachable whether or
+    // not the person belongs to a jiha. Staff roles add their own queues as a second index.
+    const sections: Array<{ href: string; title: string; body: string; icon: LucideIcon }> = [
+      { href: '/app/contributions', title: 'مساهماتي', body: 'تبرعاتك وإيصالاتها وأين وصلت', icon: HandHeart },
+      { href: '/app/investments', title: 'استثماراتي', body: 'التزاماتك وتخصيصاتك وتقارير الشركات', icon: TrendingUp },
+      { href: '/app/applications', title: 'طلباتي', body: 'طلبات البرامج والتدريب وحالتها', icon: GraduationCap },
+      { href: '/app/jobs', title: 'وظائفي', body: 'ترشيحاتك وعروض العمل والتوظيف', icon: Briefcase },
+      { href: '/app/assistance', title: 'طلبات المساعدة', body: 'اطلب مساعدة أو تابع طلبًا قائمًا', icon: HandCoins },
+      { href: '/app/proposals', title: 'أفكاري', body: 'أفكار المشاريع التي قدمتها للاحتضان', icon: Lightbulb },
+      { href: '/app/volunteering', title: 'التطوع', body: 'فرصك التطوعية وساعاتك المعتمدة', icon: Users },
+      { href: '/app/notifications', title: 'الإشعارات', body: 'ما حدث في الجهات والمشاريع التي تتابعها', icon: Bell }
     ];
-    const staffTiles: Array<{ href: string; title: string; body: string; icon: LucideIcon; show: boolean }> = [
-      { href: '/admin/verifications', title: 'مراجعات التوثيق', body: 'طلبات توثيق الجهات بانتظار القرار.', icon: ShieldCheck, show: me.platformRoles.includes('VerificationReviewer') },
-      { href: '/admin/reviews/project', title: 'مراجعة المشاريع', body: 'محتوى المشاريع قبل النشر.', icon: CircleCheck, show: me.platformRoles.includes('ContentReviewer') },
-      { href: '/admin/bank-change-requests', title: 'الحسابات البنكية', body: 'طلبات تغيير الحساب البنكي.', icon: Building2, show: me.platformRoles.includes('FinanceOperator') },
-      { href: '/admin/team', title: 'فريق التشغيل', body: 'منح فريق المنصة وصلاحياته.', icon: Users, show: me.platformRoles.includes('PlatformAdmin') }
+    const staff: Array<{ href: string; title: string; body: string; icon: LucideIcon; show: boolean }> = [
+      { href: '/admin/verifications', title: 'مراجعات التوثيق', body: 'طلبات توثيق الجهات بانتظار القرار', icon: ShieldCheck, show: me.platformRoles.includes('VerificationReviewer') },
+      { href: '/admin/reviews/project', title: 'مراجعة المشاريع', body: 'محتوى المشاريع قبل النشر', icon: CircleCheck, show: me.platformRoles.includes('ContentReviewer') },
+      { href: '/admin/bank-change-requests', title: 'الحسابات البنكية', body: 'طلبات تغيير الحساب البنكي', icon: Building2, show: me.platformRoles.includes('FinanceOperator') },
+      { href: '/admin/team', title: 'فريق التشغيل', body: 'منح فريق المنصة وصلاحياته', icon: Users, show: me.platformRoles.includes('PlatformAdmin') }
     ];
-    const initial = (me.profile.displayName.trim()[0] ?? '؟').toUpperCase();
-    const tileGrid = (items: Array<{ href: string; title: string; body: string; icon: LucideIcon }>, label: string) => (
-      <nav className="tmk-tiles" aria-label={label}>
-        {items.map(tile => {
-          const Icon = tile.icon;
+    const Chevron = locale === 'ar' ? ChevronLeft : ChevronRight;
+    const index = (items: Array<{ href: string; title: string; body: string; icon: LucideIcon }>, label: string) => (
+      <nav className="tmk-index" aria-label={label}>
+        {items.map(item => {
+          const Icon = item.icon;
           return (
-            <a className="tmk-tile" key={tile.href} href={L(tile.href)}>
-              <span className="tmk-feature__icon"><Icon aria-hidden="true" size={22} /></span>
-              <strong>{tile.title}</strong>
-              <span>{tile.body}</span>
+            <a className="tmk-index__item" key={item.href} href={L(item.href)}>
+              <Icon aria-hidden="true" size={20} />
+              <strong>{item.title}</strong>
+              <span>{item.body}</span>
+              <Chevron aria-hidden="true" size={18} />
             </a>
           );
         })}
       </nav>
     );
+    const hour = new Date().getHours();
+    const given = summary?.given[0];
     content = <>
-      <section className="tmk-welcome" aria-labelledby="per01-title">
-        <div className="tmk-welcome__who">
-          <span className="tmk-avatar" aria-hidden="true">{initial}</span>
+      <header className="tmk-greeting">
+        <div className="tmk-greeting__row">
           <div>
-            <h1 id="per01-title">مرحبًا، {me.profile.displayName}</h1>
-            <p>هذه مساحتك الشخصية. جهاتك مستقلة عنها، ولكل جهة صلاحياتها الخاصة، ولا تصبح أموالها أموالك.</p>
+            <p>{hour < 12 ? t('goodMorning') : t('goodEvening')} · {formatDate(new Date(), locale)}</p>
+            <h1>{me.profile.displayName}</h1>
+          </div>
+          <div className="tmk-row__actions">
+            <a className="tmk-button tmk-button--secondary" href={L('/onboarding')}><UserRound aria-hidden="true" size={18} />ملفي</a>
+            <a className="tmk-button tmk-button--primary" href={L('/explore')}>تصفّح المشاريع</a>
           </div>
         </div>
-        <div className="tmk-hero__actions">
-          <a className="tmk-button tmk-button--highlight" href={L('/explore')}>استكشف المشاريع</a>
-          <a className="tmk-button tmk-button--on-brand" href={L('/onboarding')}><UserRound aria-hidden="true" size={18} />إكمال ملفي</a>
+      </header>
+
+      {/* Real figures from this account; a read that fails shows a dash rather than a zero. */}
+      <dl className="tmk-figures" aria-busy={!summary}>
+        <div>
+          <dt>ما ساهمت به</dt>
+          <dd>{given ? <MoneyAmount minor={given.minor} currency={given.currency} locale={locale} /> : summary ? '0' : '—'}<small>{summary && summary.given.length > 1 ? `وبعملات أخرى (${summary.given.length - 1})` : 'بعد خصم أي استرداد'}</small></dd>
         </div>
-      </section>
+        <div>
+          <dt>مساهمات مكتملة</dt>
+          <dd>{summary ? summary.contributions ?? '—' : '—'}<small><a href={L('/app/contributions')}>عرض السجل</a></small></dd>
+        </div>
+        <div>
+          <dt>طلبات البرامج</dt>
+          <dd>{summary ? summary.applications ?? '—' : '—'}<small><a href={L('/app/applications')}>متابعة الطلبات</a></small></dd>
+        </div>
+        <div>
+          <dt>إشعارات غير مقروءة</dt>
+          <dd>{summary ? summary.unread ?? '—' : '—'}<small><a href={L('/app/notifications')}>فتح الإشعارات</a></small></dd>
+        </div>
+      </dl>
 
-      <h2 style={{ marginBlockStart: 0 }}>نشاطي</h2>
-      {tileGrid(tiles, 'أقسام مساحتي')}
+      <div className="tmk-section-row"><h2>مساحتي</h2></div>
+      {index(sections, 'أقسام مساحتي')}
 
-      {staffTiles.some(tile => tile.show) && <>
-        <h2>أعمال فريق المنصة</h2>
-        {tileGrid(staffTiles.filter(tile => tile.show), 'أعمال فريق المنصة')}
+      {staff.some(item => item.show) && <>
+        <div className="tmk-section-row"><h2>أعمال فريق المنصة</h2></div>
+        {index(staff.filter(item => item.show), 'أعمال فريق المنصة')}
       </>}
 
       <div className="tmk-section-row">
@@ -413,7 +454,7 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
           ? <EmptyState title="لم تنضم إلى جهة بعد" action={<a className="tmk-button tmk-button--primary" href={L('/app/organizations/new')}><Plus aria-hidden="true" size={18} />أنشئ جهة</a>}>أنشئ جهة لتصبح مالكها، أو اقبل دعوة وصلت إلى بريدك من جهة قائمة.</EmptyState>
           : me.contexts.map(context => <article className="tmk-row" key={context.organization.id}>
               <div className="tmk-row__lead">
-                <span className="tmk-feature__icon"><Building2 aria-hidden="true" size={22} /></span>
+                <Building2 aria-hidden="true" size={20} />
                 <div>
                   <strong>{context.organization.displayName}</strong>
                   <p className="tmk-field__hint">{context.roles.map(r => roleLabels[r] ?? r).join('، ')}</p>
@@ -496,23 +537,15 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
   >
     {authPage
       ? <div className="tmk-auth">
-          <aside className="tmk-auth__aside">
-            <div>
-              <Logo size={44} />
-              <h2>{route === '/register' ? 'انضم إلى من يصنعون أثرًا يمكن إثباته' : 'مرحبًا بك في تمكين'}</h2>
-              <p>حساب واحد للمساهمة والاستثمار والتدريب والعمل، ولإدارة الجهات التي تنتمي إليها.</p>
-            </div>
-            <ul className="tmk-auth__points">
-              <li><ShieldCheck aria-hidden="true" size={20} /><span><strong>جهات موثقة فقط</strong>كل جهة تمر بمراجعة مستقلة قبل أن تجمع أي تمويل.</span></li>
-              <li><HandHeart aria-hidden="true" size={20} /><span><strong>تتبّع كل مساهمة</strong>من لحظة الدفع حتى دليل التنفيذ وتقرير الإغلاق.</span></li>
-              <li><KeyRound aria-hidden="true" size={20} /><span><strong>حسابك محمي</strong>تأكيد البريد برمز، وتحقق بخطوتين للعمليات الحساسة.</span></li>
-            </ul>
-          </aside>
-          <div className="tmk-auth__main" aria-busy={busy || loading}>
+          <div className="tmk-auth__card" aria-busy={busy || loading}>
             {error && <div ref={errorRef} tabIndex={-1}><Notice tone="danger" live="assertive">{error}</Notice></div>}
             {notice && <Notice tone="success">{notice}</Notice>}
             {loading ? <Skeleton lines={4} label={t('loading')} /> : content}
           </div>
+          <ul className="tmk-auth__facts">
+            <li><ShieldCheck aria-hidden="true" size={16} />جهات موثقة بمراجعة مستقلة قبل أي تمويل</li>
+            <li><KeyRound aria-hidden="true" size={16} />تأكيد البريد برمز، وتحقق بخطوتين للعمليات الحساسة</li>
+          </ul>
         </div>
       : <div aria-busy={busy || loading}>
           {/* A failure takes focus so a keyboard or screen-reader user is not left on a stale form. */}

@@ -27,7 +27,7 @@ export const stateLabel = (state: string, locale: Locale) => {
   return labels[state]?.[locale] ?? state;
 };
 
-const stateTone = (state: string) =>
+export const stateTone = (state: string): 'success' | 'warning' | 'info' | 'neutral' =>
   state === 'completed' ? 'success' : state === 'paused' ? 'warning' : state === 'published' ? 'info' : 'neutral';
 
 export function cityName(location: { city: { nameAr: string; nameEn: string } }, locale: Locale) {

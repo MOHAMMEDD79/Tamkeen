@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { color, contrastRatio, tokenNames, tokensCss } from '@tamkeen/ui';
+import { color, contrastRatio, darkColor, tokenNames, tokensCss } from '@tamkeen/ui';
 
 const stylesheet = readFileSync(fileURLToPath(new URL('../packages/ui/src/styles.css', import.meta.url)), 'utf8');
 
@@ -10,54 +10,65 @@ const stylesheet = readFileSync(fileURLToPath(new URL('../packages/ui/src/styles
  * 03-DESIGN-SYSTEM calls the palette a starting point and requires every combination that actually
  * ships to be tested before it is adopted. These are those combinations, not a sample.
  */
-const textPairs: Array<[string, string, string]> = [
-  ['primary text on canvas', color.ink, color.canvas],
-  ['primary text on surface', color.ink, color.surface],
-  ['primary text on sunken surface', color.ink, color.surfaceSunken],
-  ['secondary text on canvas', color.muted, color.canvas],
-  ['secondary text on surface', color.muted, color.surface],
-  ['secondary text on sunken surface', color.muted, color.surfaceSunken],
-  ['link on surface', color.primary, color.surface],
-  ['link on canvas', color.primary, color.canvas],
-  ['link on primary tint', color.primary, color.primaryTint],
-  ['label on primary button', color.onAccent, color.primary],
-  ['label on hovered primary button', color.onAccent, color.primaryHover],
-  ['success text on its tint', color.success, color.successTint],
-  ['warning text on its tint', color.warning, color.warningTint],
-  ['danger text on its tint', color.danger, color.dangerTint],
-  ['info text on its tint', color.info, color.infoTint],
-  ['danger outline button on surface', color.danger, color.surface],
-  ['white text on the deep brand ground', color.onAccent, color.brandDeep],
-  ['secondary text on the deep brand ground', color.onBrandMuted, color.brandDeep],
-  ['highlight text on the deep brand ground', color.highlight, color.brandDeep],
-  ['label on a highlight button', color.brandDeep, color.highlight]
+type Palette = typeof color | typeof darkColor;
+const themes: Array<[string, Palette]> = [['light', color], ['dark', darkColor]];
+
+const textPairs = (c: Palette): Array<[string, string, string]> => [
+  ['primary text on canvas', c.ink, c.canvas],
+  ['primary text on surface', c.ink, c.surface],
+  ['primary text on sunken surface', c.ink, c.surfaceSunken],
+  ['secondary text on canvas', c.muted, c.canvas],
+  ['secondary text on surface', c.muted, c.surface],
+  ['secondary text on sunken surface', c.muted, c.surfaceSunken],
+  ['link on surface', c.primary, c.surface],
+  ['link on canvas', c.primary, c.canvas],
+  ['link on sunken surface', c.primary, c.surfaceSunken],
+  ['link on primary tint', c.primary, c.primaryTint],
+  ['label on primary button', c.onAccent, c.primary],
+  ['label on hovered primary button', c.onAccent, c.primaryHover],
+  ['success text on its tint', c.success, c.successTint],
+  ['warning text on its tint', c.warning, c.warningTint],
+  ['danger text on its tint', c.danger, c.dangerTint],
+  ['info text on its tint', c.info, c.infoTint],
+  ['danger outline button on surface', c.danger, c.surface],
+  ['text on the inverse ground', c.onBrand, c.brandDeep],
+  ['secondary text on the inverse ground', c.onBrandMuted, c.brandDeep],
+  ['highlight numeral on the inverse ground', c.highlight, c.brandDeep]
 ];
 
 /** 1.4.11 applies to control boundaries and to the focus indicator, at 3:1. */
-const uiPairs: Array<[string, string, string]> = [
-  ['field border on surface', color.fieldBorder, color.surface],
-  ['field border on canvas', color.fieldBorder, color.canvas],
-  ['field border on sunken surface', color.fieldBorder, color.surfaceSunken],
-  ['focus ring on surface', color.focus, color.surface],
-  ['focus ring on canvas', color.focus, color.canvas],
-  ['focus ring on primary tint', color.focus, color.primaryTint],
-  ['meter fill on its track', color.primary, color.surfaceSunken]
+const uiPairs = (c: Palette): Array<[string, string, string]> => [
+  ['field border on surface', c.fieldBorder, c.surface],
+  ['field border on canvas', c.fieldBorder, c.canvas],
+  ['field border on sunken surface', c.fieldBorder, c.surfaceSunken],
+  ['focus ring on surface', c.focus, c.surface],
+  ['focus ring on canvas', c.focus, c.canvas],
+  ['focus ring on primary tint', c.focus, c.primaryTint],
+  ['meter fill on its track', c.primary, c.surfaceSunken],
+  ['highlight mark on surface', c.highlight, c.surface]
 ];
 
-test('every text colour pair that ships meets WCAG 2.2 AA at 4.5:1', () => {
-  const failures = textPairs
-    .map(([name, foreground, background]) => ({ name, ratio: contrastRatio(foreground, background) }))
+test('every text colour pair that ships meets WCAG 2.2 AA at 4.5:1, in both themes', () => {
+  const failures = themes.flatMap(([theme, palette]) => textPairs(palette)
+    .map(([name, foreground, background]) => ({ name: `${theme}: ${name}`, ratio: contrastRatio(foreground, background) }))
     .filter(result => result.ratio < 4.5)
-    .map(result => `${result.name} = ${result.ratio.toFixed(2)}:1`);
+    .map(result => `${result.name} = ${result.ratio.toFixed(2)}:1`));
   assert.deepEqual(failures, [], 'text contrast below AA');
 });
 
-test('control boundaries and the focus indicator meet WCAG 2.2 at 3:1', () => {
-  const failures = uiPairs
-    .map(([name, foreground, background]) => ({ name, ratio: contrastRatio(foreground, background) }))
+test('control boundaries and the focus indicator meet WCAG 2.2 at 3:1, in both themes', () => {
+  const failures = themes.flatMap(([theme, palette]) => uiPairs(palette)
+    .map(([name, foreground, background]) => ({ name: `${theme}: ${name}`, ratio: contrastRatio(foreground, background) }))
     .filter(result => result.ratio < 3)
-    .map(result => `${result.name} = ${result.ratio.toFixed(2)}:1`);
+    .map(result => `${result.name} = ${result.ratio.toFixed(2)}:1`));
   assert.deepEqual(failures, [], 'non-text contrast below 3:1');
+});
+
+test('the dark theme defines every colour the light theme does and applies by choice or by system', () => {
+  assert.deepEqual(Object.keys(darkColor).sort(), Object.keys(color).sort());
+  const css = tokensCss();
+  assert.equal(css.includes(':root[data-theme="dark"]{'), true, 'an explicit dark choice must apply');
+  assert.equal(css.includes('@media (prefers-color-scheme: dark){:root:not([data-theme="light"])'), true, 'the system preference applies unless light was chosen');
 });
 
 test('the focus ring is separated from the control it outlines rather than abutting its fill', () => {

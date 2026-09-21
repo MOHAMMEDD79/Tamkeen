@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Sans_Arabic } from 'next/font/google';
 import { notFound } from 'next/navigation';
-import { DEFAULT_LOCALE, LOCALES, directionOf, isLocale, tokensCss } from '@tamkeen/ui';
+import { DEFAULT_LOCALE, LOCALES, directionOf, isLocale, themeBootScript, tokensCss } from '@tamkeen/ui';
 import '@tamkeen/ui/styles.css';
 
 // Self-hosted by next/font at build time (SIL OFL 1.1): the browser never calls a font CDN.
@@ -33,8 +33,12 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   return (
-    <html lang={locale} dir={directionOf(locale)} className={brandFont.variable}>
+    // The boot script may set data-theme before React hydrates, so that one attribute is expected
+    // to differ from the server render.
+    <html lang={locale} dir={directionOf(locale)} className={brandFont.variable} suppressHydrationWarning>
       <head>
+        {/* Runs before first paint so a remembered dark or light choice never flashes the other. */}
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript() }} />
         {/* The token layer is generated from tokens.ts so the stylesheet can never drift from it. */}
         <style id="tamkeen-tokens" dangerouslySetInnerHTML={{ __html: tokensCss() }} />
       </head>

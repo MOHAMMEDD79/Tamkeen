@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Bell, Briefcase, Building2, ChartColumn, ClipboardList, Compass, GraduationCap, HandCoins, HandHeart, LayoutDashboard, LifeBuoy, Lightbulb, Menu, Settings, TrendingUp, Users } from 'lucide-react';
 import { localePath, translator, type Locale, type StringKey } from './locale.js';
+import { ThemeToggle } from './theme-toggle.js';
 
 /**
  * The application shell: header, optional context sidebar, the main region and the footer.
@@ -27,20 +28,18 @@ export interface ShellContext {
 export interface ShellNavItem { href: string; text: string; current?: boolean; icon?: LucideIcon }
 export interface ShellNavGroup { title?: string; items: ShellNavItem[] }
 
-/** The brand mark: three rising bars in a rounded square — funding, delivery, result. */
-export function Logo({ size = 36 }: { size?: number }) {
+/**
+ * The brand mark: three rising bars — funding, delivery, result — on an ink square. The ground and
+ * bars read their colours from the theme, so the mark inverts cleanly in dark mode; the tallest bar
+ * carries the ochre seal colour in both.
+ */
+export function Logo({ size = 32 }: { size?: number }) {
   return (
     <svg className="tmk-logo" width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id="tmk-logo-fill" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#0B8C83" />
-          <stop offset="1" stopColor="#063B38" />
-        </linearGradient>
-      </defs>
-      <rect width="40" height="40" rx="11" fill="url(#tmk-logo-fill)" />
-      <rect x="9" y="22" width="5.5" height="9" rx="2.2" fill="#FFFFFF" opacity="0.7" />
-      <rect x="17.25" y="16" width="5.5" height="15" rx="2.2" fill="#FFFFFF" opacity="0.85" />
-      <rect x="25.5" y="9" width="5.5" height="22" rx="2.2" fill="#E3B04B" />
+      <rect className="tmk-logo__ground" width="40" height="40" rx="10" />
+      <rect className="tmk-logo__bar" x="9.5" y="22" width="5" height="9" rx="1.5" />
+      <rect className="tmk-logo__bar" x="17.5" y="15.5" width="5" height="15.5" rx="1.5" />
+      <rect className="tmk-logo__seal" x="25.5" y="9" width="5" height="22" rx="1.5" />
     </svg>
   );
 }
@@ -128,9 +127,11 @@ export function AppShell({ locale, path, children, navigation, contexts, activeC
           {activeContextName ? <span className="tmk-header__context"><Building2 aria-hidden="true" size={16} />{activeContextName}</span> : null}
           <span className="tmk-header__spacer" />
           <div className="tmk-header__actions">
+            <ThemeToggle label={t('toggleTheme')} />
             <a className="tmk-button tmk-button--quiet tmk-header__lang" href={localePath(other, path)} lang={other} hrefLang={other} aria-label={t('changeLanguageLabel')}>{t('changeLanguage')}</a>
             {accountControls}
           </div>
+          <span className="tmk-header__compact"><ThemeToggle label={t('toggleTheme')} /></span>
           {/* A disclosure, not a script: the menu works before hydration and without JavaScript. */}
           <details className="tmk-mobile-menu">
             <summary className="tmk-button tmk-button--secondary" aria-label={t('openMenu')}><Menu aria-hidden="true" size={20} /></summary>

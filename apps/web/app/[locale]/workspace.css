@@ -8,7 +8,7 @@
 .identity-panel > h1 { margin-block-start: 0; }
 
 .eyebrow {
-  color: var(--tmk-color-primary); font-weight: 700;
+  color: var(--tmk-color-muted); font-weight: 600;
   font-size: var(--tmk-type-caption-size); margin-block-end: var(--tmk-space-8);
 }
 
@@ -26,16 +26,16 @@ form { display: grid; gap: var(--tmk-space-16); margin-block: var(--tmk-space-24
 form:has(> .tmk-table-wrap) { max-inline-size: none; }
 form > .tmk-table-wrap { inline-size: 100%; }
 
-.field { display: grid; gap: var(--tmk-space-8); line-height: var(--tmk-type-body-line); font-weight: 600; font-size: 15px; }
+.field { display: grid; gap: var(--tmk-space-8); line-height: var(--tmk-type-body-line); font-weight: 600; font-size: 14px; }
 .field input, .field select, .field textarea {
-  inline-size: 100%; min-inline-size: 0; min-block-size: 48px;
-  padding: var(--tmk-space-12) var(--tmk-space-16); font: inherit; font-size: 16px; font-weight: 400;
+  inline-size: 100%; min-inline-size: 0; min-block-size: 44px;
+  padding: var(--tmk-space-8) var(--tmk-space-12); font: inherit; font-size: 16px; font-weight: 400;
   color: var(--tmk-color-ink); background: var(--tmk-color-surface);
   border: 1px solid var(--tmk-color-field-border); border-radius: var(--tmk-radius-field);
   transition: border-color var(--tmk-motion-fast) var(--tmk-motion-easing), box-shadow var(--tmk-motion-fast) var(--tmk-motion-easing);
 }
 .field input:hover, .field select:hover, .field textarea:hover { border-color: var(--tmk-color-ink); }
-.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--tmk-color-primary); box-shadow: var(--tmk-shadow-focus); }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--tmk-color-focus); box-shadow: var(--tmk-shadow-focus); }
 /* A one-time code reads as six separate digits, centred, so it is easy to compare with the email. */
 .field input[autocomplete="one-time-code"] { font-size: 24px; letter-spacing: 0.5em; text-align: center; font-weight: 600; }
 .field textarea { resize: vertical; min-block-size: 96px; }
@@ -43,16 +43,15 @@ form > .tmk-table-wrap { inline-size: 100%; }
 
 button {
   font: inherit; font-weight: 600; cursor: pointer;
-  min-block-size: 48px; padding: var(--tmk-space-12) var(--tmk-space-24);
+  min-block-size: 44px; padding: var(--tmk-space-8) var(--tmk-space-16); font-size: 15px;
   color: var(--tmk-color-on-accent); background: var(--tmk-color-primary);
   border: 1px solid var(--tmk-color-primary); border-radius: var(--tmk-radius-field);
-  box-shadow: var(--tmk-shadow-sm);
-  transition: background-color var(--tmk-motion-fast) var(--tmk-motion-easing), box-shadow var(--tmk-motion-fast) var(--tmk-motion-easing);
+  transition: background-color var(--tmk-motion-fast) var(--tmk-motion-easing);
 }
-button:hover:not(:disabled) { background: var(--tmk-color-primary-hover); border-color: var(--tmk-color-primary-hover); box-shadow: var(--tmk-shadow-md); }
+button:hover:not(:disabled) { background: var(--tmk-color-primary-hover); border-color: var(--tmk-color-primary-hover); }
 button:disabled { opacity: 0.55; cursor: not-allowed; }
-button.secondary { background: var(--tmk-color-surface); color: var(--tmk-color-primary); border-color: var(--tmk-color-field-border); }
-button.secondary:hover:not(:disabled) { background: var(--tmk-color-primary-tint); }
+button.secondary { background: var(--tmk-color-surface); color: var(--tmk-color-ink); border-color: var(--tmk-color-field-border); }
+button.secondary:hover:not(:disabled) { background: var(--tmk-color-surface-sunken); }
 /* An action that sits among links (e.g. "send a new code") and should read like one. 24px keeps the target size. */
 button.link-button, button.link-button:hover:not(:disabled) {
   min-block-size: 24px; padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none;
@@ -120,7 +119,7 @@ dd { margin: 0; font-weight: 600; }
 }
 
 /* Inside the split auth card the form takes the card's width and the submit spans it. */
-.tmk-auth__main form { max-inline-size: none; margin-block: var(--tmk-space-24) var(--tmk-space-16); }
-.tmk-auth__main form > button[type="submit"] { inline-size: 100%; }
-.tmk-auth__main > h1, .tmk-auth__main h1 { margin-block-start: 0; }
-.tmk-auth__main .inline-links { justify-content: center; font-size: 15px; }
+.tmk-auth__card form { max-inline-size: none; margin-block: var(--tmk-space-24) var(--tmk-space-16); }
+.tmk-auth__card form > button[type="submit"] { inline-size: 100%; }
+.tmk-auth__card h1 { margin-block-start: 0; }
+.tmk-auth__card .inline-links { justify-content: center; font-size: 15px; }

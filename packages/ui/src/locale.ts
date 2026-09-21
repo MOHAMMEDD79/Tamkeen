@@ -140,7 +140,10 @@ export const strings = {
   footerExplore: { ar: 'استكشف', en: 'Explore' },
   footerAccount: { ar: 'حسابك', en: 'Your account' },
   footerRights: { ar: 'جميع الحقوق محفوظة', en: 'All rights reserved' },
-  footerTerms: { ar: 'الشروط', en: 'Terms' }
+  footerTerms: { ar: 'الشروط', en: 'Terms' },
+  toggleTheme: { ar: 'تبديل المظهر بين الفاتح والداكن', en: 'Switch between light and dark appearance' },
+  goodMorning: { ar: 'صباح الخير', en: 'Good morning' },
+  goodEvening: { ar: 'مساء الخير', en: 'Good evening' }
 } as const satisfies Dictionary;
 
 export type StringKey = keyof typeof strings;
