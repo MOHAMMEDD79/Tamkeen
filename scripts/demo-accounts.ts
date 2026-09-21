@@ -3,16 +3,16 @@
  *
  * Creates (or resets) a verified account for every platform role, every organisation membership
  * role and every personal profile type, puts each one where its role applies, and turns on
- * two-step verification for the platform staff (their pages require it). The shared password and
- * each staff account's authenticator key are written to `.local/demo-accounts.md` — a gitignored
- * file the owner opens themselves — and never printed, so they do not end up in a terminal log.
+ * two-step verification for the platform staff (their pages require it). All accounts share one
+ * simple password and all staff share one authenticator key, so testing a role takes seconds. Both
+ * are written to `.local/demo-accounts.md` (gitignored), not printed to the terminal.
  *
  * Refuses to run outside demo/test. Re-running it resets the password and re-applies the roles.
  *
  *   pnpm demo:accounts
  */
 
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { CURRENT_TERMS_VERSION, loadConfig } from '@tamkeen/config';
 import { createDatabase } from '@tamkeen/database';
@@ -81,7 +81,10 @@ function totpNow(uri: string): string {
 const db = createDatabase(config.databaseUrl);
 const auth = createAuth(config, db);
 const identity = new IdentityService(db);
-const password = `Tamkeen-${randomBytes(9).toString('base64url')}`;
+// One memorable password for every test account, so testing a role is not a lookup exercise. It is
+// only ever set on a local build (the environment check above), and DEMO_ACCOUNTS_PASSWORD overrides it.
+const password = process.env.DEMO_ACCOUNTS_PASSWORD || 'Tamkeen@2026';
+if (password.length < 12) throw new Error('DEMO_ACCOUNTS_PASSWORD must be at least 12 characters.');
 
 /** Creates the account or replaces its password, then marks the email verified. */
 async function account(email: string, name: string) {
@@ -97,8 +100,19 @@ async function account(email: string, name: string) {
   return db.user.update({ where: { id: user.id }, data: { emailVerified: true } });
 }
 
-/** Turns on TOTP the way a person would: sign in, enable, confirm the first code. */
+/**
+ * Turns on TOTP the way a person would: sign in, enable, confirm the first code. The first staff
+ * account does this for real; the others then receive a copy of its stored (encrypted) secret, so a
+ * single authenticator entry produces the code for every staff test account.
+ */
+let sharedTwoStep: { secret: string; backupCodes: string } | null = null;
 async function enableTwoStep(email: string, userId: string): Promise<string> {
+  if (sharedTwoStep) {
+    await db.twoFactor.deleteMany({ where: { userId } });
+    await db.twoFactor.create({ data: { userId, secret: sharedTwoStep.secret, backupCodes: sharedTwoStep.backupCodes, verified: true } });
+    await db.user.update({ where: { id: userId }, data: { twoFactorEnabled: true } });
+    return '';
+  }
   await db.twoFactor.deleteMany({ where: { userId } });
   await db.user.update({ where: { id: userId }, data: { twoFactorEnabled: false } });
   const signIn = await auth.api.signInEmail({ body: { email, password }, asResponse: true });
@@ -106,6 +120,8 @@ async function enableTwoStep(email: string, userId: string): Promise<string> {
   const headers = new Headers({ cookie, origin: config.appBaseUrl });
   const setup = await auth.api.enableTwoFactor({ body: { password }, headers }) as { totpURI: string };
   await auth.api.verifyTOTP({ body: { code: totpNow(setup.totpURI), trustDevice: false }, headers });
+  const stored = await db.twoFactor.findUniqueOrThrow({ where: { userId } });
+  sharedTwoStep = { secret: stored.secret, backupCodes: stored.backupCodes };
   return new URL(setup.totpURI).searchParams.get('secret') ?? '';
 }
 
@@ -116,15 +132,20 @@ try {
     nabta: await db.organization.findFirstOrThrow({ where: { slug: `${SEED_TAG}-nabta` } })
   };
 
-  rows.push('## فريق المنصة (تسجيل الدخول يطلب رمز التحقق بخطوتين)', '', '| الدور | البريد | مفتاح تطبيق المصادقة | ماذا تختبر |', '|---|---|---|---|');
+  const staffRows: string[] = [];
+  let staffKey = '';
   for (const entry of platform) {
     const email = emailFor(entry.role);
     const user = await account(email, `${entry.name} (تجريبي)`);
     const held = await db.platformGrant.findFirst({ where: { userId: user.id, role: entry.role, revokedAt: null } });
     if (!held) await db.platformGrant.create({ data: { userId: user.id, role: entry.role, grantedBy: user.id } });
-    const secret = await enableTwoStep(email, user.id);
-    rows.push(`| ${entry.name} | ${email} | \`${secret}\` | ${entry.test} |`);
+    staffKey = (await enableTwoStep(email, user.id)) || staffKey;
+    staffRows.push(`| ${entry.name} | ${email} | ${entry.test} |`);
   }
+  rows.push('## فريق المنصة (بعد كلمة المرور يُطلب رمز من 6 أرقام)', '',
+    `مفتاح واحد لكل حسابات فريق المنصة، أضفه مرة واحدة في تطبيق المصادقة: \`${staffKey}\``,
+    'عند إدخال الرمز فعّل «تذكّر هذا الجهاز» فلا يُطلب منك مرة أخرى من هذا المتصفح لمدة 30 يومًا.', '',
+    '| الدور | البريد | ماذا تختبر |', '|---|---|---|', ...staffRows);
 
   rows.push('', '## أدوار داخل الجهات', '', '| الدور | البريد | الجهة | ماذا تختبر |', '|---|---|---|---|');
   for (const entry of membership) {

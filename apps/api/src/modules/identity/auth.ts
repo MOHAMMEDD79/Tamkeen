@@ -17,7 +17,9 @@ export function createAuth(config: RuntimeConfig, db: DatabaseClient) {
     appName: 'Tamkeen', baseURL: config.apiBaseUrl, basePath: '/api/v1/auth',
     secret: config.sessionSecret, trustedOrigins: [config.appBaseUrl],
     plugins: [
-      twoFactor({ issuer: 'Tamkeen', twoFactorCookieMaxAge: 600, trustDeviceMaxAge: 0 }),
+      // A remembered device skips the sign-in code for 30 days, but only on a local build: in staging
+      // and production every sign-in asks for the code. Sensitive operations re-ask either way.
+      twoFactor({ issuer: 'Tamkeen', twoFactorCookieMaxAge: 600, trustDeviceMaxAge: ['demo', 'test'].includes(config.environment) ? 30 * 24 * 3600 : 0 }),
       emailOTP({
         otpLength: 6, expiresIn: 600, allowedAttempts: 5, storeOTP: 'hashed',
         // Sign-up sends a code instead of a link; OTP sign-in is off and its route is not exposed.
