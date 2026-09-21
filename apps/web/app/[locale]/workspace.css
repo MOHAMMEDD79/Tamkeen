@@ -167,3 +167,16 @@ article.row > div:first-child > strong { font-size: 17px; }
 .tmk-main__inner > div > h2 { display: flex; align-items: center; gap: var(--tmk-space-12); margin-block: var(--tmk-space-48) var(--tmk-space-16); }
 .tmk-main__inner > div > h2::before { content: ''; inline-size: 6px; block-size: 22px; border-radius: 3px; background: var(--tmk-color-accent); }
 .tmk-main__inner > div > h1 { font-size: var(--tmk-type-h1-dashboard-size); }
+
+/*
+ * Inside the dashboard the page is wide, so a form uses it: fields flow into as many ~320px columns
+ * as fit, while everything that is not a single field (a checkbox group, a table, a note, the
+ * buttons) takes a whole row. Forms with a layout of their own (the site editor cards, inline row
+ * actions) are left alone. The 680px reading cap above still applies to the narrow sign-in card.
+ */
+.tmk-app__main form { max-inline-size: none; }
+.tmk-app__main form:not(.tmk-admin-item):not(.tmk-toolbar):has(> .field, > .tmk-field) { grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); align-items: start; }
+.tmk-app__main form:not(.tmk-admin-item):not(.tmk-toolbar) > :not(.field):not(.tmk-field),
+.tmk-app__main form:not(.tmk-admin-item):not(.tmk-toolbar) > :has(textarea) { grid-column: 1 / -1; }
+.tmk-app__main form:not(.tmk-admin-item):not(.tmk-toolbar) > button { justify-self: start; min-inline-size: 180px; }
+.tmk-app__main .tmk-page-header__lead { max-inline-size: 820px; }
