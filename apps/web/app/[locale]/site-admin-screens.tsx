@@ -202,7 +202,7 @@ function Field({ label, name, value, max, required, area, ltr }: { label: string
     <div className="tmk-field" style={{ margin: 0 }}>
       <label className="tmk-field__label" htmlFor={id}>{label}</label>
       {area
-        ? <textarea className="tmk-field__control" id={id} name={name} defaultValue={value} maxLength={max} rows={3} dir={ltr ? 'ltr' : undefined} />
+        ? <textarea className="tmk-field__control" id={id} name={name} defaultValue={value} maxLength={max} rows={4} dir={ltr ? 'ltr' : undefined} />
         : <input className="tmk-field__control" id={id} name={name} defaultValue={value} maxLength={max} required={required} dir={ltr ? 'ltr' : undefined} />}
     </div>
   );

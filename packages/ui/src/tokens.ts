@@ -139,7 +139,7 @@ export const layout = {
   contentMax: '1280px',
   /** Reading column for prose and forms. */
   proseMax: '680px',
-  sidebarWidth: '240px',
+  sidebarWidth: '280px',
   headerHeight: '76px',
   /** Side gutter that keeps content clear of the viewport edge at 360px. */
   gutter: '20px'

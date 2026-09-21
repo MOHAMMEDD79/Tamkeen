@@ -123,3 +123,47 @@ dd { margin: 0; font-weight: 600; }
 .tmk-auth__card form > button[type="submit"] { inline-size: 100%; }
 .tmk-auth__card h1 { margin-block-start: 0; }
 .tmk-auth__card .inline-links { justify-content: center; font-size: 15px; }
+
+/* ---------- Pro form and list treatment for every signed-in screen ---------- */
+
+/* A form on its own reads as a card, not loose fields on the page. Nested forms stay flat. */
+.tmk-main__inner > div > form, .tmk-main__inner > form {
+  padding: var(--tmk-space-24); background: var(--tmk-color-surface); border: 1px solid var(--tmk-color-border);
+  border-radius: var(--tmk-radius-card); box-shadow: var(--tmk-shadow-sm);
+}
+
+/* Checkbox groups (roles, capabilities, permissions) become a grid of selectable chips. */
+fieldset {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); gap: var(--tmk-space-8);
+  border: 1px solid var(--tmk-color-border); border-radius: var(--tmk-radius-card); padding: var(--tmk-space-16); background: var(--tmk-color-surface);
+}
+fieldset legend { font-weight: 700; padding-inline: var(--tmk-space-8); }
+.check {
+  align-items: center; min-block-size: 44px; padding: var(--tmk-space-8) var(--tmk-space-12); margin: 0;
+  border: 1px solid var(--tmk-color-border); border-radius: var(--tmk-radius-field); background: var(--tmk-color-canvas);
+  cursor: pointer; transition: border-color var(--tmk-motion-fast) var(--tmk-motion-easing), background-color var(--tmk-motion-fast) var(--tmk-motion-easing);
+}
+.check:hover { border-color: var(--tmk-color-primary); }
+.check input { accent-color: var(--tmk-color-primary); margin: 0; }
+/* The selected state is a filled chip with a heavier label, not colour alone. */
+.check:has(input:checked) { border-color: var(--tmk-color-primary); background: var(--tmk-color-primary-tint); color: var(--tmk-color-primary); font-weight: 700; }
+/* A single consent or preference checkbox stays a line, not a chip. */
+form > .check, .terms-consent { border: 0; background: none; padding-inline: 0; }
+
+/* Records in a list (team members, sessions, invitations, reviews) each sit on their own card. */
+article.row {
+  padding: var(--tmk-space-16) var(--tmk-space-24); margin-block-end: var(--tmk-space-12);
+  background: var(--tmk-color-surface); border: 1px solid var(--tmk-color-border); border-radius: var(--tmk-radius-card);
+  box-shadow: var(--tmk-shadow-sm); transition: box-shadow var(--tmk-motion-base) var(--tmk-motion-easing);
+}
+article.row:hover { box-shadow: var(--tmk-shadow-md); }
+article.row:last-of-type { border-block-end: 1px solid var(--tmk-color-border); }
+.tmk-card article.row { padding-inline: 0; border: 0; border-block-end: 1px solid var(--tmk-color-border); border-radius: 0; box-shadow: none; margin: 0; }
+article.row > div:first-child > strong { font-size: 17px; }
+.member-actions { align-items: flex-end; }
+.member-actions form { padding: 0; background: none; border: 0; box-shadow: none; }
+
+/* Section headings inside a screen get breathing room and a thin accent. */
+.tmk-main__inner > div > h2 { display: flex; align-items: center; gap: var(--tmk-space-12); margin-block: var(--tmk-space-48) var(--tmk-space-16); }
+.tmk-main__inner > div > h2::before { content: ''; inline-size: 6px; block-size: 22px; border-radius: 3px; background: var(--tmk-color-accent); }
+.tmk-main__inner > div > h1 { font-size: var(--tmk-type-h1-dashboard-size); }

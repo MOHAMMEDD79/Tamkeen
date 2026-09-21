@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Bell, Briefcase, Building2, ChartColumn, ClipboardList, Compass, GraduationCap, HandCoins, HandHeart, LayoutDashboard, LifeBuoy, Lightbulb, Mail, Menu, Settings, TrendingUp, Users } from 'lucide-react';
+import { Bell, Briefcase, Building2, ChartColumn, ClipboardList, Compass, Globe, GraduationCap, HandCoins, HandHeart, LayoutDashboard, LifeBuoy, Lightbulb, Mail, Menu, Settings, TrendingUp, Users } from 'lucide-react';
 import { localePath, translator, type Locale, type StringKey } from './locale.js';
 import { ThemeToggle } from './theme-toggle.js';
 import { RevealOnScroll } from './motion.js';
@@ -113,6 +113,88 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
         <a className="tmk-button tmk-button--quiet" href={localePath(locale, '/login')}>{t('signIn')}</a>
         <a className="tmk-button tmk-button--primary" href={localePath(locale, '/register')}>{t('register')}</a>
       </>;
+  const appMode = Boolean(sidebar?.length || contexts?.length);
+  const sidebarNav = (
+    <>
+      {personal ? <AccountPanel locale={locale} path={path} /> : null}
+      {contexts?.length ? (
+        <div className="tmk-sidebar__group">
+          <p className="tmk-sidebar__title" id="tmk-contexts-title">{t('navGroupOrganizations')}</p>
+          <div className="tmk-sidebar__nav">
+            {contexts.map(context => (
+              <a key={context.id} className="tmk-sidebar__link" href={context.href} aria-current={context.current ? 'page' : undefined}>
+                <Building2 aria-hidden="true" size={18} className="tmk-sidebar__icon" />
+                <span className="tmk-sidebar__text">{context.name}<span className="tmk-sidebar__kind">{context.kind}</span></span>
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {sidebar?.map((group, index) => (
+        <div className="tmk-sidebar__group" key={group.title ?? index}>
+          {group.title ? <p className="tmk-sidebar__title">{group.title}</p> : null}
+          <div className="tmk-sidebar__nav">
+            {group.items.map(item => {
+              const Icon = item.icon;
+              return (
+                <a key={item.href} className="tmk-sidebar__link" href={item.href} aria-current={item.current ? 'page' : undefined}>
+                  {Icon ? <Icon aria-hidden="true" size={18} className="tmk-sidebar__icon" /> : null}
+                  <span className="tmk-sidebar__text">{item.text}</span>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+
+  /*
+   * Signed-in and staff pages: a dashboard layout. The sidebar is docked full-height to the start
+   * edge (the right in Arabic) and carries the brand; a slim top bar holds the page-level controls.
+   * No marketing header or footer competes with the work.
+   */
+  if (appMode) {
+    return (
+      <div className="tmk-app">
+        <RevealOnScroll />
+        <a className="tmk-skip-link" href="#tmk-main">{t('skipToContent')}</a>
+        <aside className="tmk-app__sidebar">
+          <a className="tmk-header__brand tmk-app__brand" href={localePath(locale, '/')}><Logo size={36} /><span>{t('brand')}</span></a>
+          <nav className="tmk-sidebar" aria-label={personal ? t('personalWorkspace') : t('workspace')}>{sidebarNav}</nav>
+          <a className="tmk-app__site" href={localePath(locale, '/')}><Globe aria-hidden="true" size={18} />{t('viewSite')}</a>
+        </aside>
+        <div className="tmk-app__body">
+          <header className="tmk-app__topbar">
+            {/* The sidebar as a drawer on narrow screens; a disclosure, so it works without JavaScript. */}
+            <details className="tmk-app__drawer">
+              <summary className="tmk-button tmk-button--secondary" aria-label={t('openMenu')}><Menu aria-hidden="true" size={20} /></summary>
+              <div className="tmk-app__drawer-panel"><nav className="tmk-sidebar" aria-label={t('mainNavigation')}>{sidebarNav}</nav></div>
+            </details>
+            <a className="tmk-header__brand tmk-app__topbrand" href={localePath(locale, '/')}><Logo size={30} /><span>{t('brand')}</span></a>
+            {activeContextName ? <span className="tmk-header__context"><Building2 aria-hidden="true" size={16} />{activeContextName}</span> : null}
+            <span className="tmk-header__spacer" />
+            <div className="tmk-app__actions">
+              <ThemeToggle label={t('toggleTheme')} />
+              <a className="tmk-button tmk-button--quiet" href={localePath(other, path)} lang={other} hrefLang={other} aria-label={t('changeLanguageLabel')}>{t('changeLanguage')}</a>
+              {accountControls}
+            </div>
+          </header>
+          {demoBanner ? (
+            <p className="tmk-demo-banner" role="note">
+              <i aria-hidden="true">!</i>
+              <span><strong>{t('demoDataTitle')}</strong> — {t('demoDataBody')}</span>
+            </p>
+          ) : null}
+          {lead}
+          <main className="tmk-main tmk-app__main" id="tmk-main" tabIndex={-1}>
+            <div className="tmk-main__inner">{children}</div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="tmk-shell">
       <RevealOnScroll />
@@ -130,7 +212,6 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
             <span>{t('brand')}</span>
           </a>
           <nav className="tmk-nav" aria-label={t('mainNavigation')}>{publicLinks}</nav>
-          {activeContextName ? <span className="tmk-header__context"><Building2 aria-hidden="true" size={16} />{activeContextName}</span> : null}
           <span className="tmk-header__spacer" />
           <div className="tmk-header__actions">
             <ThemeToggle label={t('toggleTheme')} />
@@ -152,41 +233,7 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
         </div>
       </header>
       {lead}
-      <div className={`tmk-shell__body${sidebar || contexts?.length ? ' tmk-shell__body--with-sidebar' : ''}`}>
-        {sidebar || contexts?.length ? (
-          <nav className="tmk-sidebar" aria-label={personal ? t('personalWorkspace') : t('workspace')}>
-            {personal ? <AccountPanel locale={locale} path={path} /> : null}
-            {contexts?.length ? (
-              <div className="tmk-sidebar__group">
-                <p className="tmk-sidebar__title" id="tmk-contexts-title">{t('navGroupOrganizations')}</p>
-                <div className="tmk-sidebar__nav">
-                  {contexts.map(context => (
-                    <a key={context.id} className="tmk-sidebar__link" href={context.href} aria-current={context.current ? 'page' : undefined}>
-                      <Building2 aria-hidden="true" size={18} className="tmk-sidebar__icon" />
-                      <span className="tmk-sidebar__text">{context.name}<span className="tmk-sidebar__kind">{context.kind}</span></span>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            {sidebar?.map((group, index) => (
-              <div className="tmk-sidebar__group" key={group.title ?? index}>
-                {group.title ? <p className="tmk-sidebar__title">{group.title}</p> : null}
-                <div className="tmk-sidebar__nav">
-                  {group.items.map(item => {
-                    const Icon = item.icon;
-                    return (
-                      <a key={item.href} className="tmk-sidebar__link" href={item.href} aria-current={item.current ? 'page' : undefined}>
-                        {Icon ? <Icon aria-hidden="true" size={18} className="tmk-sidebar__icon" /> : null}
-                        <span className="tmk-sidebar__text">{item.text}</span>
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </nav>
-        ) : null}
+      <div className="tmk-shell__body">
         <main className="tmk-main" id="tmk-main" tabIndex={-1}>
           <div className="tmk-main__inner">{children}</div>
         </main>

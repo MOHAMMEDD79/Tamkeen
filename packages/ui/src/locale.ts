@@ -123,6 +123,7 @@ export const strings = {
   navImpact: { ar: 'الأثر', en: 'Impact' },
   navAbout: { ar: 'من نحن', en: 'About us' },
   navContact: { ar: 'تواصل معنا', en: 'Contact us' },
+  viewSite: { ar: 'زيارة الموقع', en: 'View the site' },
   navDashboard: { ar: 'لوحتي', en: 'Dashboard' },
   navContributions: { ar: 'مساهماتي', en: 'My contributions' },
   navInvestments: { ar: 'استثماراتي', en: 'My investments' },
