@@ -1254,7 +1254,7 @@ export function OrgProposals({ locale, orgId, proposalId }: { locale: Locale; or
                 }}>
                   <Notice tone="info" title="لا حصة">
                     <p style={{ marginBlockEnd: 0 }}>
-                      لا يحتوي هذا النموذج حقل نسبة، لأن الاتفاق لا يمنح حصة. أي حصة تحتاج اتفاق استثمار صريح على مسار PART-08/09 المستقل.
+                      لا يحتوي هذا النموذج حقل نسبة، لأن الاتفاق لا يمنح حصة. أي حصة تحتاج اتفاق استثمار صريحًا عبر مسار الاستثمار المستقل.
                     </p>
                   </Notice>
                   <div className="tmk-field">

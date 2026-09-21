@@ -267,11 +267,11 @@ export function OrgProjects({ locale, orgId, mode }: { locale: Locale2; orgId: s
         ]}
       />
 
-      <Card title="ما لم يُبنَ بعد في هذه الشاشة">
-        <p className="tmk-field__hint">تُذكر هنا حتى لا تبحث عنها. لا تُعرض كأزرار لأن لا شيء خلفها.</p>
+      <Card title="قريبًا في هذه الشاشة">
+        
         <article className="tmk-row">
           <div><strong>أرشفة مشروع</strong><p className="tmk-field__hint">تتطلب إغلاقًا وتسوية مالية مكتملة، وكلاهما يعتمد على الدفتر.</p></div>
-          <StatusBadge tone="neutral">غير منفذ بعد · PART-07</StatusBadge>
+          <StatusBadge tone="neutral">قريبًا</StatusBadge>
         </article>
       </Card>
     </>

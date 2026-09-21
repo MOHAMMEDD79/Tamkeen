@@ -304,7 +304,7 @@ export function MyAssistance({ locale, caseId }: { locale: Locale; caseId?: stri
                   </div>
                   <div className="tmk-field">
                     <label className="tmk-field__label" htmlFor="documentRef">مرجع المستند</label>
-                    <span className="tmk-field__hint" id="doc-hint">رفع الملفات لم يُبنَ بعد (PART-13): اكتب اسم المستند أو مكانه، ولا يُرفع شيء إلى المنصة.</span>
+                    <span className="tmk-field__hint" id="doc-hint">رفع الملفات غير متاح هنا بعد: اكتب اسم المستند أو مكانه، ولا يُرفع شيء إلى المنصة.</span>
                     <input id="documentRef" name="documentRef" className="tmk-field__control" maxLength={200} aria-describedby="doc-hint" />
                   </div>
                   <p className="tmk-row__actions">

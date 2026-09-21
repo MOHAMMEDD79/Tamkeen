@@ -1029,7 +1029,7 @@ export function InvestmentReviews({ locale, offeringId }: { locale: Locale; offe
             <a className="tmk-button tmk-button--quiet" href={L('/admin/investment-reviews')}>عودة للطابور</a>
           </p>
           <p className="tmk-field__hint">
-            اعتماد التخصيص (ADM-04.A03) غير متاح: التخصيص يحتاج التزامات وتسوية، وهما من PART-09.
+            اعتماد التخصيص يتم من قائمة مراجعة الاستثمار بعد إغلاق العرض وتسوية الالتزامات.
           </p>
         </Card>
       </>

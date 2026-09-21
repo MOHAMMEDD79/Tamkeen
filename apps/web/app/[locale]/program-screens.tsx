@@ -229,7 +229,7 @@ export function CareerProfile({ locale }: { locale: Locale }) {
           <div className="tmk-field">
             <label className="tmk-field__label" htmlFor="cvReference">مرجع السيرة الذاتية</label>
             <span className="tmk-field__hint" id="cv-hint">
-              رفع الملفات لم يُبنَ بعد (PER-10.A02): اكتب هنا اسم المستند أو رابطه لدى جهة أخرى، ولا يُرفع شيء إلى المنصة.
+              رفع الملفات غير متاح هنا بعد: اكتب هنا اسم المستند أو رابطه لدى جهة أخرى، ولا يُرفع شيء إلى المنصة.
             </span>
             <input id="cvReference" name="cvReference" className="tmk-field__control" defaultValue={profile.cvReference} maxLength={200} aria-describedby="cv-hint" />
           </div>

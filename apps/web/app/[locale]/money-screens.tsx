@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  AppShell, Card, DataTable, EmptyState, ErrorState, Ltr, MoneyAmount, Notice, PageHeader,
-  Skeleton, Stat, StatusBadge, formatDate, formatMinorUnits, localePath, translator, type Locale
+  AppShell, Button, Card, DataTable, EmptyState, ErrorState, Ltr, MoneyAmount, Notice, PageHeader,
+  Skeleton, Stat, StatusBadge, TextField, formatDate, formatMinorUnits, localePath, translator, type Locale
 } from '@tamkeen/ui';
 import './workspace.css';
 import { DownloadButton } from './download-button';
@@ -460,8 +460,8 @@ export function PaymentResult({ locale, intentId }: { locale: Locale; intentId: 
       {/* A blind financial retry remains unavailable; support is a real private ticket workflow. */}
       <Card title="إجراءات غير متاحة بعد">
         <ul>
-          <li><strong>إعادة محاولة الدفع (PER-05.A03):</strong> تحتاج سلسلة محاولات مرتبطة بنفس المساهمة دون تكرار عملية ناجحة، وهي جزء من وحدة الاسترداد والمحاولات في PART-07. حاليًا ابدأ مساهمة جديدة من صفحة المشروع.</li>
-          <li><strong>طلب مساعدة (PER-05.A04):</strong> <a href={L('/contact')}>افتح تذكرة دعم خاصة</a> وأرفق مرجع المساهمة. التذكرة لا تعيد محاولة الدفع ولا تغيّر الدفتر.</li>
+          <li><strong>إعادة محاولة الدفع:</strong> غير متاحة بعد، حتى لا تتكرر عملية نجحت من قبل. ابدأ مساهمة جديدة من صفحة المشروع.</li>
+          <li><strong>طلب مساعدة:</strong> <a href={L('/contact')}>افتح تذكرة دعم خاصة</a> وأرفق مرجع المساهمة. التذكرة لا تعيد محاولة الدفع ولا تغيّر الدفتر.</li>
         </ul>
       </Card>
     </>
@@ -492,6 +492,7 @@ export function MyContributions({ locale }: { locale: Locale }) {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [refundFor, setRefundFor] = useState<MyContribution | null>(null);
 
   const load = useCallback(async () => setRows(await api('/me/contributions') as MyContribution[]), []);
 
@@ -519,6 +520,27 @@ export function MyContributions({ locale }: { locale: Locale }) {
       setNotice('حُدِّث الظهور العام. يسري التغيير فورًا على صفحة المشروع.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر تحديث الظهور.');
+    } finally { setBusy(''); }
+  };
+
+  /**
+   * PER-03.A03. The server decides eligibility and the refundable remainder; this form only turns a
+   * typed amount into integer minor units by string arithmetic, never through a float.
+   */
+  const requestRefund = async (row: MyContribution, data: FormData) => {
+    if (busy) return;
+    const typed = String(data.get('amount') ?? '').trim();
+    const match = /^(\d{1,14})(?:\.(\d{1,2}))?$/.exec(typed);
+    if (!match) { setError('اكتب المبلغ بالأرقام، مع خانتين عشريتين على الأكثر.'); return; }
+    const amountMinor = `${match[1]}${(match[2] ?? '').padEnd(2, '0')}`.replace(/^0+(?=\d)/, '');
+    setBusy(`refund-${row.id}`); setError(''); setNotice('');
+    try {
+      await api(`/contributions/${row.id}/refund-requests`, 'POST', { amountMinor, reason: String(data.get('reason') ?? '') });
+      setRefundFor(null);
+      await load();
+      setNotice('أُرسل طلب الاسترداد. يراجعه فريق المالية، ولا يتغير رصيد المشروع حتى يُعتمد الاسترداد ويُقيَّد.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر إرسال طلب الاسترداد.');
     } finally { setBusy(''); }
   };
 
@@ -621,6 +643,12 @@ export function MyContributions({ locale }: { locale: Locale }) {
                   : <span className="tmk-field__hint">—</span>
               }
               ,{
+                key: 'refund', header: 'الاسترداد',
+                cell: row => ['succeeded', 'partially_refunded'].includes(row.state)
+                  ? <button type="button" className="tmk-button tmk-button--quiet" disabled={Boolean(busy)} onClick={() => { setError(''); setNotice(''); setRefundFor(row); }}>طلب استرداد</button>
+                  : <span className="tmk-field__hint">—</span>
+              }
+              ,{
                 key: 'receipt', header: 'الإيصال',
                 cell: row => ['succeeded', 'partially_refunded', 'refunded'].includes(row.state) ? <DownloadButton endpoint={`/contributions/${row.id}/receipt`} label="نزّل الإيصال" /> : <span className="tmk-field__hint">بعد التأكيد</span>
               }
@@ -633,11 +661,34 @@ export function MyContributions({ locale }: { locale: Locale }) {
         </Card>
       )}
 
+      {refundFor ? (() => {
+        const remaining = (BigInt(refundFor.amountMinor) - BigInt(refundFor.refundedMinor || '0')).toString();
+        return (
+          <Card title={`طلب استرداد: ${refundFor.project.title}`} id="refund-request">
+            <p className="tmk-field__hint">
+              يمكن استرداد حتى <MoneyAmount minor={remaining} currency={refundFor.currency} locale={locale} />. يراجع فريق المالية الطلب قبل تنفيذه، ويُقيَّد الاسترداد بقيد عكسي في الدفتر.
+            </p>
+            <form onSubmit={event => { event.preventDefault(); void requestRefund(refundFor, new FormData(event.currentTarget)); }}>
+              <TextField id="refund-amount" name="amount" label={`المبلغ (${refundFor.currency})`} defaultValue={formatMinorUnits(remaining).replace(/,/g, '')} inputMode="text" required />
+              <div className="tmk-field">
+                <label className="tmk-field__label" htmlFor="refund-reason">سبب الطلب</label>
+                <span className="tmk-field__hint" id="refund-reason-hint">عشرة أحرف على الأقل. يراه فريق المالية فقط.</span>
+                <textarea id="refund-reason" name="reason" className="tmk-field__control" required minLength={10} maxLength={1000} aria-describedby="refund-reason-hint" />
+              </div>
+              <div className="tmk-row__actions">
+                <Button type="submit" variant="primary" busy={busy === `refund-${refundFor.id}`} busyLabel="جارٍ الإرسال…">أرسل الطلب</Button>
+                <Button type="button" variant="secondary" onClick={() => setRefundFor(null)}>إلغاء</Button>
+              </div>
+            </form>
+          </Card>
+        );
+      })() : null}
+
       <Card title="إجراءات أخرى">
         <ul>
           <li><strong>المستندات:</strong> كشف CSV المؤرخ يشمل السجل كاملًا، ولكل مساهمة مؤكدة إيصال خاص مشتق من تأكيدها غير القابل لإعادة الكتابة.</li>
-          <li><strong>طلب استرداد (PER-03.A03):</strong> الاسترداد والقيود العكسية جزء من PART-07.</li>
-          <li><strong>مشكلة في الدفع (PER-03.A04):</strong> <a href={L('/contact')}>افتح تذكرة دعم خاصة</a> مع مرجع المساهمة.</li>
+          <li><strong>طلب استرداد:</strong> من عمود «الاسترداد» في الجدول أعلاه، لأي مساهمة مكتملة لم تُسترد بالكامل.</li>
+          <li><strong>مشكلة في الدفع:</strong> <a href={L('/contact')}>افتح تذكرة دعم خاصة</a> مع مرجع المساهمة.</li>
         </ul>
       </Card>
     </>
@@ -851,8 +902,8 @@ export function OrgFinance({ locale, orgId, projectId }: { locale: Locale; orgId
       <Card title="إجراءات أخرى">
         <ul>
           <li><strong>التصدير المنقح وكشف الدفتر:</strong> الزران أعلاه ينشئان لقطتين مؤرختين تنتهيان بعد 24 ساعة. تصدير المساهمات لا يحتوي اسمًا أو بريدًا لأي مساهم.</li>
-          <li><strong>طلب كشف هوية تشغيلي (ORG-09.A03):</strong> يحتاج صلاحية <code>contribution.identity.read</code> بسبب مسجَّل وتدقيق، وهي في PART-07.</li>
-          <li><strong>طلب استرداد (ORG-09.A04) وطلب صرف (ORG-10.A03):</strong> الاسترداد والصرف وقيودهما العكسية في PART-07.</li>
+          <li><strong>كشف هوية مساهم مجهول:</strong> غير متاح بعد. سيحتاج صلاحية خاصة وسببًا مسجَّلًا يخضع للتدقيق.</li>
+          <li><strong>طلب صرف:</strong> من صفحة «الصرف» في مساحة الجهة، ويمر بفصل ثلاثي للصلاحيات قبل التنفيذ.</li>
         </ul>
       </Card>
     </>
