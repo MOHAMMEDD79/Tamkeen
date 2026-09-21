@@ -34,14 +34,18 @@ export interface ShellNavGroup { title?: string; items: ShellNavItem[] }
  * The brand mark: three rising bars â€” funding, delivery, result â€” on a teal square. The colours come
  * from the theme, so the mark stays legible in dark mode; the tallest bar is amber in both.
  */
-export function Logo({ size = 32 }: { size?: number }) {
+/**
+ * The official Tamkeen mark (the files live in the web app's public/brand folder). It ships in two
+ * inks: the original navy and teal for light surfaces, and a white and pale-teal version for dark
+ * ones. `onDark` forces the light ink (the sidebar and footer are always dark); otherwise the ink
+ * follows the theme, with the swap done in CSS so it is right on first paint.
+ */
+export function Logo({ size = 40, onDark = false }: { size?: number; onDark?: boolean }) {
   return (
-    <svg className="tmk-logo" width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-      <rect className="tmk-logo__ground" width="40" height="40" rx="10" />
-      <rect className="tmk-logo__bar" x="9.5" y="22" width="5" height="9" rx="1.5" />
-      <rect className="tmk-logo__bar" x="17.5" y="15.5" width="5" height="15.5" rx="1.5" />
-      <rect className="tmk-logo__seal" x="25.5" y="9" width="5" height="22" rx="1.5" />
-    </svg>
+    <span className={onDark ? 'tmk-logo tmk-logo--on-dark' : 'tmk-logo'} style={{ inlineSize: size, blockSize: size }} aria-hidden="true">
+      <img className="tmk-logo__ink" src="/brand/tamkeen-mark.png" alt="" width={size} height={size} />
+      <img className="tmk-logo__light" src="/brand/tamkeen-mark-light.png" alt="" width={size} height={size} />
+    </span>
   );
 }
 
@@ -161,7 +165,7 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
         <RevealOnScroll />
         <a className="tmk-skip-link" href="#tmk-main">{t('skipToContent')}</a>
         <aside className="tmk-app__sidebar">
-          <a className="tmk-header__brand tmk-app__brand" href={localePath(locale, '/')}><Logo size={36} /><span>{t('brand')}</span></a>
+          <a className="tmk-header__brand tmk-app__brand" href={localePath(locale, '/')}><Logo size={42} onDark /><span>{t('brand')}</span></a>
           <nav className="tmk-sidebar" aria-label={personal ? t('personalWorkspace') : t('workspace')}>{sidebarNav}</nav>
           <a className="tmk-app__site" href={localePath(locale, '/')}><Globe aria-hidden="true" size={18} />{t('viewSite')}</a>
         </aside>
@@ -172,7 +176,7 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
               <summary className="tmk-button tmk-button--secondary" aria-label={t('openMenu')}><Menu aria-hidden="true" size={20} /></summary>
               <div className="tmk-app__drawer-panel"><nav className="tmk-sidebar" aria-label={t('mainNavigation')}>{sidebarNav}</nav></div>
             </details>
-            <a className="tmk-header__brand tmk-app__topbrand" href={localePath(locale, '/')}><Logo size={30} /><span>{t('brand')}</span></a>
+            <a className="tmk-header__brand tmk-app__topbrand" href={localePath(locale, '/')}><Logo size={34} /><span>{t('brand')}</span></a>
             {activeContextName ? <span className="tmk-header__context"><Building2 aria-hidden="true" size={16} />{activeContextName}</span> : null}
             <span className="tmk-header__spacer" />
             <div className="tmk-app__actions">
@@ -242,7 +246,7 @@ export function AppShell({ locale, path, children, lead, navigation, contexts, a
       <footer className="tmk-footer">
         <div className="tmk-footer__inner">
           <div className="tmk-footer__brand">
-            <a className="tmk-header__brand tmk-footer__logo" href={localePath(locale, '/')}><Logo /><span>{t('brand')}</span></a>
+            <a className="tmk-header__brand tmk-footer__logo" href={localePath(locale, '/')}><Logo size={48} onDark /><span>{t('brand')}</span></a>
             <p>{t('footerAbout')}</p>
           </div>
           <div>

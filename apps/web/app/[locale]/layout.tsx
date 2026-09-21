@@ -24,6 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     description: arabic
       ? 'منصة تربط التمويل بالتنفيذ وبنتيجة موثقة عبر العمل الخيري والاستثمار والتدريب إلى العمل.'
       : 'A platform linking funding to delivery and to a documented result across charity, investment and training to work.',
+    icons: { icon: '/brand/icon.png', apple: '/brand/icon.png' },
     // Nothing here is production content; keeping it out of indexes is deliberate.
     robots: { index: false, follow: false }
   };
