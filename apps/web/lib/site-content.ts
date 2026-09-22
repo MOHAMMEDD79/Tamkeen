@@ -109,6 +109,14 @@ const COVERS: Record<string, string[]> = {
   enablement: ['/media/defaults/cover-work-1.jpg', '/media/defaults/cover-work-2.jpg']
 };
 
+export interface ListingCovers { offering: Record<string, string>; program: Record<string, string>; job: Record<string, string> }
+
+/** Admin-set photos of offerings, programmes and jobs by slug; empty maps if the API is unreachable. */
+export async function readListingCovers(): Promise<ListingCovers> {
+  const result = await readPublic<ListingCovers>('/listing-covers');
+  return result.ok ? result.data : { offering: {}, program: {}, job: {} };
+}
+
 /** The admin-set cover, or a stable default photo for the project's track. */
 export function coverFor(project: { slug: string; type: string; coverUrl?: string | null }): string {
   if (project.coverUrl) return project.coverUrl;

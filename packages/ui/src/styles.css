@@ -926,6 +926,7 @@ html[dir="ltr"] .tmk-index__item:hover > svg:last-child { transform: translateX(
   transition: transform var(--tmk-motion-base) var(--tmk-motion-easing-out), box-shadow var(--tmk-motion-base) var(--tmk-motion-easing-out), border-color var(--tmk-motion-base) var(--tmk-motion-easing);
 }
 .tmk-admin-card:hover, .tmk-admin-card:focus-within { transform: translateY(-4px); box-shadow: var(--tmk-shadow-lg); border-color: var(--tmk-color-primary); }
+a.tmk-admin-card__open { text-decoration: none; }
 .tmk-admin-card__open { display: grid; grid-template-rows: auto 1fr; padding: 0; border: 0; background: none; text-align: start; font: inherit; color: inherit; cursor: pointer; }
 .tmk-admin-card__media { position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden; background: var(--tmk-color-surface-sunken); }
 .tmk-admin-card__media img { display: block; inline-size: 100%; block-size: 100%; object-fit: cover; transition: transform 900ms var(--tmk-motion-easing-out); }

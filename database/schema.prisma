@@ -4013,6 +4013,20 @@ model ProjectCover {
   @@map("project_covers")
 }
 
+/// An admin-set cover photo for an offering, programme or job. Polymorphic by `kind`, so there is
+/// no foreign key; the admin service checks the listing exists before writing one.
+model ListingCover {
+  kind        String @db.VarChar(16)
+  subjectId   String @map("subject_id") @db.Uuid
+  imageKey    String @map("image_key") @db.VarChar(120)
+  contentType String @map("content_type") @db.VarChar(40)
+  checksum    String @db.Char(64)
+  updatedById String? @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  @@id([kind, subjectId])
+  @@map("listing_covers")
+}
+
 /// A message from the public contact form. Sent without a session, so it carries only what the
 /// visitor typed; it is never linked to an account by email.
 model ContactMessage {

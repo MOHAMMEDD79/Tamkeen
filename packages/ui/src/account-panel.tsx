@@ -31,7 +31,7 @@ const ROLE_LABELS: Record<string, { ar: string; en: string }> = {
 const STAFF_LINKS: Array<{ role: string; path: string; ar: string; en: string; icon: LucideIcon }> = [
   { role: 'PlatformAdmin', path: '/admin/site', ar: 'البانرات والأقسام', en: 'Banners & sections', icon: LayoutTemplate },
   { role: 'PlatformAdmin', path: '/admin/site/pages', ar: 'صفحات الموقع', en: 'Site pages', icon: FileText },
-  { role: 'PlatformAdmin', path: '/admin/site/covers', ar: 'صور المشاريع', en: 'Project covers', icon: Images },
+  { role: 'PlatformAdmin', path: '/admin/site/covers', ar: 'المشاريع والفرص', en: 'Listings & photos', icon: Images },
   { role: 'PlatformAdmin', path: '/admin/site/settings', ar: 'بيانات التواصل', en: 'Contact details', icon: Contact },
   { role: 'PlatformAdmin', path: '/admin/messages', ar: 'رسائل التواصل', en: 'Contact messages', icon: Inbox },
   { role: 'PlatformAdmin', path: '/admin/organizations', ar: 'الجهات', en: 'Organisations', icon: Building2 },

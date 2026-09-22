@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { IDENTITY_RUNTIME, type IdentityRuntime } from '../identity/identity.controller.js';
 import { sessionFrom } from '../identity/session.js';
 import { IdentityError } from '../identity/policy.js';
-import { SiteContentService, type StoredImage } from './site-content.service.js';
+import { LISTING_KINDS, SiteContentService, type StoredImage } from './site-content.service.js';
 import { isSiteMediaId, isSiteMediaKey, SITE_MEDIA_MAX_BYTES, siteMediaIdOf, siteMediaKey, siteMediaUrl, SiteMediaStorage } from './site-media-storage.js';
 
 const uuid = z.string().uuid();
@@ -189,6 +189,27 @@ export class SiteContentController {
   @Delete('admin/projects/:id/cover') async removeCover(@Req() req: IncomingMessage, @Param('id') id: string) {
     const session = await this.session(req);
     return { data: await this.service.removeProjectCover(session.user.id, uuid.parse(id)) };
+  }
+
+  // ---------------------------------------------------------------- listings of every kind
+
+  @Get('listing-covers') async listingCovers() { return { data: await this.service.publicListingCovers() }; }
+
+  @Get('admin/listings') async listings(@Req() req: IncomingMessage) {
+    const session = await this.session(req);
+    return { data: await this.service.listings(session.user.id) };
+  }
+
+  @Put('admin/listings/:kind/:id/cover') async setListingCover(@Req() req: IncomingMessage, @Param('kind') kind: string, @Param('id') id: string, @Body() body: unknown) {
+    const session = await this.session(req);
+    await this.service.admin(session.user.id);
+    const { imageKey: key } = z.object({ imageKey }).strict().parse(body);
+    return { data: await this.service.setListingCover(session.user.id, z.enum(LISTING_KINDS).parse(kind), uuid.parse(id), await this.storedImage(session.user.id, key)) };
+  }
+
+  @Delete('admin/listings/:kind/:id/cover') async removeListingCover(@Req() req: IncomingMessage, @Param('kind') kind: string, @Param('id') id: string) {
+    const session = await this.session(req);
+    return { data: await this.service.removeListingCover(session.user.id, z.enum(LISTING_KINDS).parse(kind), uuid.parse(id)) };
   }
 
   // ---------------------------------------------------------------- admin: contact inbox

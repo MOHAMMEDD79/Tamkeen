@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { AppShell, Card, EmptyState, Ltr, MoneyAmount, Notice, StatusBadge, formatDate, isLocale, localePath, type Locale } from '@tamkeen/ui';
 import { readPublic, type PublicJobCard, type PublicProgramCard } from '../../../lib/server-api';
-import { readSiteContent, section } from '../../../lib/site-content';
+import { readListingCovers, readSiteContent, section } from '../../../lib/site-content';
 import { ReadError, jobClaimLabel } from '../public-parts';
 import { PageHero } from '../marketing';
 
@@ -81,7 +81,7 @@ export default async function Opportunities({ params }: { params: Promise<{ loca
   if (!isLocale(raw)) notFound();
   const locale = raw satisfies Locale;
   const ar = locale === 'ar';
-  const [result, jobs, site] = await Promise.all([readPublic<PublicProgramCard[]>('/programs'), readPublic<PublicJobCard[]>('/jobs'), readSiteContent()]);
+  const [result, jobs, site, listingCovers] = await Promise.all([readPublic<PublicProgramCard[]>('/programs'), readPublic<PublicJobCard[]>('/jobs'), readSiteContent(), readListingCovers()]);
   const pick = (value: { ar: string; en: string }) => value[locale] || value.ar;
   const header = section(site, 'opportunities.header'), programsHead = section(site, 'opportunities.programs'), jobsHead = section(site, 'opportunities.jobs');
 
@@ -119,7 +119,7 @@ export default async function Opportunities({ params }: { params: Promise<{ loca
             return (
               <article className="tmk-opp tmk-reveal" key={program.slug}>
                 <a className="tmk-opp__media" href={href} tabIndex={-1} aria-hidden="true">
-                  <img src={topicPhoto(program.title, program.skills)} alt="" loading="lazy" />
+                  <img src={listingCovers.program[program.slug] ?? topicPhoto(program.title, program.skills)} alt="" loading="lazy" />
                   <span className="tmk-opp__tags">
                     <span className="tmk-opp__tag">{MODE_LABELS[program.deliveryMode]?.[locale] ?? program.deliveryMode}</span>
                     {program.level ? <span className="tmk-opp__tag">{program.level}</span> : null}
@@ -173,7 +173,7 @@ export default async function Opportunities({ params }: { params: Promise<{ loca
             return (
               <article className="tmk-opp tmk-reveal" key={job.slug}>
                 <a className="tmk-opp__media tmk-opp__media--short" href={href} tabIndex={-1} aria-hidden="true">
-                  <img src={topicPhoto(job.title, job.skills)} alt="" loading="lazy" />
+                  <img src={listingCovers.job[job.slug] ?? topicPhoto(job.title, job.skills)} alt="" loading="lazy" />
                   <span className="tmk-opp__tags">
                     <span className="tmk-opp__tag tmk-opp__tag--warm">{jobContractLabel(job.contractType, job.contractMonths, ar)}</span>
                     <span className="tmk-opp__tag">{MODE_LABELS[job.deliveryMode]?.[locale] ?? job.deliveryMode}</span>

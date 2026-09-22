@@ -30,6 +30,7 @@ test('site content, media, project covers and the contact inbox over HTTP', asyn
   const users: string[] = [];
   const organizations: string[] = [];
   const projects: string[] = [];
+  const jobs: string[] = [];
   const createdItems: string[] = [];
   const uploadedIds: string[] = [];
   const heroesBefore = await db.siteMediaItem.findMany({ where: { slot: 'hero' } });
@@ -175,6 +176,21 @@ test('site content, media, project covers and the contact inbox over HTTP', asyn
     assert.equal(await cardCover(), null);
     assert.equal((await call('DELETE', `/admin/projects/${project.id}/cover`, { cookie: admin.cookie })).status, 404);
 
+    // --- A job cover: the same photo store, keyed by kind, public by slug -------------------------
+    const job = await db.job.create({ data: { organizationId: organization.id, slug: `job-${prefix.slice(0, 8)}`, title: 'Cover test job', summary: 'A job that gets a cover photo.', salaryDisclosed: false, salaryUndisclosedReason: 'Set per candidate.', createdBy: owner.id } });
+    jobs.push(job.id);
+    assert.equal((await call('PUT', `/admin/listings/job/${job.id}/cover`, { cookie: visitor.cookie, body: { imageKey: uploaded.imageKey } })).status, 403);
+    assert.equal((await call('PUT', `/admin/listings/venture/${job.id}/cover`, { cookie: admin.cookie, body: { imageKey: uploaded.imageKey } })).status, 422, 'an unknown kind is refused');
+    assert.equal((await call('PUT', `/admin/listings/program/${job.id}/cover`, { cookie: admin.cookie, body: { imageKey: uploaded.imageKey } })).status, 404, 'the id must be a listing of that kind');
+    assert.equal((await call('PUT', `/admin/listings/job/${job.id}/cover`, { cookie: admin.cookie, body: { imageKey: uploaded.imageKey } })).status, 200);
+    assert.equal(((await call('GET', '/listing-covers', { origin: null })).data as { job: Record<string, string> }).job[job.slug], uploaded.imageUrl);
+    const everything = (await call('GET', '/admin/listings', { cookie: admin.cookie })).data as { projects: Array<{ id: string }>; jobs: Array<{ id: string; coverUrl: string | null }> };
+    assert.ok(everything.projects.some(row => row.id === project.id));
+    assert.equal(everything.jobs.find(row => row.id === job.id)?.coverUrl, uploaded.imageUrl);
+    assert.equal((await call('DELETE', `/admin/listings/job/${job.id}/cover`, { cookie: admin.cookie })).status, 200);
+    assert.equal(((await call('GET', '/listing-covers', { origin: null })).data as { job: Record<string, string> }).job[job.slug], undefined);
+    assert.equal((await call('DELETE', `/admin/listings/job/${job.id}/cover`, { cookie: admin.cookie })).status, 404);
+
     // --- The contact form works without a session and lands in the admin inbox -----------------
     const client = (n: number) => ({ 'x-forwarded-for': `198.51.100.${n}` });
     const seed = Math.floor(Math.random() * 200);
@@ -236,7 +252,7 @@ test('site content, media, project covers and the contact inbox over HTTP', asyn
 
     // --- Every admin change left an audit row ---------------------------------------------------
     const actions = (await db.identityAuditEvent.findMany({ where: { actorId: admin.user.id }, select: { action: true } })).map(row => row.action);
-    for (const action of ['site_media.uploaded', 'site_content.item.updated', 'site_content.item.created', 'site_content.item.deleted', 'site_content.section.saved', 'site_content.section.reset', 'site_settings.saved', 'project_cover.set', 'project_cover.removed', 'contact_message.read']) {
+    for (const action of ['site_media.uploaded', 'site_content.item.updated', 'site_content.item.created', 'site_content.item.deleted', 'site_content.section.saved', 'site_content.section.reset', 'site_settings.saved', 'project_cover.set', 'project_cover.removed', 'job_cover.set', 'job_cover.removed', 'contact_message.read']) {
       assert.ok(actions.includes(action), `${action} is audited`);
     }
   } finally {
@@ -250,6 +266,8 @@ test('site content, media, project covers and the contact inbox over HTTP', asyn
     if (settingsBefore.length) await db.siteSetting.createMany({ data: settingsBefore });
     await db.contactMessage.deleteMany({ where: { email: `${prefix}-contact@example.test` } });
     await db.$transaction(async tx => {
+      await tx.listingCover.deleteMany({ where: { subjectId: { in: jobs } } });
+      await tx.job.deleteMany({ where: { id: { in: jobs } } });
       await tx.project.deleteMany({ where: { id: { in: projects } } });
       await tx.membership.deleteMany({ where: { organizationId: { in: organizations } } });
       await tx.party.deleteMany({ where: { OR: [{ userId: { in: users } }, { organizationId: { in: organizations } }] } });

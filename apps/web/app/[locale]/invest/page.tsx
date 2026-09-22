@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { BadgeCheck, CalendarClock, TrendingUp } from 'lucide-react';
 import { AppShell, EmptyState, Ltr, MoneyAmount, Notice, StatusBadge, formatDate, isLocale, localePath, type Locale } from '@tamkeen/ui';
 import { readPublic, type PublicOfferingCard } from '../../../lib/server-api';
-import { readSiteContent, section } from '../../../lib/site-content';
+import { readListingCovers, readSiteContent, section } from '../../../lib/site-content';
 import { PageHero, forwardIcon } from '../marketing';
 import { ReadError } from '../public-parts';
 
@@ -45,7 +45,7 @@ export default async function Invest({ params }: { params: Promise<{ locale: str
   if (!isLocale(raw)) notFound();
   const locale = raw satisfies Locale;
   const ar = locale === 'ar';
-  const [result, site] = await Promise.all([readPublic<PublicOfferingCard[]>('/offerings'), readSiteContent()]);
+  const [result, site, listingCovers] = await Promise.all([readPublic<PublicOfferingCard[]>('/offerings'), readSiteContent(), readListingCovers()]);
   const pick = (value: { ar: string; en: string }) => value[locale] || value.ar;
   const header = section(site, 'invest.header'), offers = section(site, 'invest.offers'), cta = section(site, 'invest.cta');
   const Forward = forwardIcon(locale);
@@ -91,7 +91,7 @@ export default async function Invest({ params }: { params: Promise<{ locale: str
           {result.data.map((offering, index) => (
             <article className="tmk-project tmk-reveal" key={offering.slug} style={{ ['--reveal-delay' as string]: index % 3 }}>
               <div className="tmk-project__media">
-                <img src={covers[index % covers.length]} alt="" loading="lazy" />
+                <img src={listingCovers.offering[offering.slug] ?? covers[index % covers.length]} alt="" loading="lazy" />
                 <span className="tmk-project__chip"><TrendingUp aria-hidden="true" size={15} />{ar ? 'استثماري' : 'Investment'}</span>
                 <span className="tmk-project__state">
                   {/* A card that does not say where its round has got to invites a reader to act on one that closed weeks ago. */}

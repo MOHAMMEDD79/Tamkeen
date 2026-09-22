@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Archive, Eye, EyeOff, ImagePlus, Inbox, Loader2, MailOpen, Pencil, Plus, RotateCcw, Save, Trash2, X } from 'lucide-react';
+import { Archive, Eye, EyeOff, ImagePlus, Inbox, Loader2, MailOpen, Pencil, Plus, RotateCcw, Save, Search, Trash2, X } from 'lucide-react';
 import { AppShell, EmptyState, Notice, PageHeader, Skeleton, StatusBadge, formatDate, localePath, type Locale } from '@tamkeen/ui';
 import { SECTIONS, SECTION_BY_SLOT, SETTING_FIELDS, SITE_PAGES, resolveSection, type PageKey, type SectionDef, type SectionField } from '../../lib/site-sections';
 
@@ -21,7 +21,6 @@ interface AdminItem {
   cta: { label: Text; href: string }; imageKey: string | null; imageUrl: string; defaultImage: string;
   active: boolean; version: number; updatedAt: string;
 }
-interface CoverRow { id: string; slug: string; title: string; type: string; state: string; organization: { displayName: string }; coverUrl: string | null }
 interface ContactMessage { id: string; name: string; email: string; subject: string; body: string; locale: string; state: 'new' | 'read' | 'archived'; createdAt: string; readAt: string | null }
 
 class HttpError extends Error { constructor(message: string, readonly status: number) { super(message); } }
@@ -79,7 +78,7 @@ export function SiteAdmin({ locale, mode }: { locale: Locale; mode: Mode }) {
       {mode === 'content' ? <ContentEditor run={run} locale={locale} />
         : mode === 'pages' ? <PagesEditor run={run} locale={locale} />
         : mode === 'settings' ? <SettingsEditor run={run} locale={locale} />
-        : mode === 'covers' ? <CoverEditor run={run} locale={locale} /> : <MessageInbox run={run} locale={locale} />}
+        : mode === 'covers' ? <ListingsEditor run={run} locale={locale} /> : <MessageInbox run={run} locale={locale} />}
     </AppShell>
   );
 }
@@ -351,41 +350,85 @@ export function Field({ label, name, value, max, required, area, ltr, hint, auto
   );
 }
 
-function CoverEditor({ run, locale }: { run: Run; locale: Locale }) {
-  const [rows, setRows] = useState<CoverRow[] | null>(null);
+type ListingTab = 'projects' | 'offerings' | 'programs' | 'jobs';
+interface ListingRow { id: string; slug: string; title: string; state: string; type?: string; organization: { displayName: string; status: string }; coverUrl: string | null }
+
+const LISTING_TABS: Array<{ key: ListingTab; label: string; kind: 'project' | 'offering' | 'program' | 'job'; path: string; fallback: string }> = [
+  { key: 'projects', label: 'المشاريع', kind: 'project', path: '/projects', fallback: '/media/defaults/cover-charity-1.jpg' },
+  { key: 'offerings', label: 'عروض الاستثمار', kind: 'offering', path: '/invest', fallback: '/media/defaults/cover-invest-1.jpg' },
+  { key: 'programs', label: 'برامج التدريب', kind: 'program', path: '/programs', fallback: '/media/defaults/cover-work-1.jpg' },
+  { key: 'jobs', label: 'الوظائف', kind: 'job', path: '/jobs', fallback: '/media/defaults/cover-work-2.jpg' }
+];
+const PROJECT_TYPES: Record<string, string> = { charity: 'خيري', venture: 'استثماري', enablement: 'تمكين' };
+
+/**
+ * Every listing on the platform — projects of all three tracks, investment offerings, training
+ * programmes and jobs — with the photo the public card shows. The admin sets or removes it here;
+ * a listing without one shows its track's default photo.
+ */
+function ListingsEditor({ run, locale }: { run: Run; locale: Locale }) {
+  const [data, setData] = useState<Record<ListingTab, ListingRow[]> | null>(null);
+  const [tab, setTab] = useState<ListingTab>('projects');
+  const [query, setQuery] = useState('');
   const [busy, setBusy] = useState('');
-  const load = useCallback(async () => setRows(await call<CoverRow[]>('/admin/projects/covers')), []);
+  const load = useCallback(async () => setData(await call<Record<ListingTab, ListingRow[]>>('/admin/listings')), []);
   useEffect(() => { void run(load); }, [run, load]);
-  const upload = (row: CoverRow, file: File | undefined) => {
+  const current = LISTING_TABS.find(entry => entry.key === tab)!;
+  const coverPath = (row: ListingRow) => current.kind === 'project' ? `/admin/projects/${row.id}/cover` : `/admin/listings/${current.kind}/${row.id}/cover`;
+
+  const upload = (row: ListingRow, file: File | undefined) => {
     if (!file) return;
     setBusy(row.id);
     void run(async () => {
       const uploaded = await uploadImage(file);
-      await call(`/admin/projects/${row.id}/cover`, 'PUT', { imageKey: uploaded.imageKey });
+      await call(coverPath(row), 'PUT', { imageKey: uploaded.imageKey });
       await load(); return `تغيّرت صورة «${row.title}».`;
     }).finally(() => setBusy(''));
   };
+  const needle = query.trim().toLowerCase();
+  const rows = (data?.[tab] ?? []).filter(row => !needle || `${row.title} ${row.organization.displayName}`.toLowerCase().includes(needle));
+
   return (
     <>
-      <PageHeader dashboard eyebrow="إدارة الموقع" title="صور المشاريع" lead="صورة الغلاف تظهر في بطاقة المشروع وصفحته. المشروع بلا صورة يعرض صورة افتراضية لمساره." />
-      {!rows ? <Skeleton lines={6} label="جارٍ التحميل" /> : rows.length === 0 ? <EmptyState title="لا مشاريع بعد" /> : (
-        <div className="tmk-projects">
+      <PageHeader dashboard eyebrow="إدارة الموقع" title="المشاريع والفرص"
+        lead="كل مشروع وعرض استثمار وبرنامج تدريب ووظيفة على المنصة، بالصورة التي تظهر في بطاقته للزوار. غيّر الصورة أو أزلها لتعود صورة المسار الافتراضية. لإخفاء كل ما لجهة ما، أوقف الجهة من «الجهات»." />
+      <div className="tmk-admin-toolbar">
+        <label className="tmk-admin-search">
+          <Search aria-hidden="true" size={18} />
+          <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="ابحث بالعنوان أو الجهة" aria-label="بحث" />
+        </label>
+        <nav className="tmk-pills" aria-label="نوع القائمة">
+          {LISTING_TABS.map(entry => (
+            <button key={entry.key} type="button" className="tmk-pill" aria-current={entry.key === tab ? 'true' : undefined} onClick={() => setTab(entry.key)}>
+              {entry.label}<span className="tmk-pill__count">{data?.[entry.key].length ?? '…'}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+      {!data ? <Skeleton lines={6} label="جارٍ التحميل" /> : rows.length === 0 ? <EmptyState title="لا شيء هنا بعد" /> : (
+        <div className="tmk-admin-cards">
           {rows.map(row => (
-            <article className="tmk-project" key={row.id}>
-              <div className="tmk-project__media">
-                {row.coverUrl ? <img src={row.coverUrl} alt="" /> : <div className="tmk-admin-empty-cover"><ImagePlus aria-hidden="true" size={36} /><span>صورة افتراضية</span></div>}
-                <span className="tmk-project__state"><StatusBadge tone="neutral">{row.state}</StatusBadge></span>
-              </div>
-              <div className="tmk-project__body">
-                <p className="tmk-project__org" style={{ margin: 0 }}>{row.organization.displayName}</p>
-                <h3 className="tmk-project__title" style={{ position: 'static' }}><a href={localePath(locale, `/projects/${row.slug}`)} target="_blank" rel="noreferrer">{row.title}</a></h3>
-              </div>
-              <div className="tmk-project__foot">
-                <label className="tmk-button tmk-button--primary" aria-disabled={busy === row.id}>
-                  <ImagePlus aria-hidden="true" size={16} />{row.coverUrl ? 'استبدال' : 'رفع صورة'}
-                  <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={busy === row.id} onChange={event => upload(row, event.target.files?.[0])} />
+            <article className="tmk-admin-card" key={row.id} data-hidden={row.organization.status !== 'active' ? 'true' : undefined}>
+              <a className="tmk-admin-card__open" href={localePath(locale, `${current.path}/${row.slug}`)} target="_blank" rel="noreferrer">
+                <span className="tmk-admin-card__media">
+                  <img src={row.coverUrl ?? current.fallback} alt="" loading="lazy" />
+                  <span className="tmk-admin-card__status"><StatusBadge tone={row.coverUrl ? 'success' : 'neutral'}>{row.coverUrl ? 'صورة مخصصة' : 'صورة افتراضية'}</StatusBadge></span>
+                  {busy === row.id ? <span className="tmk-editor__uploading" role="status"><Loader2 aria-hidden="true" size={22} className="tmk-spin" />جارٍ الرفع…</span> : null}
+                </span>
+                <span className="tmk-admin-card__body">
+                  <span className="tmk-admin-card__slot">{row.type ? PROJECT_TYPES[row.type] ?? row.type : current.label} · {row.state}</span>
+                  <strong>{row.title}</strong>
+                  <span className="tmk-admin-card__text">{row.organization.displayName}{row.organization.status !== 'active' ? ' · الجهة موقوفة' : ''}</span>
+                </span>
+              </a>
+              <div className="tmk-admin-card__actions">
+                <label className="tmk-button tmk-button--secondary" aria-disabled={busy === row.id}>
+                  <ImagePlus aria-hidden="true" size={16} />{row.coverUrl ? 'استبدال الصورة' : 'رفع صورة'}
+                  <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={busy === row.id} onChange={event => { upload(row, event.target.files?.[0]); event.target.value = ''; }} />
                 </label>
-                {row.coverUrl ? <button type="button" className="tmk-button tmk-button--quiet" disabled={busy === row.id} onClick={() => void run(async () => { await call(`/admin/projects/${row.id}/cover`, 'DELETE'); await load(); return 'أُزيلت الصورة وعادت الصورة الافتراضية.'; })}><Trash2 aria-hidden="true" size={16} />إزالة</button> : null}
+                {row.coverUrl ? (
+                  <button type="button" className="tmk-button tmk-button--quiet" disabled={busy === row.id} onClick={() => void run(async () => { await call(coverPath(row), 'DELETE'); await load(); return 'أُزيلت الصورة وعادت الصورة الافتراضية.'; })}><Trash2 aria-hidden="true" size={16} />إزالة</button>
+                ) : null}
               </div>
             </article>
           ))}

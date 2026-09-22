@@ -28,6 +28,9 @@ export const SETTING_KEYS = [
 ] as const;
 export type SettingKey = typeof SETTING_KEYS[number];
 export const CONTACT_STATES = ['new', 'read', 'archived'] as const;
+/** Listings other than projects that can carry an admin cover photo. */
+export const LISTING_KINDS = ['offering', 'program', 'job'] as const;
+export type ListingKind = typeof LISTING_KINDS[number];
 type ContactState = typeof CONTACT_STATES[number];
 
 export interface ItemChanges {
@@ -266,6 +269,71 @@ export class SiteContentService {
       await tx.identityAuditEvent.create({ data: { actorId, resourceId: projectId, action: 'project_cover.removed' } });
       return { projectId, coverUrl: null };
     });
+  }
+
+  // ---------------------------------------------------------------- listings of every kind
+
+  /** Every listing on the platform, of all four kinds, with its current cover (or null). */
+  async listings(actorId: string) {
+    await this.admin(actorId);
+    const organization = { select: { displayName: true, status: true } };
+    const [projects, offerings, programs, jobs, covers] = await Promise.all([
+      this.db.project.findMany({ select: { id: true, slug: true, title: true, type: true, state: true, organization, cover: { select: { imageKey: true } } }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
+      this.db.offering.findMany({ select: { id: true, slug: true, title: true, state: true, organization }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
+      this.db.program.findMany({ select: { id: true, slug: true, title: true, state: true, skills: true, organization }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
+      this.db.job.findMany({ select: { id: true, slug: true, title: true, state: true, skills: true, organization }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
+      this.db.listingCover.findMany()
+    ]);
+    const cover = (kind: ListingKind, id: string) => { const row = covers.find(entry => entry.kind === kind && entry.subjectId === id); return row ? siteMediaUrl(row.imageKey) : null; };
+    return {
+      projects: projects.map(({ cover: projectCover, ...row }) => ({ ...row, coverUrl: projectCover ? siteMediaUrl(projectCover.imageKey) : null })),
+      offerings: offerings.map(row => ({ ...row, coverUrl: cover('offering', row.id) })),
+      programs: programs.map(row => ({ ...row, coverUrl: cover('program', row.id) })),
+      jobs: jobs.map(row => ({ ...row, coverUrl: cover('job', row.id) }))
+    };
+  }
+
+  private async listingExists(tx: DatabaseClient, kind: ListingKind, id: string) {
+    const select = { select: { id: true }, where: { id } };
+    const row = kind === 'offering' ? await tx.offering.findUnique(select) : kind === 'program' ? await tx.program.findUnique(select) : await tx.job.findUnique(select);
+    if (!row) throw new IdentityError('not_found', 404);
+  }
+
+  async setListingCover(actorId: string, kind: ListingKind, subjectId: string, image: StoredImage) {
+    return this.db.$transaction(async tx => {
+      await new IdentityService(tx as DatabaseClient).platformAdministratorUser(actorId);
+      await this.listingExists(tx as DatabaseClient, kind, subjectId);
+      const data = { imageKey: image.imageKey, contentType: image.contentType, checksum: image.checksum, updatedById: actorId };
+      await tx.listingCover.upsert({ where: { kind_subjectId: { kind, subjectId } }, create: { kind, subjectId, ...data }, update: data });
+      await tx.identityAuditEvent.create({ data: { actorId, resourceId: subjectId, action: `${kind}_cover.set` } });
+      return { kind, subjectId, coverUrl: siteMediaUrl(image.imageKey) };
+    });
+  }
+
+  async removeListingCover(actorId: string, kind: ListingKind, subjectId: string) {
+    return this.db.$transaction(async tx => {
+      await new IdentityService(tx as DatabaseClient).platformAdministratorUser(actorId);
+      const removed = await tx.listingCover.deleteMany({ where: { kind, subjectId } });
+      if (!removed.count) throw new IdentityError('not_found', 404);
+      await tx.identityAuditEvent.create({ data: { actorId, resourceId: subjectId, action: `${kind}_cover.removed` } });
+      return { kind, subjectId, coverUrl: null };
+    });
+  }
+
+  /** Public: the cover photo of each offering, programme and job that has one, keyed by slug. */
+  async publicListingCovers() {
+    const covers = await this.db.listingCover.findMany();
+    const ids = (kind: ListingKind) => covers.filter(row => row.kind === kind).map(row => row.subjectId);
+    const [offerings, programs, jobs] = await Promise.all([
+      this.db.offering.findMany({ where: { id: { in: ids('offering') } }, select: { id: true, slug: true } }),
+      this.db.program.findMany({ where: { id: { in: ids('program') } }, select: { id: true, slug: true } }),
+      this.db.job.findMany({ where: { id: { in: ids('job') } }, select: { id: true, slug: true } })
+    ]);
+    const bySlug = (kind: ListingKind, rows: Array<{ id: string; slug: string }>) => Object.fromEntries(rows.map(row => {
+      const cover = covers.find(entry => entry.kind === kind && entry.subjectId === row.id)!;
+      return [row.slug, siteMediaUrl(cover.imageKey)];
+    }));
+    return { offering: bySlug('offering', offerings), program: bySlug('program', programs), job: bySlug('job', jobs) };
   }
 
   // ---------------------------------------------------------------- admin: contact inbox
