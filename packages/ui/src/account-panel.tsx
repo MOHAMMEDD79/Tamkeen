@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Banknote, ClipboardCheck, Contact, FileSearch, FileText, Gauge, Images, Inbox, Landmark, LayoutTemplate, LifeBuoy, LogOut, ScrollText, ShieldCheck, TrendingUp, UsersRound } from 'lucide-react';
+import { Banknote, Building2, ClipboardCheck, Contact, FileSearch, FileText, Gauge, Images, Inbox, Landmark, LayoutTemplate, LifeBuoy, LogOut, ScrollText, ShieldCheck, TrendingUp, Users, UsersRound } from 'lucide-react';
 import { localePath, type Locale } from './locale.js';
 
 /**
@@ -34,6 +34,8 @@ const STAFF_LINKS: Array<{ role: string; path: string; ar: string; en: string; i
   { role: 'PlatformAdmin', path: '/admin/site/covers', ar: 'صور المشاريع', en: 'Project covers', icon: Images },
   { role: 'PlatformAdmin', path: '/admin/site/settings', ar: 'بيانات التواصل', en: 'Contact details', icon: Contact },
   { role: 'PlatformAdmin', path: '/admin/messages', ar: 'رسائل التواصل', en: 'Contact messages', icon: Inbox },
+  { role: 'PlatformAdmin', path: '/admin/organizations', ar: 'الجهات', en: 'Organisations', icon: Building2 },
+  { role: 'PlatformAdmin', path: '/admin/users', ar: 'المستخدمون', en: 'Users', icon: Users },
   { role: 'PlatformAdmin', path: '/admin/team', ar: 'فريق التشغيل', en: 'Staff team', icon: UsersRound },
   { role: 'VerificationReviewer', path: '/admin/verifications', ar: 'توثيق الجهات', en: 'Verifications', icon: ShieldCheck },
   { role: 'ContentReviewer', path: '/admin/reviews/project', ar: 'مراجعة المشاريع', en: 'Project reviews', icon: ClipboardCheck },

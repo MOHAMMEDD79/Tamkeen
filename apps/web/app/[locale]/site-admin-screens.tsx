@@ -33,7 +33,7 @@ const messages: Record<string, string> = {
   not_found: 'العنصر غير موجود أو حُذف.'
 };
 
-async function call<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+export async function call<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const response = await fetch(`/api/v1${path}`, { method, credentials: 'include', cache: 'no-store', headers: body === undefined ? {} : { 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new HttpError(messages[result.error?.code] ?? (response.status === 401 ? 'سجّل الدخول بحساب مدير المنصة.' : 'تعذر تنفيذ العملية.'), response.status);
@@ -336,7 +336,7 @@ function ContentDialog({ item, nextOrder, canDelete, onClose, onDone }: {
   );
 }
 
-function Field({ label, name, value, max, required, area, ltr, hint, autoFocus, numeric }: {
+export function Field({ label, name, value, max, required, area, ltr, hint, autoFocus, numeric }: {
   label: string; name: string; value: string; max: number; required?: boolean; area?: boolean; ltr?: boolean; hint?: string | undefined; autoFocus?: boolean; numeric?: boolean;
 }) {
   const id = `field-${name}-${useId()}`;

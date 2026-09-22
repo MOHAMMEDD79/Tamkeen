@@ -20,6 +20,7 @@ import { EmploymentController } from './modules/employment/employment.controller
 import { ProgramsController } from './modules/programs/programs.controller.js';
 import { OperationsController } from './modules/operations/operations.controller.js';
 import { SiteContentController } from './modules/site-content/site-content.controller.js';
+import { DirectoryController } from './modules/admin-directory/directory.controller.js';
 import { IdentityError } from './modules/identity/policy.js';
 
 const DATABASE = Symbol('DATABASE');
@@ -52,7 +53,7 @@ class HealthController {
 export async function createApp(config: RuntimeConfig) {
   const db = createDatabase(config.databaseUrl);
   const auth = createAuth(config, db);
-  @Module({ controllers: [HealthController, IdentityController, ProjectsController, CharityController, MoneyController, DisbursementsController, InvestmentController, ProgramsController, EmploymentController, EnablementController, OperationsController, SiteContentController], providers: [{ provide: DATABASE, useValue: db }, { provide: IDENTITY_RUNTIME, useValue: { db, auth, config } }, DatabaseLifecycle] })
+  @Module({ controllers: [HealthController, IdentityController, ProjectsController, CharityController, MoneyController, DisbursementsController, InvestmentController, ProgramsController, EmploymentController, EnablementController, OperationsController, SiteContentController, DirectoryController], providers: [{ provide: DATABASE, useValue: db }, { provide: IDENTITY_RUNTIME, useValue: { db, auth, config } }, DatabaseLifecycle] })
   class AppModule {}
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ['error', 'warn'], bodyParser: false });
   app.setGlobalPrefix('api/v1');
