@@ -26,10 +26,10 @@ form { display: grid; gap: var(--tmk-space-16); margin-block: var(--tmk-space-24
 form:has(> .tmk-table-wrap) { max-inline-size: none; }
 form > .tmk-table-wrap { inline-size: 100%; }
 
-.field { display: grid; gap: var(--tmk-space-8); line-height: var(--tmk-type-body-line); font-weight: 600; font-size: 14px; }
+.field { display: grid; gap: var(--tmk-space-8); line-height: var(--tmk-type-body-line); font-weight: 600; font-size: 15px; }
 .field input, .field select, .field textarea {
   inline-size: 100%; min-inline-size: 0; min-block-size: 44px;
-  padding: var(--tmk-space-8) var(--tmk-space-12); font: inherit; font-size: 16px; font-weight: 400;
+  padding: var(--tmk-space-8) var(--tmk-space-12); font: inherit; font-size: 17px; font-weight: 400;
   color: var(--tmk-color-ink); background: var(--tmk-color-surface);
   border: 1px solid var(--tmk-color-field-border); border-radius: var(--tmk-radius-field);
   transition: border-color var(--tmk-motion-fast) var(--tmk-motion-easing), box-shadow var(--tmk-motion-fast) var(--tmk-motion-easing);
