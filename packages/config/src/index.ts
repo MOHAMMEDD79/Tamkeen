@@ -88,3 +88,19 @@ export function loadConfig(env: Record<string, string | undefined>): RuntimeConf
     heartbeatMs: integer('WORKER_HEARTBEAT_MS', 1000, 60000)
   };
 }
+
+/**
+ * The browser origins the API accepts writes from. Always the configured app URL; on a local build
+ * also its loopback twin, because "localhost" and "127.0.0.1" are the same machine to a person but
+ * different origins to a browser, and opening the other one used to make every sign-in and save
+ * fail with a bare 403.
+ */
+export function trustedOrigins(config: Pick<RuntimeConfig, 'appBaseUrl' | 'environment'>): string[] {
+  const origins = [config.appBaseUrl];
+  if (config.environment === 'demo' || config.environment === 'test') {
+    const url = new URL(config.appBaseUrl);
+    const twin = url.hostname === '127.0.0.1' ? 'localhost' : url.hostname === 'localhost' ? '127.0.0.1' : null;
+    if (twin) origins.push(`${url.protocol}//${twin}${url.port ? `:${url.port}` : ''}`);
+  }
+  return origins;
+}

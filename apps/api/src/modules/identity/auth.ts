@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { emailOTP, twoFactor } from 'better-auth/plugins';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
-import { CURRENT_TERMS_VERSION, type RuntimeConfig } from '@tamkeen/config';
+import { CURRENT_TERMS_VERSION, trustedOrigins, type RuntimeConfig } from '@tamkeen/config';
 import type { DatabaseClient } from '@tamkeen/database';
 import { hashedSessionAdapter } from './session-adapter.js';
 
@@ -15,7 +15,7 @@ export function createAuth(config: RuntimeConfig, db: DatabaseClient) {
   };
   return betterAuth({
     appName: 'Tamkeen', baseURL: config.apiBaseUrl, basePath: '/api/v1/auth',
-    secret: config.sessionSecret, trustedOrigins: [config.appBaseUrl],
+    secret: config.sessionSecret, trustedOrigins: trustedOrigins(config),
     plugins: [
       // A remembered device skips the sign-in code for 30 days, but only on a local build: in staging
       // and production every sign-in asks for the code. Sensitive operations re-ask either way.

@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, HttpException, HttpStatus, Inject, Param, Patch, Post, Put, Query, Req, Res } from '@nestjs/common';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
+import { trustedOrigins } from '@tamkeen/config';
 import { IDENTITY_RUNTIME, type IdentityRuntime } from '../identity/identity.controller.js';
 import { sessionFrom } from '../identity/session.js';
 import { IdentityError } from '../identity/policy.js';
@@ -109,7 +110,7 @@ export class SiteContentController {
 
   /** No session: the form is for visitors. The origin rule every other write follows still applies. */
   @Post('contact-messages') async contact(@Req() req: IncomingMessage, @Res({ passthrough: true }) res: ServerResponse, @Body() body: unknown) {
-    if (req.headers.origin !== this.runtime.config.appBaseUrl) throw new ForbiddenException();
+    if (!trustedOrigins(this.runtime.config).includes(req.headers.origin ?? '')) throw new ForbiddenException();
     const retryAfter = this.contactLimit.take(clientAddress(req));
     if (retryAfter) { res.setHeader('Retry-After', String(retryAfter)); throw new HttpException('Too many messages', HttpStatus.TOO_MANY_REQUESTS); }
     return { data: await this.service.createContactMessage(contactMessage.parse(body)) };

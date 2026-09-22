@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { loadConfig } from '../packages/config/src/index.js';
+import { loadConfig, trustedOrigins } from '../packages/config/src/index.js';
 
 const safe = {
   APP_ENV: 'demo', DATABASE_URL: 'postgresql://local:secret@127.0.0.1:55432/tamkeen_demo',
@@ -52,4 +52,11 @@ test('rejects malformed flags, ports and placeholder secrets', () => {
 test('validation errors do not disclose configuration secrets', () => {
   const privateValue = 'postgresql://user:top-secret@private.example.com/tamkeen_prod';
   assert.throws(() => loadConfig({ ...safe, DATABASE_URL: privateValue }), error => error instanceof Error && !error.message.includes('top-secret') && !error.message.includes('private.example.com'));
+});
+
+test('a local build trusts both loopback spellings of its own origin, and nothing else', () => {
+  assert.deepEqual(trustedOrigins({ appBaseUrl: 'http://127.0.0.1:3000', environment: 'demo' }), ['http://127.0.0.1:3000', 'http://localhost:3000']);
+  assert.deepEqual(trustedOrigins({ appBaseUrl: 'http://localhost:3000', environment: 'test' }), ['http://localhost:3000', 'http://127.0.0.1:3000']);
+  assert.deepEqual(trustedOrigins({ appBaseUrl: 'https://tamkeen.example', environment: 'demo' }), ['https://tamkeen.example']);
+  assert.deepEqual(trustedOrigins({ appBaseUrl: 'http://127.0.0.1:3000', environment: 'production' }), ['http://127.0.0.1:3000'], 'production trusts exactly its configured origin');
 });

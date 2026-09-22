@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Controller, Get, HttpException, HttpStatus, Inject, Injectable, Module, type OnApplicationShutdown } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import type { RuntimeConfig } from '@tamkeen/config';
+import { trustedOrigins, type RuntimeConfig } from '@tamkeen/config';
 import { createDatabase, type DatabaseClient } from '@tamkeen/database';
 import { toNodeHandler } from 'better-auth/node';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -58,7 +58,7 @@ export async function createApp(config: RuntimeConfig) {
   class AppModule {}
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ['error', 'warn'], bodyParser: false });
   app.setGlobalPrefix('api/v1');
-  app.enableCors({ origin: config.appBaseUrl, credentials: true });
+  app.enableCors({ origin: trustedOrigins(config), credentials: true });
   const authHandler = toNodeHandler(auth);
   app.getHttpAdapter().getInstance().all('/api/v1/auth/*splat', (req: IncomingMessage, res: ServerResponse, next: () => void) => {
     req.headers['x-tamkeen-client-ip'] = req.socket.remoteAddress ?? '127.0.0.1';

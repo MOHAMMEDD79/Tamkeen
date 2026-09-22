@@ -2,7 +2,7 @@ import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import type { IncomingMessage } from 'node:http';
 import { fromNodeHeaders } from 'better-auth/node';
 import type { DatabaseClient } from '@tamkeen/database';
-import type { RuntimeConfig } from '@tamkeen/config';
+import { trustedOrigins, type RuntimeConfig } from '@tamkeen/config';
 import type { Auth } from './auth.js';
 import { IdentityService } from './identity.service.js';
 
@@ -17,7 +17,7 @@ export interface SessionRuntime { db: DatabaseClient; auth: Auth; config: Runtim
  * module is how one route ends up quietly weaker than the rest.
  */
 export async function sessionFrom(runtime: SessionRuntime, req: IncomingMessage) {
-  if (!['GET', 'HEAD'].includes(req.method ?? '') && req.headers.origin !== runtime.config.appBaseUrl) throw new ForbiddenException();
+  if (!['GET', 'HEAD'].includes(req.method ?? '') && !trustedOrigins(runtime.config).includes(req.headers.origin ?? '')) throw new ForbiddenException();
   const session = await runtime.auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
   if (!session) throw new UnauthorizedException();
   await new IdentityService(runtime.db).activeUser(session.user.id);
