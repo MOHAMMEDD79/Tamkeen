@@ -13,3 +13,6 @@ playwright-report/
 test-results/
 *.log
 Tamkeen-Blueprint-MD.zip
+
+# Local test-account credentials (passwords and the shared staff 2FA key); never published.
+tamkeen-test-accounts.txt
