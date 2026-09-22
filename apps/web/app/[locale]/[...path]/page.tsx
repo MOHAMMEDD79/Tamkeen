@@ -17,6 +17,7 @@ import { OrgAgreements, OrgAssistance, OrgProgramOutcomes, OrgProposals, OrgSpon
 import { AdminOperations, ExportTracker, MyNotifications, OperationsDashboard, SupportTickets } from '../operations-screens';
 import { SiteAdmin } from '../site-admin-screens';
 import { DirectoryAdmin } from '../admin-directory-screens';
+import { ProjectsAdmin } from '../admin-projects-screens';
 import {
   adminDisbursement, adminInvestmentReview, checkout, isWorkspaceRoute,
   myInvestmentDetail, orgInvestorRelations,
@@ -71,6 +72,7 @@ export default async function Page({ params, searchParams }: {
   if (route === '/admin/messages') return <SiteAdmin locale={locale} mode="messages" />;
   if (route === '/admin/organizations') return <DirectoryAdmin locale={locale} mode="organizations" />;
   if (route === '/admin/users') return <DirectoryAdmin locale={locale} mode="users" />;
+  if (route === '/admin/projects') return <ProjectsAdmin locale={locale} />;
 
   // Longest-first among the /org/.../projects/... family, so /finance is not taken as a detail page.
   const finance = orgProjectFinance.exec(route);

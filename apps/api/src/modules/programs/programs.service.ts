@@ -439,6 +439,7 @@ export class ProgramsService {
       where: {
         state: { in: [...PUBLIC_PROGRAM_STATES] },
         organization: { status: 'active' },
+        adminVisibility: 'visible',
         ...(skill ? { skills: { has: skill } } : {}),
         ...(city ? { city } : {})
       },
@@ -454,7 +455,7 @@ export class ProgramsService {
   async publicProgram(slug: string) {
     if (typeof slug !== 'string' || slug.length > SLUG_MAX) throw new IdentityError('not_found', 404);
     const program = await this.db.program.findFirst({
-      where: { slug, state: { in: [...PUBLIC_PROGRAM_STATES] }, organization: { status: 'active' } },
+      where: { slug, state: { in: [...PUBLIC_PROGRAM_STATES] }, organization: { status: 'active' }, adminVisibility: 'visible' },
       include: {
         organization: { select: { slug: true, displayName: true, city: true, country: true, verification: true } },
         cohorts: { orderBy: { startAt: 'asc' } }
@@ -502,7 +503,7 @@ export class ProgramsService {
   /** PUB-10.A03. The public curriculum: what will be taught and how it is assessed. */
   async curriculum(slug: string) {
     const program = await this.db.program.findFirst({
-      where: { slug, state: { in: [...PUBLIC_PROGRAM_STATES] }, organization: { status: 'active' } },
+      where: { slug, state: { in: [...PUBLIC_PROGRAM_STATES] }, organization: { status: 'active' }, adminVisibility: 'visible' },
       include: { cohorts: { orderBy: { startAt: 'asc' } } }
     });
     if (!program) throw new IdentityError('not_found', 404);

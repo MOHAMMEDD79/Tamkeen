@@ -351,7 +351,7 @@ export function Field({ label, name, value, max, required, area, ltr, hint, auto
 }
 
 type ListingTab = 'projects' | 'offerings' | 'programs' | 'jobs';
-interface ListingRow { id: string; slug: string; title: string; state: string; type?: string; organization: { displayName: string; status: string }; coverUrl: string | null }
+interface ListingRow { id: string; slug: string; title: string; state: string; type?: string; version: number; adminVisibility: string; organization: { displayName: string; status: string }; coverUrl: string | null }
 
 const LISTING_TABS: Array<{ key: ListingTab; label: string; kind: 'project' | 'offering' | 'program' | 'job'; path: string; fallback: string }> = [
   { key: 'projects', label: 'المشاريع', kind: 'project', path: '/projects', fallback: '/media/defaults/cover-charity-1.jpg' },
@@ -412,7 +412,7 @@ function ListingsEditor({ run, locale }: { run: Run; locale: Locale }) {
               <a className="tmk-admin-card__open" href={localePath(locale, `${current.path}/${row.slug}`)} target="_blank" rel="noreferrer">
                 <span className="tmk-admin-card__media">
                   <img src={row.coverUrl ?? current.fallback} alt="" loading="lazy" />
-                  <span className="tmk-admin-card__status"><StatusBadge tone={row.coverUrl ? 'success' : 'neutral'}>{row.coverUrl ? 'صورة مخصصة' : 'صورة افتراضية'}</StatusBadge></span>
+                  <span className="tmk-admin-card__status"><StatusBadge tone={row.adminVisibility === 'visible' ? (row.coverUrl ? 'success' : 'neutral') : 'danger'}>{row.adminVisibility !== 'visible' ? 'مخفي عن الزوار' : row.coverUrl ? 'صورة مخصصة' : 'صورة افتراضية'}</StatusBadge></span>
                   {busy === row.id ? <span className="tmk-editor__uploading" role="status"><Loader2 aria-hidden="true" size={22} className="tmk-spin" />جارٍ الرفع…</span> : null}
                 </span>
                 <span className="tmk-admin-card__body">
@@ -427,8 +427,15 @@ function ListingsEditor({ run, locale }: { run: Run; locale: Locale }) {
                   <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={busy === row.id} onChange={event => { upload(row, event.target.files?.[0]); event.target.value = ''; }} />
                 </label>
                 {row.coverUrl ? (
-                  <button type="button" className="tmk-button tmk-button--quiet" disabled={busy === row.id} onClick={() => void run(async () => { await call(coverPath(row), 'DELETE'); await load(); return 'أُزيلت الصورة وعادت الصورة الافتراضية.'; })}><Trash2 aria-hidden="true" size={16} />إزالة</button>
+                  <button type="button" className="tmk-button tmk-button--quiet" disabled={busy === row.id} onClick={() => void run(async () => { await call(coverPath(row), 'DELETE'); await load(); return 'أُزيلت الصورة وعادت الصورة الافتراضية.'; })}><Trash2 aria-hidden="true" size={16} />إزالة الصورة</button>
                 ) : null}
+                {current.kind === 'project'
+                  ? <a className="tmk-button tmk-button--quiet" href={localePath(locale, '/admin/projects')}><Pencil aria-hidden="true" size={16} />تعديل المشروع</a>
+                  : <button type="button" className="tmk-button tmk-button--quiet" disabled={busy === row.id} onClick={() => void run(async () => {
+                      const next = row.adminVisibility === 'visible' ? 'hidden' : 'visible';
+                      await call(`/admin/listings/${current.kind}/${row.id}`, 'PATCH', { version: row.version, visibility: next }); await load();
+                      return next === 'hidden' ? `أُخفي «${row.title}» عن الزوار.` : `عاد «${row.title}» للظهور.`;
+                    })}>{row.adminVisibility === 'visible' ? <><EyeOff aria-hidden="true" size={16} />إخفاء</> : <><Eye aria-hidden="true" size={16} />إظهار</>}</button>}
               </div>
             </article>
           ))}

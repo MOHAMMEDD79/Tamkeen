@@ -81,6 +81,7 @@ export class ProjectsService {
     if (filters.type && !PROJECT_TYPES.includes(filters.type)) throw new IdentityError('invalid_input', 422);
     const where = {
       state: { in: [...PUBLICLY_VISIBLE_STATES] },
+      adminVisibility: 'visible',
       organization: { status: 'active' as const, ...(filters.organizationSlug ? { slug: filters.organizationSlug } : {}), ...(filters.verifiedOnly ? { verification: 'verified' as const } : {}) },
       ...(filters.type ? { type: filters.type } : {}),
       ...(filters.cityId ? { cityId: filters.cityId } : {}),
@@ -105,7 +106,7 @@ export class ProjectsService {
 
   async publicProject(slug: string) {
     if (typeof slug !== 'string' || !/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u.test(slug) || slug.length > 120) throw new IdentityError('not_found', 404);
-    const project = await this.db.project.findFirst({ where: { slug, state: { in: [...PUBLICLY_VISIBLE_STATES] }, organization: { status: 'active' } }, include: publicDetailInclude });
+    const project = await this.db.project.findFirst({ where: { slug, state: { in: [...PUBLICLY_VISIBLE_STATES] }, organization: { status: 'active' }, adminVisibility: 'visible' }, include: publicDetailInclude });
     // An unpublished or archived project is absent, not forbidden: 404 does not confirm it exists.
     if (!project) throw new IdentityError('not_found', 404);
     return publicProjectDetail(project, await this.fundingFor(project));
@@ -154,7 +155,7 @@ export class ProjectsService {
     });
     if (!organization) throw new IdentityError('not_found', 404);
     const projects = await this.db.project.findMany({
-      where: { organizationId: organization.id, state: { in: [...PUBLICLY_VISIBLE_STATES] } },
+      where: { organizationId: organization.id, state: { in: [...PUBLICLY_VISIBLE_STATES] }, adminVisibility: 'visible' },
       include: publicInclude,
       orderBy: [{ publishedAt: 'desc' }],
       take: PAGE_SIZE_DEFAULT
@@ -179,7 +180,7 @@ export class ProjectsService {
    */
   async impact() {
     const [publishedProjects, verifiedOrganizations, confirmed] = await Promise.all([
-      this.db.project.count({ where: { state: { in: [...PUBLICLY_VISIBLE_STATES] }, organization: { status: 'active' } } }),
+      this.db.project.count({ where: { state: { in: [...PUBLICLY_VISIBLE_STATES] }, organization: { status: 'active' }, adminVisibility: 'visible' } }),
       this.db.organization.count({ where: { status: 'active', verification: 'verified' } }),
       this.db.contribution.findMany({
         where: { state: { in: [...CONFIRMED_CONTRIBUTION_STATES] } },
@@ -428,7 +429,7 @@ export class ProjectsService {
     if (Boolean(input.projectSlug) === Boolean(input.programSlug)) throw new IdentityError('invalid_input', 422);
 
     if (input.programSlug) {
-      const program = await this.db.program.findFirst({ where: { slug: input.programSlug, state: { in: [...PUBLIC_PROGRAM_STATES] }, organization: { status: 'active' } }, select: { id: true } });
+      const program = await this.db.program.findFirst({ where: { slug: input.programSlug, state: { in: [...PUBLIC_PROGRAM_STATES] }, organization: { status: 'active' }, adminVisibility: 'visible' }, select: { id: true } });
       // Only something the actor can already see may be saved; anything else stays absent.
       if (!program) throw new IdentityError('not_found', 404);
       const existing = await this.db.bookmark.findFirst({ where: { userId: actorId, programId: program.id } });
@@ -438,7 +439,7 @@ export class ProjectsService {
     }
 
     const projectSlugValue = input.projectSlug ?? '';
-    const project = await this.db.project.findFirst({ where: { slug: projectSlugValue, state: { in: [...PUBLICLY_VISIBLE_STATES] }, organization: { status: 'active' } }, select: { id: true } });
+    const project = await this.db.project.findFirst({ where: { slug: projectSlugValue, state: { in: [...PUBLICLY_VISIBLE_STATES] }, organization: { status: 'active' }, adminVisibility: 'visible' }, select: { id: true } });
     if (!project) throw new IdentityError('not_found', 404);
     // Saving twice is the same outcome as saving once, not a duplicate row or an error.
     const existing = await this.db.bookmark.findFirst({ where: { userId: actorId, projectId: project.id } });

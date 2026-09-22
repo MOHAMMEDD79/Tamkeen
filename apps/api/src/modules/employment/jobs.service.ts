@@ -244,6 +244,7 @@ export class JobsService {
       where: {
         state: { in: [...PUBLIC_JOB_STATES] },
         organization: { status: 'active' },
+        adminVisibility: 'visible',
         ...(skill ? { skills: { has: skill } } : {}),
         ...(city ? { city } : {})
       },
@@ -259,7 +260,7 @@ export class JobsService {
   async publicJob(slug: string) {
     if (typeof slug !== 'string' || slug.length > SLUG_MAX) throw new IdentityError('not_found', 404);
     const job = await this.db.job.findFirst({
-      where: { slug, state: { in: [...PUBLIC_JOB_STATES] }, organization: { status: 'active' } },
+      where: { slug, state: { in: [...PUBLIC_JOB_STATES] }, organization: { status: 'active' }, adminVisibility: 'visible' },
       include: {
         organization: { select: { slug: true, displayName: true, city: true, country: true, verification: true } },
         program: { select: { slug: true, title: true, state: true } }

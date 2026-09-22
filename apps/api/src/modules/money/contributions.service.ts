@@ -121,7 +121,8 @@ export class ContributionsService {
       if (!project || !project.campaign) throw new IdentityError('not_found', 404);
       // Serialise capacity decisions for this project so two checkouts cannot both fit (CH-02).
       await tx.$queryRaw`SELECT id FROM projects WHERE id = ${project.id}::uuid FOR UPDATE`;
-      if (!this.acceptsFunding(project.state) || project.organization.status !== 'active') throw new IdentityError('conflict', 409);
+      // A listing the platform admin hid or removed takes no new money, whatever its state says.
+      if (!this.acceptsFunding(project.state) || project.organization.status !== 'active' || project.adminVisibility !== 'visible') throw new IdentityError('conflict', 409);
       if (project.campaign.endsAt <= new Date()) throw new IdentityError('conflict', 409);
 
       // The fee is recomputed here; the quote the browser accepted is only checked for agreement.

@@ -414,7 +414,7 @@ export class OfferingsService {
   async browse(filters: { instrument?: string; cursor?: string; limit?: number }) {
     const limit = Math.min(Math.max(filters.limit ?? 20, 1), 100);
     const rows = await this.db.offering.findMany({
-      where: { state: { in: [...PUBLIC_OFFERING_STATES] }, organization: { status: 'active' } },
+      where: { state: { in: [...PUBLIC_OFFERING_STATES] }, organization: { status: 'active' }, adminVisibility: 'visible' },
       include: { venture: true, organization: { select: { slug: true, displayName: true, city: true, country: true, verification: true } } },
       orderBy: [{ opensAt: 'desc' }, { id: 'asc' }],
       take: limit + 1,
@@ -432,7 +432,7 @@ export class OfferingsService {
   async publicOffering(slug: string) {
     if (typeof slug !== 'string' || slug.length > SLUG_MAX) throw new IdentityError('not_found', 404);
     const offering = await this.db.offering.findFirst({
-      where: { slug, state: { in: [...PUBLIC_OFFERING_STATES] }, organization: { status: 'active' } },
+      where: { slug, state: { in: [...PUBLIC_OFFERING_STATES] }, organization: { status: 'active' }, adminVisibility: 'visible' },
       include: {
         venture: true, currentDisclosure: true,
         organization: { select: { slug: true, displayName: true, city: true, country: true, verification: true } },

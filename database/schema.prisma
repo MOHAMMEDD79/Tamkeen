@@ -740,6 +740,8 @@ model Project {
   longitude               Float?
   publicLocationPrecision LocationPrecision @default(city) @map("public_location_precision")
   publishedAt             DateTime? @map("published_at") @db.Timestamptz(3)
+  /// visible, hidden or removed: the platform admin's decision, independent of the workflow state.
+  adminVisibility String @default("visible") @map("admin_visibility") @db.VarChar(8)
   version                 Int @default(1)
   createdBy               String @map("created_by") @db.Uuid
   createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -1527,6 +1529,8 @@ model Offering {
   /// The disclosure the offering is currently published against.
   currentDisclosureId    String? @unique @map("current_disclosure_id") @db.Uuid
   simulated              Boolean @default(true)
+  /// visible, hidden or removed: the platform admin's decision, independent of the workflow state.
+  adminVisibility String @default("visible") @map("admin_visibility") @db.VarChar(8)
   version                Int @default(1)
   createdBy              String @map("created_by") @db.Uuid
   createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -2212,6 +2216,8 @@ model Program {
   currentReviewerId   String? @map("current_reviewer_id") @db.Uuid
   createdBy           String @map("created_by") @db.Uuid
   managerId           String @map("manager_id") @db.Uuid
+  /// visible, hidden or removed: the platform admin's decision, independent of the workflow state.
+  adminVisibility String @default("visible") @map("admin_visibility") @db.VarChar(8)
   version             Int @default(1)
   createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -2733,6 +2739,8 @@ model Job {
   stateReason      String @default("") @map("state_reason") @db.VarChar(200)
   publishedAt      DateTime? @map("published_at") @db.Timestamptz(3)
   createdBy        String @map("created_by") @db.Uuid
+  /// visible, hidden or removed: the platform admin's decision, independent of the workflow state.
+  adminVisibility String @default("visible") @map("admin_visibility") @db.VarChar(8)
   version          Int @default(1)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

@@ -29,7 +29,7 @@ export const staticRoutes = [
   '/app/notifications', '/app/saved', '/app/tickets', '/contact', '/admin/tickets', '/admin/audit', '/admin/operations',
   // The platform admin's control of the public site: banners, track panels, project covers, and
   // what visitors send through Contact us.
-  '/admin/site', '/admin/site/pages', '/admin/site/settings', '/admin/site/covers', '/admin/messages', '/admin/organizations', '/admin/users'
+  '/admin/site', '/admin/site/pages', '/admin/site/settings', '/admin/site/covers', '/admin/messages', '/admin/organizations', '/admin/users', '/admin/projects'
 ];
 
 /** ORG-06 and ORG-07 have their own component, so they are matched before the workspace routes. */

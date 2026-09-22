@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { IDENTITY_RUNTIME, type IdentityRuntime } from '../identity/identity.controller.js';
 import { sessionFrom } from '../identity/session.js';
 import { IdentityError } from '../identity/policy.js';
-import { LISTING_KINDS, SiteContentService, type StoredImage } from './site-content.service.js';
+import { EDITABLE_KINDS, LISTING_KINDS, SiteContentService, type StoredImage } from './site-content.service.js';
 import { isSiteMediaId, isSiteMediaKey, SITE_MEDIA_MAX_BYTES, siteMediaIdOf, siteMediaKey, siteMediaUrl, SiteMediaStorage } from './site-media-storage.js';
 
 const uuid = z.string().uuid();
@@ -198,6 +198,24 @@ export class SiteContentController {
   @Get('admin/listings') async listings(@Req() req: IncomingMessage) {
     const session = await this.session(req);
     return { data: await this.service.listings(session.user.id) };
+  }
+
+  @Patch('admin/listings/:kind/:id') async updateListing(@Req() req: IncomingMessage, @Param('kind') kind: string, @Param('id') id: string, @Body() body: unknown) {
+    const session = await this.session(req);
+    await this.service.admin(session.user.id);
+    const input = z.object({
+      version: z.number().int().positive(),
+      title: text(200).min(3).optional(), summary: text(2000).optional(), story: text(20000).optional(),
+      responsibilities: text(4000).optional(), requirements: text(4000).optional(),
+      visibility: z.enum(['visible', 'hidden', 'removed']).optional()
+    }).strict().parse(body);
+    const listingKind = z.enum(EDITABLE_KINDS).parse(kind);
+    // Each kind has its own limits; a field a kind does not have is refused rather than ignored.
+    if (listingKind === 'project' && ((input.title?.length ?? 0) > 140 || (input.summary?.length ?? 0) > 300 || input.responsibilities !== undefined || input.requirements !== undefined)) throw new IdentityError('invalid_input', 422);
+    if (listingKind === 'offering' && (input.summary !== undefined || input.story !== undefined || input.responsibilities !== undefined || input.requirements !== undefined)) throw new IdentityError('invalid_input', 422);
+    if (listingKind === 'program' && (input.story !== undefined || input.responsibilities !== undefined || input.requirements !== undefined)) throw new IdentityError('invalid_input', 422);
+    if (listingKind === 'job' && input.story !== undefined) throw new IdentityError('invalid_input', 422);
+    return { data: await this.service.updateListing(session.user.id, listingKind, uuid.parse(id), input) };
   }
 
   @Put('admin/listings/:kind/:id/cover') async setListingCover(@Req() req: IncomingMessage, @Param('kind') kind: string, @Param('id') id: string, @Body() body: unknown) {

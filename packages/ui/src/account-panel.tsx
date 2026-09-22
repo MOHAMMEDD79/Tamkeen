@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Banknote, Building2, ClipboardCheck, Contact, FileSearch, FileText, Gauge, Images, Inbox, Landmark, LayoutTemplate, LifeBuoy, LogOut, ScrollText, ShieldCheck, TrendingUp, Users, UsersRound } from 'lucide-react';
+import { Banknote, Building2, ClipboardCheck, Contact, FileSearch, FileText, FolderKanban, Gauge, Images, Inbox, Landmark, LayoutTemplate, LifeBuoy, LogOut, ScrollText, ShieldCheck, TrendingUp, Users, UsersRound } from 'lucide-react';
 import { localePath, type Locale } from './locale.js';
 
 /**
@@ -29,6 +29,7 @@ const ROLE_LABELS: Record<string, { ar: string; en: string }> = {
 };
 
 const STAFF_LINKS: Array<{ role: string; path: string; ar: string; en: string; icon: LucideIcon }> = [
+  { role: 'PlatformAdmin', path: '/admin/projects', ar: 'إدارة المشاريع', en: 'Projects', icon: FolderKanban },
   { role: 'PlatformAdmin', path: '/admin/site', ar: 'البانرات والأقسام', en: 'Banners & sections', icon: LayoutTemplate },
   { role: 'PlatformAdmin', path: '/admin/site/pages', ar: 'صفحات الموقع', en: 'Site pages', icon: FileText },
   { role: 'PlatformAdmin', path: '/admin/site/covers', ar: 'المشاريع والفرص', en: 'Listings & photos', icon: Images },

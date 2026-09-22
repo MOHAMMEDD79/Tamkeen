@@ -31,6 +31,14 @@ export const CONTACT_STATES = ['new', 'read', 'archived'] as const;
 /** Listings other than projects that can carry an admin cover photo. */
 export const LISTING_KINDS = ['offering', 'program', 'job'] as const;
 export type ListingKind = typeof LISTING_KINDS[number];
+/** Every listing kind the admin can edit, hide or remove. */
+export const EDITABLE_KINDS = ['project', 'offering', 'program', 'job'] as const;
+export type EditableKind = typeof EDITABLE_KINDS[number];
+export type AdminVisibility = 'visible' | 'hidden' | 'removed';
+export interface ListingChanges {
+  title?: string | undefined; summary?: string | undefined; story?: string | undefined;
+  responsibilities?: string | undefined; requirements?: string | undefined; visibility?: AdminVisibility | undefined;
+}
 type ContactState = typeof CONTACT_STATES[number];
 
 export interface ItemChanges {
@@ -278,10 +286,10 @@ export class SiteContentService {
     await this.admin(actorId);
     const organization = { select: { displayName: true, status: true } };
     const [projects, offerings, programs, jobs, covers] = await Promise.all([
-      this.db.project.findMany({ select: { id: true, slug: true, title: true, type: true, state: true, organization, cover: { select: { imageKey: true } } }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
-      this.db.offering.findMany({ select: { id: true, slug: true, title: true, state: true, organization }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
-      this.db.program.findMany({ select: { id: true, slug: true, title: true, state: true, skills: true, organization }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
-      this.db.job.findMany({ select: { id: true, slug: true, title: true, state: true, skills: true, organization }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
+      this.db.project.findMany({ select: { id: true, slug: true, title: true, summary: true, story: true, type: true, state: true, version: true, adminVisibility: true, organization, cover: { select: { imageKey: true } } }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
+      this.db.offering.findMany({ select: { id: true, slug: true, title: true, state: true, version: true, adminVisibility: true, organization }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
+      this.db.program.findMany({ select: { id: true, slug: true, title: true, summary: true, state: true, version: true, adminVisibility: true, skills: true, organization }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
+      this.db.job.findMany({ select: { id: true, slug: true, title: true, summary: true, responsibilities: true, requirements: true, state: true, version: true, adminVisibility: true, skills: true, organization }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 300 }),
       this.db.listingCover.findMany()
     ]);
     const cover = (kind: ListingKind, id: string) => { const row = covers.find(entry => entry.kind === kind && entry.subjectId === id); return row ? siteMediaUrl(row.imageKey) : null; };
@@ -291,6 +299,35 @@ export class SiteContentService {
       programs: programs.map(row => ({ ...row, coverUrl: cover('program', row.id) })),
       jobs: jobs.map(row => ({ ...row, coverUrl: cover('job', row.id) }))
     };
+  }
+
+  /**
+   * The admin's edit of any listing: its public text, and whether the public sees it. Hiding and
+   * removing change only `adminVisibility`, never the workflow state, so the organisation's own
+   * records, the money and the reviews are untouched and "show" or "restore" undoes either. The
+   * version is bumped so an organisation editing the same listing at the same moment gets a 409.
+   */
+  async updateListing(actorId: string, kind: EditableKind, id: string, input: ListingChanges & { version: number }) {
+    return this.db.$transaction(async tx => {
+      await new IdentityService(tx as DatabaseClient).platformAdministratorUser(actorId);
+      const { version, visibility, ...text } = input;
+      const common = { ...defined({ title: text.title }), ...(visibility ? { adminVisibility: visibility } : {}), version: { increment: 1 } };
+      const where = { id, version };
+      const count = kind === 'project'
+        ? (await tx.project.updateMany({ where, data: { ...common, ...defined({ summary: text.summary, story: text.story }) } })).count
+        : kind === 'offering'
+          ? (await tx.offering.updateMany({ where, data: common })).count
+          : kind === 'program'
+            ? (await tx.program.updateMany({ where, data: { ...common, ...defined({ summary: text.summary }) } })).count
+            : (await tx.job.updateMany({ where, data: { ...common, ...defined({ summary: text.summary, responsibilities: text.responsibilities, requirements: text.requirements }) } })).count;
+      if (count !== 1) {
+        const exists = kind === 'project' ? await tx.project.count({ where: { id } }) : kind === 'offering' ? await tx.offering.count({ where: { id } }) : kind === 'program' ? await tx.program.count({ where: { id } }) : await tx.job.count({ where: { id } });
+        throw new IdentityError(exists ? 'conflict' : 'not_found', exists ? 409 : 404);
+      }
+      const action = visibility ? `${kind}.admin_${visibility === 'visible' ? 'shown' : visibility}` : `${kind}.admin_edited`;
+      await tx.identityAuditEvent.create({ data: { actorId, resourceId: id, action } });
+      return { kind, id, ...(visibility ? { visibility } : {}) };
+    });
   }
 
   private async listingExists(tx: DatabaseClient, kind: ListingKind, id: string) {

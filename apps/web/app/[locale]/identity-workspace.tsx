@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { CURRENT_TERMS_VERSION } from '@tamkeen/config';
 import { AppShell, Card, EmptyState, ErrorState, Ltr, MoneyAmount, Notice, PageHeader, Skeleton, StatusBadge, formatDate, localePath, translator, type Locale } from '@tamkeen/ui';
-import { Bell, Briefcase, Building2, ChevronLeft, Contact, FileText, Images, Inbox, LayoutTemplate, ChevronRight, CircleCheck, GraduationCap, HandCoins, HandHeart, KeyRound, LifeBuoy, Lightbulb, Plus, Settings, ShieldCheck, TrendingUp, UserRound, Users, type LucideIcon } from 'lucide-react';
+import { Bell, Briefcase, Building2, ChevronLeft, Contact, FileText, FolderKanban, Images, Inbox, LayoutTemplate, ChevronRight, CircleCheck, GraduationCap, HandCoins, HandHeart, KeyRound, LifeBuoy, Lightbulb, Plus, Settings, ShieldCheck, TrendingUp, UserRound, Users, type LucideIcon } from 'lucide-react';
 import { safeReturnTo } from '../../lib/return-to';
 import './workspace.css';
 
@@ -383,6 +383,7 @@ export function IdentityWorkspace({ route, locale }: { route: string; locale: Lo
       { href: '/admin/verifications', title: 'مراجعات التوثيق', body: 'طلبات توثيق الجهات بانتظار القرار', icon: ShieldCheck, show: me.platformRoles.includes('VerificationReviewer') },
       { href: '/admin/reviews/project', title: 'مراجعة المشاريع', body: 'محتوى المشاريع قبل النشر', icon: CircleCheck, show: me.platformRoles.includes('ContentReviewer') },
       { href: '/admin/bank-change-requests', title: 'الحسابات البنكية', body: 'طلبات تغيير الحساب البنكي', icon: Building2, show: me.platformRoles.includes('FinanceOperator') },
+      { href: '/admin/projects', title: 'إدارة المشاريع', body: 'كل المشاريع الخيرية والاستثمارية والتمكين: تعديل كل بياناتها وتمويلها ومراحلها، أو إخفاؤها أو حذفها', icon: FolderKanban, show: me.platformRoles.includes('PlatformAdmin') },
       { href: '/admin/site', title: 'البانرات والأقسام', body: 'شرائح الصفحة الرئيسية وبطاقات المسارات وبانرات الصفحات', icon: LayoutTemplate, show: me.platformRoles.includes('PlatformAdmin') },
       { href: '/admin/site/pages', title: 'صفحات الموقع', body: 'كل نص وصورة في الرئيسية ومن نحن وتواصل معنا وبقية الصفحات', icon: FileText, show: me.platformRoles.includes('PlatformAdmin') },
       { href: '/admin/site/covers', title: 'المشاريع والفرص', body: 'صور المشاريع وعروض الاستثمار وبرامج التدريب والوظائف', icon: Images, show: me.platformRoles.includes('PlatformAdmin') },
