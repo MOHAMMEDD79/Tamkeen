@@ -70,7 +70,7 @@ export default async function Organizations({ params, searchParams }: { params: 
           body: ar ? 'جرّب مسح التصفية، أو أنشئ جهة لتكون أول من ينضم.' : 'Try clearing the filters, or create an organisation to be the first to join.'
         }}
         render={items => (
-          <div className="tmk-grid tmk-grid--cards">
+          <div className="tmk-org-grid">
             {items.map(organization => <OrganizationCard key={organization.slug} organization={organization} locale={locale} />)}
           </div>
         )}

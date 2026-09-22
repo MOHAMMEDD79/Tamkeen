@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { AppShell, Card, EmptyState, Notice, PageHeader, StatusBadge, isLocale, localePath, type Locale } from '@tamkeen/ui';
 import { pathSegment, readPublic, type PublicOrganizationProfile, type PublicReportSummary } from '../../../../lib/server-api';
-import { ProjectCard, ReadError } from '../../public-parts';
+import { OrganizationLogo, ProjectCard, ReadError, organizationPlace, organizationTypeLabel } from '../../public-parts';
 import { FollowButton } from '../../follow-button';
 import { DownloadButton } from '../../download-button';
 
@@ -43,8 +43,9 @@ export default async function OrganizationProfile({ params }: { params: Promise<
               </ol>
             </nav>
 
+            <OrganizationLogo organization={organization} size={112} />
             <PageHeader
-              eyebrow={`${organization.type} · ${organization.city}`}
+              eyebrow={`${organizationTypeLabel(organization.type, locale)} · ${organizationPlace(organization, locale)}`}
               title={organization.displayName}
               lead={organization.publicDescription || (ar ? 'لم تضف هذه الجهة وصفًا عامًا بعد.' : 'This organisation has not added a public description yet.')}
               actions={<><FollowButton subjectType="organization" subjectSlug={organization.slug} label={ar ? 'تابع التحديثات' : 'Follow updates'} /><a className="tmk-button tmk-button--secondary" href={`${localePath(locale, '/explore')}?organization=${encodeURIComponent(organization.slug)}`}>{ar ? 'شاهد كل مشاريعها' : 'See all its projects'}</a></>}

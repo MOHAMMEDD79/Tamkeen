@@ -19,13 +19,18 @@ import { LocalLogoStorage } from '../apps/api/src/modules/identity/logo-storage.
 const config = loadConfig(process.env);
 if (!['demo', 'test'].includes(config.environment)) throw new Error(`orgs:real refuses to run in ${config.environment}.`);
 
-/** Public facts from the organisation's own site (https://www.bmaq.org/). */
+/**
+ * Public facts from each organisation's own site. `verification` is the platform admin's decision:
+ * 'verified' only where the admin approved the organisation; the rest start unverified.
+ */
 const REAL_ORGANIZATIONS = [
   {
     slug: 'bayt-mal-al-quds',
     legalName: 'وكالة بيت مال القدس الشريف',
     displayName: 'وكالة بيت مال القدس الشريف',
     type: 'Institution' as const,
+    // Approved by the platform admin on 2026-09-22.
+    verification: 'verified' as const,
     country: 'MA',
     city: 'الرباط',
     publicDescription: 'مؤسسة عربية إسلامية تابعة للجنة القدس، أُنشئت عام 1995 وبدأت عملها عام 1998، ومقرها الرباط. تنفذ مشاريع اجتماعية في مدينة القدس للمساهمة في حماية المدينة المقدسة والحفاظ على موروثها الديني والحضاري ودعم صمود سكانها، في مجالات التعليم والصحة والإسكان وترميم المباني التاريخية والشباب والرياضة والثقافة والمساعدة الاجتماعية.',

@@ -842,6 +842,28 @@ a.tmk-contact__card:hover { transform: translateY(-3px); border-color: var(--tmk
 .tmk-index__item:hover > svg:last-child { color: var(--tmk-color-primary); transform: translateX(-4px); }
 html[dir="ltr"] .tmk-index__item:hover > svg:last-child { transform: translateX(4px); }
 
+/* ---------- Organisation directory ---------- */
+
+.tmk-org-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: var(--tmk-space-24); margin-block-start: var(--tmk-space-24); }
+.tmk-org-card {
+  display: grid; grid-template-rows: 1fr auto; background: var(--tmk-color-surface); border: 1px solid var(--tmk-color-border); border-radius: var(--tmk-radius-card); overflow: hidden; box-shadow: var(--tmk-shadow-sm);
+  transition: transform var(--tmk-motion-base) var(--tmk-motion-easing-out), box-shadow var(--tmk-motion-base) var(--tmk-motion-easing-out), border-color var(--tmk-motion-base) var(--tmk-motion-easing);
+}
+.tmk-org-card:hover, .tmk-org-card:focus-within { transform: translateY(-4px); box-shadow: var(--tmk-shadow-lg); border-color: var(--tmk-color-primary); }
+.tmk-org-card__link { display: flex; align-items: center; gap: var(--tmk-space-16); padding: var(--tmk-space-24); color: var(--tmk-color-ink); text-decoration: none; }
+.tmk-org-card__body { display: grid; gap: var(--tmk-space-4); min-inline-size: 0; }
+.tmk-org-card__type { font-size: var(--tmk-type-caption-size); font-weight: 600; color: var(--tmk-color-primary); }
+.tmk-org-card__name { font-size: 19px; line-height: 1.35; }
+.tmk-org-card__place { font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); }
+.tmk-org-card__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--tmk-space-12); padding: var(--tmk-space-12) var(--tmk-space-24); border-block-start: 1px solid var(--tmk-color-border); background: var(--tmk-color-surface-sunken); }
+.tmk-org-card__more { font-weight: 600; font-size: var(--tmk-type-caption-size); text-decoration: none; }
+.tmk-org-logo {
+  display: inline-grid; place-items: center; flex: 0 0 auto; padding: 8px; border-radius: var(--tmk-radius-card); overflow: hidden;
+  background: #FFFFFF; border: 1px solid var(--tmk-color-border); box-shadow: var(--tmk-shadow-sm);
+}
+.tmk-org-logo img { inline-size: 100%; block-size: 100%; object-fit: contain; }
+.tmk-org-logo span { font-size: 32px; font-weight: 700; color: var(--tmk-color-primary); }
+
 /* ---------- Admin: site content ---------- */
 
 .tmk-project__foot label.tmk-button { cursor: pointer; }

@@ -74,19 +74,52 @@ export function ProjectCard({ project, locale }: { project: PublicProjectCard; l
   );
 }
 
+const ORGANIZATION_TYPES: Record<string, { ar: string; en: string }> = {
+  NGO: { ar: 'جمعية أهلية', en: 'Non-profit' },
+  Company: { ar: 'شركة', en: 'Company' },
+  Startup: { ar: 'شركة ناشئة', en: 'Startup' },
+  Foundation: { ar: 'مؤسسة', en: 'Foundation' },
+  Institution: { ar: 'مؤسسة رسمية', en: 'Institution' }
+};
+
+export function organizationTypeLabel(type: string, locale: Locale): string {
+  return ORGANIZATION_TYPES[type]?.[locale] ?? type;
+}
+
+/** "Rabat, Morocco": the country name comes from the platform's Intl data, never a hand-kept list. */
+export function organizationPlace(organization: { city: string; country: string }, locale: Locale): string {
+  let country = organization.country;
+  try { country = new Intl.DisplayNames([locale], { type: 'region' }).of(organization.country) ?? organization.country; } catch { /* unknown code: show it as is */ }
+  return [organization.city, country].filter(Boolean).join(locale === 'ar' ? '، ' : ', ');
+}
+
+/** The organisation's own logo on a white tile (logos are drawn for white), or its initial when it has none. */
+export function OrganizationLogo({ organization, size = 72 }: { organization: Pick<PublicOrganizationSummary, 'displayName' | 'logoUrl'>; size?: number }) {
+  return (
+    <span className="tmk-org-logo" style={{ inlineSize: size, blockSize: size }} aria-hidden="true">
+      {organization.logoUrl ? <img src={organization.logoUrl} alt="" loading="lazy" /> : <span>{organization.displayName.trim()[0] ?? '?'}</span>}
+    </span>
+  );
+}
+
 export function OrganizationCard({ organization, locale }: { organization: PublicOrganizationSummary; locale: Locale }) {
   const ar = locale === 'ar';
   return (
-    <article className="tmk-card">
-      <h3 style={{ marginBlockStart: 0 }}>
-        <a href={localePath(locale, `/organizations/${organization.slug}`)}>{organization.displayName}</a>
-      </h3>
-      <p style={{ color: 'var(--tmk-color-muted)' }}>{organization.type} · {organization.city}</p>
-      <p style={{ marginBlockEnd: 0 }}>
+    <article className="tmk-org-card">
+      <a className="tmk-org-card__link" href={localePath(locale, `/organizations/${organization.slug}`)}>
+        <OrganizationLogo organization={organization} size={84} />
+        <span className="tmk-org-card__body">
+          <span className="tmk-org-card__type">{organizationTypeLabel(organization.type, locale)}</span>
+          <strong className="tmk-org-card__name">{organization.displayName}</strong>
+          <span className="tmk-org-card__place">{organizationPlace(organization, locale)}</span>
+        </span>
+      </a>
+      <div className="tmk-org-card__foot">
         {organization.verified
-          ? <StatusBadge tone="success">{ar ? 'موثقة' : 'Verified'}</StatusBadge>
+          ? <StatusBadge tone="success">{ar ? 'جهة موثقة' : 'Verified'}</StatusBadge>
           : <StatusBadge tone="neutral">{ar ? 'غير موثقة' : 'Not verified'}</StatusBadge>}
-      </p>
+        <a className="tmk-org-card__more" href={localePath(locale, `/organizations/${organization.slug}`)}>{ar ? 'عرض الجهة ←' : 'View →'}</a>
+      </div>
     </article>
   );
 }
