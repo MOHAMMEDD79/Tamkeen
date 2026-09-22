@@ -6,6 +6,7 @@ import {
   formatDate, formatMinorUnits, localePath, translator, type Locale
 } from '@tamkeen/ui';
 import './workspace.css';
+import { ProjectLocationEditor } from './maps';
 
 /**
  * ORG-07 (plan editor) and ORG-08 (project management) for PART-05.
@@ -256,6 +257,9 @@ export function OrgProjectDetail({ locale, orgId, projectId }: { locale: Locale;
           </dl>
         ) : <EmptyState title="لم تُحدَّد الحملة بعد" />}
       </Card>
+
+      {/* ---- location: any member who can update the project, in any state ---- */}
+      {can('project.update') ? <ProjectLocationEditor orgId={orgId} projectId={projectId} /> : null}
 
       {/* ---- budget ---- */}
       <Card title="الميزانية" id="budget">

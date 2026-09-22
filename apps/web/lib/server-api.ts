@@ -93,7 +93,7 @@ export interface PublicOrganizationProfile extends PublicOrganizationSummary {
   projects: PublicProjectCard[];
 }
 
-export interface City { id: string; country: string; nameAr: string; nameEn: string }
+export interface City { id: string; country: string; nameAr: string; nameEn: string; latitude: number; longitude: number }
 
 export interface ImpactSummary {
   asOf: string;

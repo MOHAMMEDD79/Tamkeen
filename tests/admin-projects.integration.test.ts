@@ -125,6 +125,21 @@ test('admin projects: edit everything, hide, and delete over HTTP', async () => 
     detail = (await call('PUT', `/admin/projects/${project.id}/milestones`, { cookie: admin.cookie, body: { version: detail.version, milestones: [{ title: 'Stage one', budgetMinor: '100000', weight: 60 }, { title: 'Stage two', budgetMinor: '50000', weight: 40 }] } })).data as Detail;
     assert.deepEqual(detail.milestones.map(stage => stage.weight), [60, 40]);
 
+    // --- The pin on the map: the organisation (any state, project.update) and the admin ------------------
+    const outsider = await signUp('outsider', false);
+    const version = (await db.project.findUniqueOrThrow({ where: { id: project.id }, select: { version: true } })).version;
+    const pin = { publicLocationPrecision: 'exact', latitude: 32.2211, longitude: 35.2544, version };
+    assert.equal((await call('PUT', `/orgs/${organization.id}/projects/${project.id}/location`, { cookie: outsider.cookie, body: pin })).status, 403, 'a non-member cannot move the pin');
+    assert.equal((await call('PUT', `/orgs/${organization.id}/projects/${project.id}/location`, { cookie: visitor.cookie, body: { ...pin, publicLocationPrecision: 'city' } })).status, 422, 'city precision stores no point');
+    const moved = await call('PUT', `/orgs/${organization.id}/projects/${project.id}/location`, { cookie: visitor.cookie, body: pin });
+    assert.equal(moved.status, 200, JSON.stringify(moved.body));
+    const shown = (await call('GET', `/projects/${project.slug}`)).data as { location: { precision: string; point: { latitude: number; longitude: number } } };
+    assert.deepEqual([shown.location.precision, shown.location.point.latitude], ['exact', 32.2211], 'the published project shows the new pin');
+    detail = (await call('GET', `/admin/projects/${project.id}`, { cookie: admin.cookie })).data as Detail;
+    detail = (await call('PATCH', `/admin/projects/${project.id}`, { cookie: admin.cookie, body: { version: detail.version, publicLocationPrecision: 'approximate', latitude: 32.23, longitude: 35.26 } })).data as Detail;
+    assert.equal(((await call('GET', `/projects/${project.slug}`)).data as { location: { precision: string } }).location.precision, 'approximate');
+    assert.equal((await call('PATCH', `/admin/projects/${project.id}`, { cookie: admin.cookie, body: { version: detail.version, publicLocationPrecision: 'exact', latitude: null, longitude: null } })).status, 422, 'exact needs a point');
+
     // --- Updates -------------------------------------------------------------------------------------------------
     const update = await db.projectUpdate.create({ data: { projectId: project.id, title: 'First update', body: 'Work started.', publishedBy: visitor.user.id } });
     assert.equal((await call('PATCH', `/admin/projects/${project.id}/updates/${update.id}`, { cookie: admin.cookie, body: { title: 'Corrected update', body: 'Work started on Monday.' } })).status, 200);

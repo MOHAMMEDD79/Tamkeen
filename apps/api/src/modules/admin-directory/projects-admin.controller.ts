@@ -15,6 +15,7 @@ const projectChanges = z.object({
   title: text(140).optional(), summary: text(300).optional(), story: text(20000).optional(),
   type: z.enum(['charity', 'venture', 'enablement']).optional(),
   cityId: uuid.optional(), publicLocationPrecision: z.enum(['exact', 'approximate', 'city']).optional(),
+  latitude: z.number().min(-90).max(90).nullable().optional(), longitude: z.number().min(-180).max(180).nullable().optional(),
   state: z.enum(['draft', 'published', 'paused', 'funding_closed', 'executing', 'impact_review', 'completed', 'archived', 'cancelled']).optional(),
   stateReason: text(1000).optional(),
   visibility: z.enum(['visible', 'hidden', 'removed']).optional()

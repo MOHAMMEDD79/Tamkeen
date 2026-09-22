@@ -890,6 +890,21 @@ html[dir="ltr"] .tmk-index__item:hover > svg:last-child { transform: translateX(
 .tmk-opp__count { padding: var(--tmk-space-8) var(--tmk-space-16); border-radius: var(--tmk-radius-pill); background: var(--tmk-color-primary-tint); color: var(--tmk-color-primary); font-weight: 700; }
 .tmk-page-hero__links { display: flex; flex-wrap: wrap; gap: var(--tmk-space-12); margin-block-start: var(--tmk-space-24); }
 
+/* ---------- Maps (Leaflet on OpenStreetMap tiles) ---------- */
+
+.tmk-map { position: relative; z-index: 0; inline-size: 100%; border-radius: var(--tmk-radius-card); overflow: hidden; border: 1px solid var(--tmk-color-border); box-shadow: var(--tmk-shadow-sm); background: var(--tmk-color-surface-sunken); margin-block: var(--tmk-space-16); }
+.tmk-map--picker { block-size: 340px; margin: 0; cursor: crosshair; }
+.tmk-map .leaflet-popup-content a { font-weight: 700; }
+.tmk-map-picker { display: grid; gap: var(--tmk-space-8); }
+.tmk-map-picker__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--tmk-space-8); font-size: 14px; color: var(--tmk-color-muted); }
+.tmk-map-picker__bar > span { display: inline-flex; align-items: center; gap: 6px; }
+.tmk-location-fields { display: grid; gap: var(--tmk-space-12); }
+.tmk-location-card { display: grid; gap: var(--tmk-space-16); margin-block: var(--tmk-space-24); }
+.tmk-location-card__form { display: grid; gap: var(--tmk-space-16); margin: 0; max-inline-size: none; }
+.tmk-location-card__message { margin: 0; font-weight: 600; }
+.tmk-location-card__message--success { color: var(--tmk-color-success); }
+.tmk-location-card__message--danger { color: var(--tmk-color-danger); }
+
 /* ---------- Organisation directory ---------- */
 
 .tmk-org-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: var(--tmk-space-24); margin-block-start: var(--tmk-space-24); }

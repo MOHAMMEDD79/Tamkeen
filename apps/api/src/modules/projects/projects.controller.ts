@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import type { IncomingMessage } from 'node:http';
 import { z } from 'zod';
 import { IDENTITY_RUNTIME, type IdentityRuntime } from '../identity/identity.controller.js';
@@ -137,6 +137,12 @@ export class ProjectsController {
   @Get('orgs/:id/projects/:projectId') async organizationProject(@Req() req: IncomingMessage, @Param('id') id: string, @Param('projectId') projectId: string) {
     const session = await this.session(req);
     return { data: await this.service.readForOrganization(session.user.id, uuid.parse(id), uuid.parse(projectId)) };
+  }
+
+  @Put('orgs/:id/projects/:projectId/location') async updateLocation(@Req() req: IncomingMessage, @Param('id') id: string, @Param('projectId') projectId: string, @Body() body: unknown) {
+    const session = await this.session(req);
+    const input = z.object({ publicLocationPrecision: precision, latitude: optionalNumber, longitude: optionalNumber, version: z.number().int().positive() }).strict().parse(body);
+    return { data: await this.service.updateLocation(session.user.id, uuid.parse(id), uuid.parse(projectId), input) };
   }
 
   @Patch('orgs/:id/projects/:projectId') async updateProject(@Req() req: IncomingMessage, @Param('id') id: string, @Param('projectId') projectId: string, @Body() body: unknown) {

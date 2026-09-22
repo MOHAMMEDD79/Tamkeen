@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { Eye, EyeOff, ExternalLink, HandHeart, LayoutGrid, Pencil, Plus, RotateCcw, Save, Search, Sprout, Trash2, TrendingUp, X } from 'lucide-react';
 import { AppShell, EmptyState, Notice, PageHeader, Skeleton, StatusBadge, formatDate, formatMinorUnits, localePath, type Locale } from '@tamkeen/ui';
 import { Field } from './site-admin-screens';
+import { LocationFields } from './maps';
 
 /**
  * ADM projects: every project in all three tracks, with everything the admin can change — text,
@@ -58,7 +59,7 @@ interface Row {
 }
 interface Detail {
   id: string; slug: string; title: string; summary: string; story: string; type: Kind; state: string; stateReason: string; adminVisibility: string; version: number;
-  cityId: string; publicLocationPrecision: 'exact' | 'approximate' | 'city'; createdAt: string; publishedAt: string | null;
+  cityId: string; publicLocationPrecision: 'exact' | 'approximate' | 'city'; latitude: number | null; longitude: number | null; createdAt: string; publishedAt: string | null;
   organization: { id: string; slug: string; displayName: string; status: string }; manager: { name: string; email: string };
   campaign: { goalMinor: string; currency: string; policy: 'flexible' | 'all_or_nothing'; endsAt: string } | null;
   budgetLines: Array<{ id: string; label: string; amountMinor: string }>;
@@ -68,7 +69,7 @@ interface Detail {
   ties: { contributions: number; payouts: number; pools: number; agreements: number; programs: number; reviewVersions: number; budgetRevisions: number; publishedReports: number };
   deletable: boolean; allowedStates: string[];
 }
-interface City { id: string; country: string; nameAr: string }
+interface City { id: string; country: string; nameAr: string; latitude: number; longitude: number }
 
 type Run = (work: () => Promise<string | void>) => Promise<void>;
 
@@ -239,13 +240,18 @@ function ProjectEditor({ projectId, initialTab, locale, onClose, onChanged, onDe
 type Send = (path: string, method: string, body: unknown, message: string) => void;
 
 function DetailsTab({ project, cities, busy, send }: { project: Detail; cities: City[]; busy: boolean; send: Send }) {
+  const [precision, setPrecision] = useState(project.publicLocationPrecision);
+  const [cityId, setCityId] = useState(project.cityId);
+  const city = cities.find(entry => entry.id === cityId);
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const value = (name: string) => String(data.get(name) ?? '');
+    const coordinate = (name: string) => precision === 'city' || !value(name) ? null : Number(value(name));
     send(`/admin/projects/${project.id}`, 'PATCH', {
       version: project.version, title: value('title').trim(), summary: value('summary').trim(), story: value('story'),
-      type: value('type'), cityId: value('cityId'), publicLocationPrecision: value('precision')
+      type: value('type'), cityId, publicLocationPrecision: precision,
+      latitude: coordinate('latitude'), longitude: coordinate('longitude')
     }, 'حُفظت بيانات المشروع.');
   };
   const ties = project.ties;
@@ -264,15 +270,13 @@ function DetailsTab({ project, cities, busy, send }: { project: Detail; cities: 
       <Field label="القصة الكاملة (تظهر في صفحة المشروع)" name="story" value={project.story} max={20000} area />
       <div className="tmk-field" style={{ margin: 0 }}>
         <label className="tmk-field__label" htmlFor="p-city">المدينة</label>
-        <select className="tmk-field__control" id="p-city" name="cityId" defaultValue={project.cityId}>
+        <select className="tmk-field__control" id="p-city" value={cityId} onChange={event => setCityId(event.target.value)}>
           {cities.length ? cities.map(city => <option key={city.id} value={city.id}>{city.nameAr} ({city.country})</option>) : <option value={project.cityId}>…</option>}
         </select>
       </div>
-      <div className="tmk-field" style={{ margin: 0 }}>
-        <label className="tmk-field__label" htmlFor="p-precision">دقة الموقع المعروض للزوار</label>
-        <select className="tmk-field__control" id="p-precision" name="precision" defaultValue={project.publicLocationPrecision}>
-          <option value="city">المدينة فقط</option><option value="approximate">تقريبي</option><option value="exact">دقيق</option>
-        </select>
+      <div className="tmk-editor__wide">
+        <LocationFields precision={precision} onPrecision={setPrecision} latitude={project.latitude} longitude={project.longitude}
+          center={city ? { latitude: city.latitude, longitude: city.longitude } : null} />
       </div>
       <p className="tmk-editor__wide tmk-field__hint" style={{ margin: 0 }}>مدير المشروع: {project.manager.name} ({project.manager.email}) · لتغيير الصورة استخدم «المشاريع والفرص».</p>
       <p className="tmk-editor__wide" style={{ margin: 0 }}><button type="submit" className="tmk-button tmk-button--primary" disabled={busy}><Save aria-hidden="true" size={18} />حفظ البيانات</button></p>

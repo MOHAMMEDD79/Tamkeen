@@ -2,11 +2,13 @@ import { notFound } from 'next/navigation';
 import { AppShell, Card, DataTable, EmptyState, Ltr, Notice, PageHeader, StatusBadge, isLocale, localePath, type Locale } from '@tamkeen/ui';
 import { readPublic, type City, type PublicProjectCard } from '../../../lib/server-api';
 import { ReadError, cityName, stateLabel, trackLabel } from '../public-parts';
+import { ProjectMap } from '../maps';
 
 /**
- * PUB-03. `MAP_PROVIDER` is `disabled` in this build, and 18-DECISIONS lists the map provider and
- * its tile licence as an open operating decision. So the list is not a degraded fallback here: it
- * is the whole feature, and the page says so instead of rendering an empty grey rectangle.
+ * PUB-03. An interactive map on OpenStreetMap tiles (the default, `MAP_PROVIDER=osm`), with the
+ * same results as a list below it. Setting `MAP_PROVIDER=disabled` removes the map and says so, and
+ * the list then carries the whole feature. OpenStreetMap's tile policy allows light use with
+ * attribution; a busy production site should move to a paid or self-hosted tile provider.
  *
  * Coordinates come from the public projection, which never carries a beneficiary's position.
  */
@@ -32,7 +34,7 @@ export default async function MapPage({ params, searchParams }: { params: Promis
   const locale = raw satisfies Locale;
   const search = await searchParams;
   const ar = locale === 'ar';
-  const mapProvider = process.env.MAP_PROVIDER ?? 'disabled';
+  const mapProvider = process.env.MAP_PROVIDER ?? 'osm';
 
   const filters = new URLSearchParams();
   for (const key of ['type', 'cityId', 'verified', 'q'] as const) {
@@ -57,6 +59,14 @@ export default async function MapPage({ params, searchParams }: { params: Promis
           : 'Each project shows its location at the precision it declared: city level, approximate, or a specific public facility.'}
         actions={<a className="tmk-button tmk-button--secondary" href={exploreHref}>{ar ? 'عرض كقائمة بطاقات' : 'View as cards'}</a>}
       />
+
+      {mapProvider !== 'disabled' && projects.ok && projects.data.some(row => row.location.point) ? (
+        <ProjectMap height={480} label={ar ? 'خريطة المشاريع' : 'Project map'}
+          points={projects.data.filter(row => row.location.point).map(row => ({
+            latitude: row.location.point!.latitude, longitude: row.location.point!.longitude, precision: row.location.precision,
+            title: row.title, href: localePath(locale, `/projects/${row.slug}`)
+          }))} />
+      ) : null}
 
       {mapProvider === 'disabled' ? (
         <Notice tone="warning" title={ar ? 'الخريطة التفاعلية غير مفعّلة' : 'The interactive map is not enabled'}>

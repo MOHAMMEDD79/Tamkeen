@@ -69,7 +69,7 @@ export class ProjectsService {
   // ---------------------------------------------------------------- public reads
 
   async cities() {
-    return this.db.city.findMany({ select: { id: true, country: true, nameAr: true, nameEn: true }, orderBy: [{ country: 'asc' }, { nameEn: 'asc' }] });
+    return this.db.city.findMany({ select: { id: true, country: true, nameAr: true, nameEn: true, latitude: true, longitude: true }, orderBy: [{ country: 'asc' }, { nameEn: 'asc' }] });
   }
 
   /**
@@ -359,6 +359,31 @@ export class ProjectsService {
       });
       await tx.identityAuditEvent.create({ data: { actorId, organizationId, resourceId: copy.id, action: 'project.duplicated' } });
       return copy;
+    });
+  }
+
+  /**
+   * Moves a project's pin on the map. Unlike the rest of the project this is allowed in any state:
+   * where the work happens is corrected on the ground after publication, and the reviewer judged
+   * the content, not a coordinate. It still needs `project.update` in the organisation, keeps the
+   * precision rule, and leaves an audit row.
+   */
+  async updateLocation(actorId: string, organizationId: string, projectId: string, input: { publicLocationPrecision: LocationPrecision; latitude: number | null; longitude: number | null; version: number }) {
+    if (!PRECISIONS.includes(input.publicLocationPrecision)) throw new IdentityError('invalid_input', 422);
+    this.assertCoordinates(input.publicLocationPrecision, input.latitude, input.longitude);
+    return this.db.$transaction(async tx => {
+      const scoped = new ProjectsService(tx as DatabaseClient);
+      await scoped.identity.access(actorId, organizationId, 'project.update');
+      const current = await tx.project.findFirst({ where: { id: projectId, organizationId }, select: { version: true } });
+      if (!current) throw new IdentityError('not_found', 404);
+      if (current.version !== input.version) throw new IdentityError('conflict', 409);
+      const updated = await tx.project.update({
+        where: { id: projectId },
+        data: { publicLocationPrecision: input.publicLocationPrecision, latitude: input.latitude, longitude: input.longitude, version: { increment: 1 } },
+        select: { version: true, publicLocationPrecision: true, latitude: true, longitude: true }
+      });
+      await tx.identityAuditEvent.create({ data: { actorId, organizationId, resourceId: projectId, action: 'project.location_updated' } });
+      return updated;
     });
   }
 

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { AppShell, Card, DataTable, EmptyState, MoneyAmount, Notice, ProgressWithLabel, StatusBadge, Stat, formatDate, isLocale, localePath, type Locale } from '@tamkeen/ui';
 import { pathSegment, readPublic, type PublicContributor, type PublicProjectDetail } from '../../../../lib/server-api';
 import { ReadError, cityName, stateLabel, trackLabel } from '../../public-parts';
+import { ProjectMap } from '../../maps';
 import { FollowButton } from '../../follow-button';
 import { coverFor } from '../../../../lib/site-content';
 import { PageHero } from '../../marketing';
@@ -208,9 +209,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ locale
                   </p>
                 </div>
                 <div className="tmk-row__actions">
-                  <a className="tmk-button tmk-button--secondary" href={`${localePath(locale, '/map')}?q=${encodeURIComponent(project.title)}`}>{ar ? 'على الخريطة' : 'On the map'}</a>
+                  <a className="tmk-button tmk-button--secondary" href={`${localePath(locale, '/map')}?q=${encodeURIComponent(project.title)}`}>{ar ? 'كل المشاريع على الخريطة' : 'All projects on the map'}</a>
                 </div>
               </article>
+              {project.location.point ? (
+                <ProjectMap label={ar ? `موقع ${project.title}` : `Location of ${project.title}`}
+                  points={[{ latitude: project.location.point.latitude, longitude: project.location.point.longitude, precision: project.location.precision, title: project.title }]} />
+              ) : null}
             </Card>
           </>
         );

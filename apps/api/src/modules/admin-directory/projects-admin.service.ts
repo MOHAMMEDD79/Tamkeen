@@ -36,6 +36,7 @@ const CONFIRMED = ['succeeded', 'partially_refunded'] as const;
 export interface ProjectChanges {
   title?: string | undefined; summary?: string | undefined; story?: string | undefined; type?: ProjectType | undefined;
   cityId?: string | undefined; publicLocationPrecision?: LocationPrecision | undefined;
+  latitude?: number | null | undefined; longitude?: number | null | undefined;
   state?: ProjectState | undefined; stateReason?: string | undefined; visibility?: 'visible' | 'hidden' | 'removed' | undefined;
 }
 
@@ -103,7 +104,7 @@ export class ProjectsAdminService {
       where: { id: projectId },
       select: {
         id: true, slug: true, title: true, summary: true, story: true, type: true, state: true, stateReason: true, adminVisibility: true, version: true,
-        cityId: true, publicLocationPrecision: true, createdAt: true, publishedAt: true, updatedAt: true,
+        cityId: true, publicLocationPrecision: true, latitude: true, longitude: true, createdAt: true, publishedAt: true, updatedAt: true,
         organization: { select: { id: true, slug: true, displayName: true, status: true } },
         manager: { select: { name: true, email: true } },
         campaign: { select: { goalMinor: true, currency: true, policy: true, endsAt: true } },
@@ -143,6 +144,13 @@ export class ProjectsAdminService {
       // another track once money is attached would re-label that money.
       if (input.type && input.type !== current.type && (current.publishedAt || Object.values(await this.moneyTies(tx as DatabaseClient, projectId)).some(count => count > 0))) throw new IdentityError('conflict', 409);
       if (input.cityId && !await tx.city.findUnique({ where: { id: input.cityId }, select: { id: true } })) throw new IdentityError('invalid_input', 422);
+      // The same precision rule as the organisation's form: a city-level project stores no point,
+      // and any other precision needs one.
+      if (input.publicLocationPrecision !== undefined || input.latitude !== undefined || input.longitude !== undefined) {
+        const precision = input.publicLocationPrecision ?? (await tx.project.findUniqueOrThrow({ where: { id: projectId }, select: { publicLocationPrecision: true } })).publicLocationPrecision;
+        const latitude = input.latitude ?? null, longitude = input.longitude ?? null;
+        if (precision === 'city' ? latitude !== null || longitude !== null : latitude === null || longitude === null || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) throw new IdentityError('invalid_input', 422);
+      }
       const data = {
         ...(input.title !== undefined ? { title: text(input.title, 3, 140) } : {}),
         ...(input.summary !== undefined ? { summary: text(input.summary, 0, 300) } : {}),
@@ -150,6 +158,8 @@ export class ProjectsAdminService {
         ...(input.type ? { type: input.type } : {}),
         ...(input.cityId ? { cityId: input.cityId } : {}),
         ...(input.publicLocationPrecision ? { publicLocationPrecision: input.publicLocationPrecision } : {}),
+        ...(input.latitude !== undefined ? { latitude: input.latitude } : {}),
+        ...(input.longitude !== undefined ? { longitude: input.longitude } : {}),
         // The publication date follows the state: set on the first published-family state, kept
         // while it stays in that family, cleared for draft and cancelled.
         ...(input.state ? { state: input.state, publishedAt: PUBLISHED_STATES.includes(input.state) ? current.publishedAt ?? new Date() : null } : {}),

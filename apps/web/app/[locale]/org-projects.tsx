@@ -5,6 +5,7 @@ import {
   AppShell, Card, DataTable, EmptyState, ErrorState, Notice, PageHeader, Skeleton, StatusBadge,
   formatDate, localePath, translator, type Locale
 } from '@tamkeen/ui';
+import { LocationFields } from './maps';
 import './workspace.css';
 
 /**
@@ -19,7 +20,7 @@ type Locale2 = Locale;
 
 interface Context { organization: { id: string; displayName: string; type: string }; roles: string[]; permissions: string[] }
 interface Me { user: { id: string; name: string }; contexts: Context[] }
-interface City { id: string; country: string; nameAr: string; nameEn: string }
+interface City { id: string; country: string; nameAr: string; nameEn: string; latitude: number; longitude: number }
 interface Member { userId: string; status: string; roles: string[]; user: { name: string } }
 interface OrgProject {
   id: string; slug: string; title: string; summary: string; type: string; state: string;
@@ -75,6 +76,8 @@ export function OrgProjects({ locale, orgId, mode }: { locale: Locale2; orgId: s
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [precision, setPrecision] = useState<'city' | 'approximate' | 'exact'>('city');
+  const [cityId, setCityId] = useState('');
+  const chosenCity = cities.find(city => city.id === cityId);
 
   useEffect(() => {
     let active = true;
@@ -156,8 +159,8 @@ export function OrgProjects({ locale, orgId, mode }: { locale: Locale2; orgId: s
                   cityId: data.get('cityId'),
                   managerId: data.get('managerId'),
                   publicLocationPrecision: precision,
-                  latitude: precision === 'city' ? null : Number(data.get('latitude')),
-                  longitude: precision === 'city' ? null : Number(data.get('longitude'))
+                  latitude: precision === 'city' || !data.get('latitude') ? null : Number(data.get('latitude')),
+                  longitude: precision === 'city' || !data.get('longitude') ? null : Number(data.get('longitude'))
                 }) as OrgProject;
                 window.location.assign(L(`/org/${orgId}/projects`));
                 setNotice(`أُنشئت مسودة «${created.title}».`);
@@ -179,7 +182,7 @@ export function OrgProjects({ locale, orgId, mode }: { locale: Locale2; orgId: s
                   <textarea name="story" rows={6} maxLength={20000} />
                 </label>
                 <label className="field">المدينة
-                  <select name="cityId" required defaultValue="">
+                  <select name="cityId" required value={cityId} onChange={event => setCityId(event.target.value)}>
                     <option value="" disabled>اختر مدينة</option>
                     {cities.map(city => <option key={city.id} value={city.id}>{city.nameAr}</option>)}
                   </select>
@@ -190,24 +193,8 @@ export function OrgProjects({ locale, orgId, mode }: { locale: Locale2; orgId: s
                     {eligibleManagers.map(member => <option key={member.userId} value={member.userId}>{member.user.name}</option>)}
                   </select>
                 </label>
-                <label className="field">دقة الموقع المعلن
-                  <select name="publicLocationPrecision" value={precision} onChange={event => setPrecision(event.target.value as typeof precision)}>
-                    <option value="city">المدينة فقط — لا تُخزَّن إحداثيات</option>
-                    <option value="approximate">تقريبي — يُنشر مقرّبًا إلى نحو كيلومتر</option>
-                    <option value="exact">منشأة عامة محددة</option>
-                  </select>
-                </label>
-                {precision === 'city' ? (
-                  <p className="note">لن تُخزَّن إحداثيات لهذا المشروع. ما لا يُخزَّن لا يمكن أن يتسرب.</p>
-                ) : (
-                  <>
-                    <Notice tone="warning">
-                      <p style={{ marginBlockEnd: 0 }}>لا تُدخل موقع مستفيد أو عنوان سكن. الموقع المعلن يخص مكان تنفيذ عام فقط.</p>
-                    </Notice>
-                    <label className="field">خط العرض<input name="latitude" type="number" step="0.000001" min={-90} max={90} required /></label>
-                    <label className="field">خط الطول<input name="longitude" type="number" step="0.000001" min={-180} max={180} required /></label>
-                  </>
-                )}
+                <LocationFields precision={precision} onPrecision={setPrecision} latitude={null} longitude={null}
+                  center={chosenCity ? { latitude: chosenCity.latitude, longitude: chosenCity.longitude } : null} />
                 <button type="submit" disabled={busy}>{busy ? 'جارٍ الحفظ…' : 'حفظ المسودة'}</button>
               </form>
             </Card>}
