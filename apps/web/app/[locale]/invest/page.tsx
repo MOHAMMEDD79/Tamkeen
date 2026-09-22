@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { BadgeCheck, CalendarClock, TrendingUp } from 'lucide-react';
 import { AppShell, EmptyState, Ltr, MoneyAmount, Notice, StatusBadge, formatDate, isLocale, localePath, type Locale } from '@tamkeen/ui';
 import { readPublic, type PublicOfferingCard } from '../../../lib/server-api';
-import { readSiteContent } from '../../../lib/site-content';
+import { readSiteContent, section } from '../../../lib/site-content';
 import { PageHero, forwardIcon } from '../marketing';
 import { ReadError } from '../public-parts';
 
@@ -46,21 +46,23 @@ export default async function Invest({ params }: { params: Promise<{ locale: str
   const locale = raw satisfies Locale;
   const ar = locale === 'ar';
   const [result, site] = await Promise.all([readPublic<PublicOfferingCard[]>('/offerings'), readSiteContent()]);
+  const pick = (value: { ar: string; en: string }) => value[locale] || value.ar;
+  const header = section(site, 'invest.header'), offers = section(site, 'invest.offers'), cta = section(site, 'invest.cta');
   const Forward = forwardIcon(locale);
   const covers = ['/media/defaults/cover-invest-1.jpg', '/media/defaults/cover-invest-2.jpg', '/media/defaults/hero-business.jpg'];
 
   return (
     <AppShell locale={locale} path="/invest"
       lead={<PageHero
-        image={site.tracks.invest?.imageUrl ?? '/media/defaults/track-invest.jpg'}
-        kicker={ar ? 'استثمار ربحي' : 'Profit investment'}
-        title={ar ? 'استثمر في شركات تنمو مع مجتمعها' : 'Invest in companies growing with their community'}
-        lead={ar
-          ? 'عروض أسهم من شركات موثقة، لكل عرض إفصاح منشور وأداة واضحة. لا تُسجَّل ملكية قبل تخصيص يعتمده مراجع مستقل.'
-          : 'Equity offerings from verified companies, each with a published disclosure and a clear instrument. No ownership before an independently approved allocation.'}>
-        <div className="tmk-carousel__actions" style={{ marginBlockStart: 24 }}>
-          <a className="tmk-button tmk-button--accent tmk-button--large" href={localePath(locale, '/app/investor/eligibility')}>{ar ? 'فعّل ملف المستثمر' : 'Set up your investor profile'}<Forward aria-hidden="true" size={20} /></a>
-        </div>
+        image={header.image}
+        kicker={pick(header.kicker)}
+        title={pick(header.title)}
+        lead={pick(header.body)}>
+        {header.cta ? (
+          <div className="tmk-carousel__actions" style={{ marginBlockStart: 24 }}>
+            <a className="tmk-button tmk-button--accent tmk-button--large" href={localePath(locale, header.cta.href)}>{pick(header.cta.label)}<Forward aria-hidden="true" size={20} /></a>
+          </div>
+        ) : null}
       </PageHero>}>
 
       {/* 00-MASTER-PROMPT: a simulated build is never presented as a real market. */}
@@ -73,9 +75,9 @@ export default async function Invest({ params }: { params: Promise<{ locale: str
       </Notice>
 
       <div className="tmk-section__head tmk-reveal" style={{ marginBlock: '48px 32px' }}>
-        <p className="tmk-kicker">{ar ? 'العروض المتاحة' : 'Available offerings'}</p>
-        <h2>{ar ? 'فرص استثمار بإفصاح كامل' : 'Investment opportunities with full disclosure'}</h2>
-        <p>{ar ? 'كل بطاقة تذكر حجم العرض كله كنسبة من الشركة، لأن «1٪ من العرض» ليست «1٪ من الشركة».' : 'Every card states the whole offering as a share of the company, because “1% of the offering” is not “1% of the company”.'}</p>
+        <p className="tmk-kicker">{pick(offers.kicker)}</p>
+        <h2>{pick(offers.title)}</h2>
+        <p>{pick(offers.body)}</p>
       </div>
 
       {!result.ok ? <ReadError locale={locale} result={result} /> : result.data.length === 0 ? (
@@ -119,12 +121,12 @@ export default async function Invest({ params }: { params: Promise<{ locale: str
       )}
 
       <section className="tmk-cta tmk-reveal" style={{ marginBlockStart: 64 }} aria-labelledby="invest-cta">
-        <img src="/media/defaults/hero-business.jpg" alt="" loading="lazy" />
-        <h2 id="invest-cta">{ar ? 'جاهز لتصبح مستثمرًا؟' : 'Ready to become an investor?'}</h2>
-        <p>{ar ? 'فعّل ملف المستثمر مرة واحدة، ثم اكتتب في العروض المفتوحة وتابع محفظتك وتقارير الشركات.' : 'Set up your investor profile once, then subscribe to open offerings and follow your portfolio and company reports.'}</p>
+        <img src={cta.image} alt="" loading="lazy" />
+        <h2 id="invest-cta">{pick(cta.title)}</h2>
+        <p>{pick(cta.body)}</p>
         <div className="tmk-carousel__actions">
-          <a className="tmk-button tmk-button--accent tmk-button--large" href={localePath(locale, '/app/investor/eligibility')}>{ar ? 'فعّل ملف المستثمر' : 'Set up your profile'}<Forward aria-hidden="true" size={20} /></a>
-          <a className="tmk-button tmk-button--glass tmk-button--large" href={localePath(locale, '/about')}>{ar ? 'تعرّف على تمكين' : 'About Tamkeen'}</a>
+          {cta.cta ? <a className="tmk-button tmk-button--accent tmk-button--large" href={localePath(locale, cta.cta.href)}>{pick(cta.cta.label)}<Forward aria-hidden="true" size={20} /></a> : null}
+          {cta.cta2 ? <a className="tmk-button tmk-button--glass tmk-button--large" href={localePath(locale, cta.cta2.href)}>{pick(cta.cta2.label)}</a> : null}
         </div>
       </section>
     </AppShell>

@@ -1,5 +1,6 @@
 import 'server-only';
 import { readPublic, type PublicProjectCard, type PublicProjectDetail } from './server-api';
+import { resolveSection, type ResolvedSection, type SavedSection } from './site-sections';
 
 /**
  * The marketing content the platform admin controls: homepage banners, the three track panels, and
@@ -14,6 +15,7 @@ export interface SiteItem {
   id: string;
   slot: string;
   sortOrder: number;
+  kicker?: SiteText;
   title: SiteText;
   body: SiteText;
   cta: { label: SiteText; href: string } | null;
@@ -24,6 +26,10 @@ export interface SiteContent {
   tracks: { charity: SiteItem | null; invest: SiteItem | null; work: SiteItem | null };
   about: SiteItem | null;
   contact: SiteItem | null;
+  /** Page sections the admin saved; see site-sections.ts for the rest. */
+  sections: Record<string, SavedSection>;
+  /** Contact details and social links that are set. */
+  settings: Record<string, string>;
 }
 
 const item = (id: string, slot: string, sortOrder: number, imageUrl: string, title: SiteText, body: SiteText, cta: SiteItem['cta']): SiteItem => ({ id, slot, sortOrder, imageUrl, title, body, cta });
@@ -68,7 +74,9 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   contact: item('default-contact', 'contact', 0, '/media/defaults/contact-team.jpg',
     { ar: 'يسعدنا أن نسمع منك', en: 'We would love to hear from you' },
     { ar: 'سؤال، شراكة، أو فكرة مشروع؟ اكتب لنا وسيعود إليك فريقنا في أقرب وقت.', en: 'A question, a partnership or a project idea? Write to us and our team will get back to you soon.' },
-    null)
+    null),
+  sections: {},
+  settings: {}
 };
 
 /** Admin content with the seeded defaults filling any gap, so no slot is ever empty. */
@@ -84,8 +92,15 @@ export async function readSiteContent(): Promise<SiteContent> {
       work: content.tracks?.work ?? DEFAULT_SITE_CONTENT.tracks.work
     },
     about: content.about ?? DEFAULT_SITE_CONTENT.about,
-    contact: content.contact ?? DEFAULT_SITE_CONTENT.contact
+    contact: content.contact ?? DEFAULT_SITE_CONTENT.contact,
+    sections: content.sections ?? {},
+    settings: content.settings ?? {}
   };
+}
+
+/** One page section: what the admin saved, over its default copy and photo. */
+export function section(site: SiteContent, slot: string): ResolvedSection {
+  return resolveSection(slot, site.sections[slot]);
 }
 
 const COVERS: Record<string, string[]> = {

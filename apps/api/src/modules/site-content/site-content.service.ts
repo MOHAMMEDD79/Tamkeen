@@ -14,12 +14,28 @@ import { siteMediaUrl } from './site-media-storage.js';
 
 export const SITE_SLOTS = ['hero', 'track.charity', 'track.invest', 'track.work', 'about', 'contact'] as const;
 export type SiteSlot = typeof SITE_SLOTS[number];
+/**
+ * A page section: `<page>.<section>`, or `<page>.<section>.<n>` for one entry of a list on it. The
+ * web app owns each section's default copy; a row here holds only what the admin changed.
+ */
+export const SECTION_SLOT = /^(home|about|contact|invest|explore|opportunities|organizations)\.[a-z0-9-]+(\.[0-9]{1,2})?$/;
+export const isSectionSlot = (slot: string) => slot.length <= 32 && SECTION_SLOT.test(slot);
+
+/** The contact details and social links an admin can set; nothing outside this list is stored. */
+export const SETTING_KEYS = [
+  'contact.email', 'contact.phone', 'contact.whatsapp', 'contact.address.ar', 'contact.address.en', 'contact.hours.ar', 'contact.hours.en',
+  'social.facebook', 'social.instagram', 'social.x', 'social.linkedin', 'social.youtube'
+] as const;
+export type SettingKey = typeof SETTING_KEYS[number];
 export const CONTACT_STATES = ['new', 'read', 'archived'] as const;
 type ContactState = typeof CONTACT_STATES[number];
 
 export interface ItemChanges {
   sortOrder?: number | undefined; titleAr?: string | undefined; titleEn?: string | undefined; bodyAr?: string | undefined; bodyEn?: string | undefined;
-  ctaLabelAr?: string | undefined; ctaLabelEn?: string | undefined; ctaHref?: string | undefined; defaultImage?: string | undefined; active?: boolean | undefined;
+  kickerAr?: string | undefined; kickerEn?: string | undefined;
+  ctaLabelAr?: string | undefined; ctaLabelEn?: string | undefined; ctaHref?: string | undefined;
+  cta2LabelAr?: string | undefined; cta2LabelEn?: string | undefined; cta2Href?: string | undefined;
+  defaultImage?: string | undefined; active?: boolean | undefined;
 }
 /** Type and checksum are read back from the stored bytes by the caller, never taken from a body. */
 export interface StoredImage { imageKey: string; contentType: string; checksum: string }
@@ -28,21 +44,27 @@ const imageUrl = (item: Pick<SiteMediaItem, 'imageKey' | 'defaultImage'>) => ite
 
 function publicItem(item: SiteMediaItem) {
   const hasCta = item.ctaHref !== '' && (item.ctaLabelAr !== '' || item.ctaLabelEn !== '');
+  const hasCta2 = item.cta2Href !== '' && (item.cta2LabelAr !== '' || item.cta2LabelEn !== '');
   return {
     id: item.id, slot: item.slot, sortOrder: item.sortOrder,
+    kicker: { ar: item.kickerAr, en: item.kickerEn },
     title: { ar: item.titleAr, en: item.titleEn },
     body: { ar: item.bodyAr, en: item.bodyEn },
     cta: hasCta ? { label: { ar: item.ctaLabelAr, en: item.ctaLabelEn }, href: item.ctaHref } : null,
-    imageUrl: imageUrl(item)
+    cta2: hasCta2 ? { label: { ar: item.cta2LabelAr, en: item.cta2LabelEn }, href: item.cta2Href } : null,
+    // A section with no uploaded photo has no image of its own: the page's default photo applies.
+    imageUrl: item.imageKey ? siteMediaUrl(item.imageKey) : item.defaultImage || null
   };
 }
 
 function adminItem(item: SiteMediaItem) {
   return {
     id: item.id, slot: item.slot, sortOrder: item.sortOrder,
+    kicker: { ar: item.kickerAr, en: item.kickerEn },
     title: { ar: item.titleAr, en: item.titleEn },
     body: { ar: item.bodyAr, en: item.bodyEn },
     cta: { label: { ar: item.ctaLabelAr, en: item.ctaLabelEn }, href: item.ctaHref },
+    cta2: { label: { ar: item.cta2LabelAr, en: item.cta2LabelEn }, href: item.cta2Href },
     imageKey: item.imageKey, imageUrl: imageUrl(item), defaultImage: item.defaultImage,
     active: item.active, version: item.version, updatedAt: item.updatedAt
   };
@@ -64,11 +86,14 @@ export class SiteContentService {
   async publicContent() {
     const items = await this.db.siteMediaItem.findMany({ where: { active: true }, orderBy: order });
     const single = (slot: SiteSlot) => { const item = items.find(entry => entry.slot === slot); return item ? publicItem(item) : null; };
+    const settings = await this.db.siteSetting.findMany({ where: { key: { in: [...SETTING_KEYS] } } });
     return {
       hero: items.filter(item => item.slot === 'hero').map(publicItem),
       tracks: { charity: single('track.charity'), invest: single('track.invest'), work: single('track.work') },
       about: single('about'),
-      contact: single('contact')
+      contact: single('contact'),
+      sections: Object.fromEntries(items.filter(item => isSectionSlot(item.slot)).map(item => [item.slot, publicItem(item)])),
+      settings: Object.fromEntries(settings.filter(setting => setting.value !== '').map(setting => [setting.key, setting.value]))
     };
   }
 
@@ -144,6 +169,66 @@ export class SiteContentService {
   /** The home page is built around the carousel; it must never be left with nothing to show. */
   private async assertAnotherActiveHero(tx: DatabaseClient, exceptId: string) {
     if (!await tx.siteMediaItem.count({ where: { slot: 'hero', active: true, id: { not: exceptId } } })) throw new IdentityError('conflict', 409);
+  }
+
+  // ---------------------------------------------------------------- admin: page sections
+
+  /**
+   * Saves a page section. The first save creates the row; later saves carry its version. `image`
+   * undefined leaves the photo alone, null returns the section to its default photo.
+   */
+  async saveSection(actorId: string, slot: string, input: ItemChanges & { version?: number | undefined }, image: StoredImage | null | undefined) {
+    if (!isSectionSlot(slot)) throw new IdentityError('invalid_input', 422);
+    return this.db.$transaction(async tx => {
+      await new IdentityService(tx as DatabaseClient).platformAdministratorUser(actorId);
+      const { version, ...changes } = input;
+      const photo = image === undefined ? {} : image ? { imageKey: image.imageKey, imageContentType: image.contentType, imageChecksum: image.checksum } : { imageKey: null, imageContentType: null, imageChecksum: null };
+      const current = await tx.siteMediaItem.findFirst({ where: { slot } });
+      if (!current) {
+        if (version !== undefined) throw new IdentityError('conflict', 409);
+        const created = await tx.siteMediaItem.create({ data: { slot, ...defined(changes), ...photo, updatedById: actorId } });
+        await tx.identityAuditEvent.create({ data: { actorId, resourceId: created.id, action: 'site_content.section.saved' } });
+        return adminItem(created);
+      }
+      if (current.version !== version) throw new IdentityError('conflict', 409);
+      const updated = await tx.siteMediaItem.updateMany({ where: { id: current.id, version }, data: { ...defined(changes), ...photo, updatedById: actorId, version: { increment: 1 } } });
+      if (updated.count !== 1) throw new IdentityError('conflict', 409);
+      await tx.identityAuditEvent.create({ data: { actorId, resourceId: current.id, action: 'site_content.section.saved' } });
+      return adminItem(await tx.siteMediaItem.findUniqueOrThrow({ where: { id: current.id } }));
+    });
+  }
+
+  /** Back to the default copy and photo: the section's row is removed. */
+  async resetSection(actorId: string, slot: string) {
+    if (!isSectionSlot(slot)) throw new IdentityError('invalid_input', 422);
+    return this.db.$transaction(async tx => {
+      await new IdentityService(tx as DatabaseClient).platformAdministratorUser(actorId);
+      const current = await tx.siteMediaItem.findFirst({ where: { slot }, select: { id: true } });
+      if (!current) throw new IdentityError('not_found', 404);
+      await tx.siteMediaItem.delete({ where: { id: current.id } });
+      await tx.identityAuditEvent.create({ data: { actorId, resourceId: current.id, action: 'site_content.section.reset' } });
+      return { slot, reset: true as const };
+    });
+  }
+
+  // ---------------------------------------------------------------- admin: contact details
+
+  async settings(actorId: string) {
+    await this.admin(actorId);
+    const rows = await this.db.siteSetting.findMany({ where: { key: { in: [...SETTING_KEYS] } } });
+    return { keys: SETTING_KEYS, values: Object.fromEntries(SETTING_KEYS.map(key => [key, rows.find(row => row.key === key)?.value ?? ''])) as Record<SettingKey, string> };
+  }
+
+  /** Every key in the body is written; an empty string clears it from the public site. */
+  async saveSettings(actorId: string, values: Partial<Record<SettingKey, string | undefined>>) {
+    return this.db.$transaction(async tx => {
+      await new IdentityService(tx as DatabaseClient).platformAdministratorUser(actorId);
+      for (const [key, value] of Object.entries(values)) {
+        await tx.siteSetting.upsert({ where: { key }, create: { key, value: value ?? '', updatedById: actorId }, update: { value: value ?? '', updatedById: actorId } });
+      }
+      // The settings are one site-wide record with no id of their own; the row is filed under the admin.
+      await tx.identityAuditEvent.create({ data: { actorId, resourceId: actorId, action: 'site_settings.saved' } });
+    }).then(() => this.settings(actorId));
   }
 
   /** The upload itself changes nothing public; the audit row records who put the bytes there. */

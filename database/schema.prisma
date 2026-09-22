@@ -3967,12 +3967,17 @@ model SiteMediaItem {
   sortOrder        Int @default(0) @map("sort_order")
   titleAr          String @default("") @map("title_ar") @db.VarChar(200)
   titleEn          String @default("") @map("title_en") @db.VarChar(200)
-  bodyAr           String @default("") @map("body_ar") @db.VarChar(600)
-  bodyEn           String @default("") @map("body_en") @db.VarChar(600)
+  kickerAr         String @default("") @map("kicker_ar") @db.VarChar(80)
+  kickerEn         String @default("") @map("kicker_en") @db.VarChar(80)
+  bodyAr           String @default("") @map("body_ar") @db.VarChar(1500)
+  bodyEn           String @default("") @map("body_en") @db.VarChar(1500)
   ctaLabelAr       String @default("") @map("cta_label_ar") @db.VarChar(60)
   ctaLabelEn       String @default("") @map("cta_label_en") @db.VarChar(60)
   // Site-internal only: a stored off-site link would turn an admin typo into an open redirect.
   ctaHref          String @default("") @map("cta_href") @db.VarChar(300)
+  cta2LabelAr      String @default("") @map("cta2_label_ar") @db.VarChar(60)
+  cta2LabelEn      String @default("") @map("cta2_label_en") @db.VarChar(60)
+  cta2Href         String @default("") @map("cta2_href") @db.VarChar(300)
   imageKey         String? @map("image_key") @db.VarChar(120)
   imageContentType String? @map("image_content_type") @db.VarChar(40)
   imageChecksum    String? @map("image_checksum") @db.Char(64)
@@ -3984,6 +3989,15 @@ model SiteMediaItem {
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   @@index([slot, sortOrder])
   @@map("site_media_items")
+}
+
+/// Contact details and social links shown on the public site; a fixed key set the API validates.
+model SiteSetting {
+  key         String @id @db.VarChar(40)
+  value       String @default("") @db.VarChar(500)
+  updatedById String? @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  @@map("site_settings")
 }
 
 /// The photo on a project's public card. Chosen by the platform, not the organisation, so it sits

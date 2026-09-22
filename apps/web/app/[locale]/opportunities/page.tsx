@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { AppShell, Card, EmptyState, Ltr, MoneyAmount, Notice, StatusBadge, formatDate, isLocale, localePath, type Locale } from '@tamkeen/ui';
 import { readPublic, type PublicJobCard, type PublicProgramCard } from '../../../lib/server-api';
-import { readSiteContent } from '../../../lib/site-content';
+import { readSiteContent, section } from '../../../lib/site-content';
 import { ReadError, jobClaimLabel } from '../public-parts';
 import { PageHero } from '../marketing';
 
@@ -82,16 +82,16 @@ export default async function Opportunities({ params }: { params: Promise<{ loca
   const locale = raw satisfies Locale;
   const ar = locale === 'ar';
   const [result, jobs, site] = await Promise.all([readPublic<PublicProgramCard[]>('/programs'), readPublic<PublicJobCard[]>('/jobs'), readSiteContent()]);
+  const pick = (value: { ar: string; en: string }) => value[locale] || value.ar;
+  const header = section(site, 'opportunities.header'), programsHead = section(site, 'opportunities.programs'), jobsHead = section(site, 'opportunities.jobs');
 
   return (
     <AppShell locale={locale} path="/opportunities"
       lead={<PageHero
-        image={site.tracks.work?.imageUrl ?? '/media/defaults/track-work.jpg'}
-        kicker={ar ? 'فرص تشغيل' : 'Jobs & training'}
-        title={ar ? 'تدرّب، ثم اعمل' : 'Train, then work'}
-        lead={ar
-          ? 'برامج تدريب مجانية من جهات موثقة، ووظائف معلنة بأجرها وعقدها. البرنامج والوظيفة شيئان منفصلان: قبول التدريب ليس قبول وظيفة.'
-          : 'Free training from verified organisations, and jobs published with their pay and contract. A programme and a job are separate: being accepted onto training is not being hired.'}>
+        image={header.image}
+        kicker={pick(header.kicker)}
+        title={pick(header.title)}
+        lead={pick(header.body)}>
         <p className="tmk-page-hero__links">
           <a className="tmk-button tmk-button--primary" href="#programs">{ar ? 'برامج التدريب' : 'Training programmes'}</a>
           <a className="tmk-button tmk-button--secondary" href="#jobs">{ar ? 'الوظائف' : 'Jobs'}</a>
@@ -100,8 +100,8 @@ export default async function Opportunities({ params }: { params: Promise<{ loca
 
       <div className="tmk-section-row" id="programs">
         <div>
-          <p className="tmk-kicker">{ar ? 'التدريب' : 'Training'}</p>
-          <h2>{ar ? 'برامج التدريب' : 'Training programmes'}</h2>
+          <p className="tmk-kicker">{pick(programsHead.kicker)}</p>
+          <h2>{pick(programsHead.title)}</h2>
         </div>
         {result.ok ? <span className="tmk-opp__count">{result.data.length} {ar ? 'برنامج مفتوح' : 'open'}</span> : null}
       </div>
@@ -152,9 +152,9 @@ export default async function Opportunities({ params }: { params: Promise<{ loca
           from whatever a programme claimed about work. */}
       <div className="tmk-section-row" id="jobs">
         <div>
-          <p className="tmk-kicker">{ar ? 'الوظائف' : 'Jobs'}</p>
-          <h2>{ar ? 'وظائف معلنة' : 'Published jobs'}</h2>
-          <p className="tmk-field__hint" style={{ margin: 0 }}>{ar ? 'لكل إعلان نوع عقده ومكانه وأجره — أو سبب عدم إعلان الأجر مكتوبًا بنصه.' : 'Each listing states its contract, location and pay — or the written reason the pay is not published.'}</p>
+          <p className="tmk-kicker">{pick(jobsHead.kicker)}</p>
+          <h2>{pick(jobsHead.title)}</h2>
+          <p className="tmk-field__hint" style={{ margin: 0 }}>{pick(jobsHead.body)}</p>
         </div>
         {jobs.ok ? <span className="tmk-opp__count">{jobs.data.length} {ar ? 'وظيفة' : 'jobs'}</span> : null}
       </div>

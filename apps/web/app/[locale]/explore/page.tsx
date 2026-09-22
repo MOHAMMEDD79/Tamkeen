@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { GraduationCap, HandHeart, LayoutGrid, Map as MapIcon, TrendingUp } from 'lucide-react';
 import { AppShell, isLocale, localePath, translator, type Locale } from '@tamkeen/ui';
 import { readPublic, type City, type PublicProjectCard } from '../../../lib/server-api';
-import { readSiteContent, withFunding } from '../../../lib/site-content';
+import { readSiteContent, section, withFunding } from '../../../lib/site-content';
 import { PageHero, ProjectMediaCard } from '../marketing';
 import { PublicList, trackLabel } from '../public-parts';
 
@@ -46,6 +46,7 @@ export default async function Explore({ params, searchParams }: { params: Promis
     readPublic<City[]>('/cities'),
     readSiteContent()
   ]);
+  const header = section(site, 'explore.header');
   // Funding progress for the cards; each project's detail is read in parallel.
   const cards = projects.ok ? await withFunding(projects.data.slice(0, 48)) : [];
   const typeHref = (type: string | null) => {
@@ -68,12 +69,10 @@ export default async function Explore({ params, searchParams }: { params: Promis
   return (
     <AppShell locale={locale} path="/explore"
       lead={<PageHero
-        image={site.tracks.charity?.imageUrl ?? '/media/defaults/track-charity.jpg'}
-        kicker={ar ? 'استكشف المشاريع' : 'Explore projects'}
-        title={ar ? 'مشاريع تصنع فرقًا حقيقيًا' : 'Projects making a real difference'}
-        lead={ar
-          ? 'كل مشروع هنا لجهة معروفة، بميزانية ومراحل معلنة. ابحث عما يلمسك وتابع أثره حتى النهاية.'
-          : 'Every project here belongs to a known organisation, with a published budget and stages. Find what moves you and follow its impact to the end.'} />}>
+        image={header.image}
+        kicker={header.kicker[locale] || header.kicker.ar}
+        title={header.title[locale] || header.title.ar}
+        lead={header.body[locale] || header.body.ar} />}>
 
       <section className="tmk-searchbar" aria-labelledby="filters-title">
         <h2 id="filters-title" className="tmk-visually-hidden">{ar ? 'تصفية' : 'Filters'}</h2>

@@ -14,9 +14,28 @@ const text = (max: number) => z.string().trim().max(max);
 const ctaHref = text(300).refine(value => value === '' || (/^\/(?![/\\])/.test(value) && !/[\s\\]/.test(value)));
 const defaultImage = z.string().regex(/^\/media\/defaults\/[a-z0-9-]+\.(?:jpg|jpeg|png|webp)$/);
 const imageKey = z.string().refine(isSiteMediaKey);
-const itemFields = { sortOrder: z.number().int().min(0).max(1000).optional(), titleAr: text(200).optional(), titleEn: text(200).optional(), bodyAr: text(600).optional(), bodyEn: text(600).optional(), ctaLabelAr: text(60).optional(), ctaLabelEn: text(60).optional(), ctaHref: ctaHref.optional(), defaultImage: defaultImage.optional(), active: z.boolean().optional() };
+const itemFields = {
+  sortOrder: z.number().int().min(0).max(1000).optional(), titleAr: text(200).optional(), titleEn: text(200).optional(), bodyAr: text(1500).optional(), bodyEn: text(1500).optional(),
+  kickerAr: text(80).optional(), kickerEn: text(80).optional(),
+  ctaLabelAr: text(60).optional(), ctaLabelEn: text(60).optional(), ctaHref: ctaHref.optional(),
+  cta2LabelAr: text(60).optional(), cta2LabelEn: text(60).optional(), cta2Href: ctaHref.optional(),
+  defaultImage: defaultImage.optional(), active: z.boolean().optional()
+};
 const createItem = z.object({ ...itemFields, titleAr: text(200).min(1), titleEn: text(200).min(1), imageKey: imageKey.nullable().optional() }).strict();
 const updateItem = z.object({ ...itemFields, imageKey: imageKey.nullable().optional(), version: z.number().int().positive() }).strict();
+const saveSection = z.object({ ...itemFields, imageKey: imageKey.nullable().optional(), version: z.number().int().positive().optional() }).strict();
+const phone = text(30).refine(value => value === '' || /^[+0-9][0-9 ()-]{5,29}$/.test(value));
+// Social links go to the network itself over https, never an arbitrary site.
+const social = (hosts: string[]) => text(300).refine(value => value === '' || hosts.some(host => new RegExp(`^https://(www\\.)?${host.replace('.', '\\.')}/`).test(value)));
+const settingsBody = z.object({
+  'contact.email': z.union([z.literal(''), z.email().max(254)]).optional(),
+  'contact.phone': phone.optional(), 'contact.whatsapp': phone.optional(),
+  'contact.address.ar': text(200).optional(), 'contact.address.en': text(200).optional(),
+  'contact.hours.ar': text(120).optional(), 'contact.hours.en': text(120).optional(),
+  'social.facebook': social(['facebook.com']).optional(), 'social.instagram': social(['instagram.com']).optional(),
+  'social.x': social(['x.com', 'twitter.com']).optional(), 'social.linkedin': social(['linkedin.com']).optional(), 'social.youtube': social(['youtube.com']).optional()
+}).strict();
+const sectionSlot = z.string().max(32);
 const contactMessage = z.object({ name: z.string().trim().min(2).max(120), email: z.email().max(254), subject: z.string().trim().min(2).max(200), body: z.string().trim().min(10).max(4000), locale: z.enum(['ar', 'en']).default('ar') }).strict();
 
 /**
@@ -118,6 +137,27 @@ export class SiteContentController {
   @Delete('admin/site-content/items/:id') async deleteItem(@Req() req: IncomingMessage, @Param('id') id: string) {
     const session = await this.session(req);
     return { data: await this.service.deleteHeroSlide(session.user.id, uuid.parse(id)) };
+  }
+
+  @Put('admin/site-content/sections/:slot') async saveSection(@Req() req: IncomingMessage, @Param('slot') slot: string, @Body() body: unknown) {
+    const session = await this.session(req);
+    const { imageKey: key, ...input } = saveSection.parse(body);
+    return { data: await this.service.saveSection(session.user.id, sectionSlot.parse(slot), input, key === undefined ? undefined : key === null ? null : await this.storedImage(session.user.id, key)) };
+  }
+
+  @Delete('admin/site-content/sections/:slot') async resetSection(@Req() req: IncomingMessage, @Param('slot') slot: string) {
+    const session = await this.session(req);
+    return { data: await this.service.resetSection(session.user.id, sectionSlot.parse(slot)) };
+  }
+
+  @Get('admin/site-settings') async settings(@Req() req: IncomingMessage) {
+    const session = await this.session(req);
+    return { data: await this.service.settings(session.user.id) };
+  }
+
+  @Put('admin/site-settings') async saveSettings(@Req() req: IncomingMessage, @Body() body: unknown) {
+    const session = await this.session(req);
+    return { data: await this.service.saveSettings(session.user.id, settingsBody.parse(body)) };
   }
 
   /** Raw bytes in the body. Stored but unused until an item or a project cover names the key. */

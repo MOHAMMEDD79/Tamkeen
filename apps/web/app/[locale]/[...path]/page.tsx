@@ -65,6 +65,8 @@ export default async function Page({ params, searchParams }: {
   if (route === '/admin/operations') return <OperationsDashboard locale={locale} />;
   if (route === '/admin/site') return <SiteAdmin locale={locale} mode="content" />;
   if (route === '/admin/site/covers') return <SiteAdmin locale={locale} mode="covers" />;
+  if (route === '/admin/site/pages') return <SiteAdmin locale={locale} mode="pages" />;
+  if (route === '/admin/site/settings') return <SiteAdmin locale={locale} mode="settings" />;
   if (route === '/admin/messages') return <SiteAdmin locale={locale} mode="messages" />;
 
   // Longest-first among the /org/.../projects/... family, so /finance is not taken as a detail page.

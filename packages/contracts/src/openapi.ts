@@ -297,15 +297,16 @@ const schemas = {
     }
   },
   LocalizedText: { type: 'object', required: ['ar', 'en'], properties: { ar: { type: 'string' }, en: { type: 'string' } }, additionalProperties: false },
-  SiteSlot: { type: 'string', enum: ['hero', 'track.charity', 'track.invest', 'track.work', 'about', 'contact'] },
+  SiteSlot: { type: 'string', description: "A fixed slot (hero, track.charity, track.invest, track.work, about, contact) or a page section '<page>.<section>[.<n>]'.", maxLength: 32 },
   PublicSiteItem: {
     type: 'object',
     description: 'Active items only. imageUrl is an uploaded photo (/api/v1/site-media/{id}) or the default path under /media/defaults/ on the web app.',
     properties: {
       id: { type: 'string', format: 'uuid' }, slot: ref('SiteSlot'), sortOrder: { type: 'integer' },
-      title: ref('LocalizedText'), body: ref('LocalizedText'),
+      kicker: ref('LocalizedText'), title: ref('LocalizedText'), body: ref('LocalizedText'),
       cta: { anyOf: [{ type: 'object', properties: { label: ref('LocalizedText'), href: { type: 'string', description: 'Site-internal path.' } } }, { type: 'null' }] },
-      imageUrl: { type: 'string' }
+      cta2: { anyOf: [{ type: 'object', properties: { label: ref('LocalizedText'), href: { type: 'string', description: 'Site-internal path.' } } }, { type: 'null' }] },
+      imageUrl: { type: ['string', 'null'], description: 'Null for a page section with no photo of its own: the page default applies.' }
     }
   },
   PublicSiteContent: {
@@ -314,15 +315,18 @@ const schemas = {
       hero: { type: 'array', items: ref('PublicSiteItem') },
       tracks: { type: 'object', properties: { charity: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] }, invest: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] }, work: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] } } },
       about: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] },
-      contact: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] }
+      contact: { anyOf: [ref('PublicSiteItem'), { type: 'null' }] },
+      sections: { type: 'object', description: 'Admin-edited page sections keyed by slot. A section absent here uses its default copy.', additionalProperties: ref('PublicSiteItem') },
+      settings: { type: 'object', description: 'Contact details and social links that are set, keyed by setting name.', additionalProperties: { type: 'string' } }
     }
   },
   AdminSiteItem: {
     type: 'object',
     properties: {
       id: { type: 'string', format: 'uuid' }, slot: ref('SiteSlot'), sortOrder: { type: 'integer' },
-      title: ref('LocalizedText'), body: ref('LocalizedText'),
+      kicker: ref('LocalizedText'), title: ref('LocalizedText'), body: ref('LocalizedText'),
       cta: { type: 'object', properties: { label: ref('LocalizedText'), href: { type: 'string' } } },
+      cta2: { type: 'object', properties: { label: ref('LocalizedText'), href: { type: 'string' } } },
       imageKey: { type: ['string', 'null'] }, imageUrl: { type: 'string' }, defaultImage: { type: 'string' },
       active: { type: 'boolean' }, version: { type: 'integer' }, updatedAt: { type: 'string', format: 'date-time' }
     }
@@ -2765,6 +2769,14 @@ const paths = {
   '/admin/site-content/items/{id}': {
     patch: operation({ id: 'updateSiteItem', summary: 'Edit an item text, link, order, visibility or photo. Omitted fields are unchanged; a stale version returns 409, and hiding the last visible hero slide returns 409.', tag: 'site', permission: 'PlatformAdmin grant with MFA', params: [uuidParam('id', 'Site item identifier.')], body: { type: 'object', required: ['version'], additionalProperties: false, properties: { sortOrder: { type: 'integer', minimum: 0, maximum: 1000 }, titleAr: { type: 'string', maxLength: 200 }, titleEn: { type: 'string', maxLength: 200 }, bodyAr: { type: 'string', maxLength: 600 }, bodyEn: { type: 'string', maxLength: 600 }, ctaLabelAr: { type: 'string', maxLength: 60 }, ctaLabelEn: { type: 'string', maxLength: 60 }, ctaHref: { type: 'string', maxLength: 300, description: 'Empty, or a path starting with a single /.' }, defaultImage: { type: 'string', pattern: '^/media/defaults/[a-z0-9-]+[.](jpg|jpeg|png|webp)$' }, active: { type: 'boolean' }, imageKey: { type: ['string', 'null'], pattern: '^site/[0-9a-f-]{36}[.]bin$', description: 'A key from the image upload; null reverts to defaultImage.' }, version: { type: 'integer', minimum: 1 } } }, success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope(ref('AdminSiteItem')) } }),
     delete: operation({ id: 'deleteHeroSlide', summary: 'Delete a hero slide. Other slots cannot be deleted (403), and the last visible hero slide cannot be deleted (409).', tag: 'site', permission: 'PlatformAdmin grant with MFA', params: [uuidParam('id', 'Site item identifier.')], success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { id: { type: 'string', format: 'uuid' }, deleted: { type: 'boolean' } } }) } })
+  },
+  '/admin/site-content/sections/{slot}': {
+    put: operation({ id: 'saveSiteSection', summary: 'Save a page section: the first save creates it, later saves carry its version (stale returns 409). Empty fields fall back to the default copy on the web.', tag: 'site', permission: 'PlatformAdmin grant with MFA', params: [tokenParam('slot', "Section slot '<page>.<section>[.<n>]'.")], body: { type: 'object', additionalProperties: false, properties: { version: { type: 'integer', minimum: 1, description: 'Required once the section has been saved; omitted on the first save.' }, sortOrder: { type: 'integer', minimum: 0, maximum: 1000 }, kickerAr: { type: 'string', maxLength: 80 }, kickerEn: { type: 'string', maxLength: 80 }, titleAr: { type: 'string', maxLength: 200 }, titleEn: { type: 'string', maxLength: 200 }, bodyAr: { type: 'string', maxLength: 1500 }, bodyEn: { type: 'string', maxLength: 1500 }, ctaLabelAr: { type: 'string', maxLength: 60 }, ctaLabelEn: { type: 'string', maxLength: 60 }, ctaHref: { type: 'string', maxLength: 300 }, cta2LabelAr: { type: 'string', maxLength: 60 }, cta2LabelEn: { type: 'string', maxLength: 60 }, cta2Href: { type: 'string', maxLength: 300 }, defaultImage: { type: 'string' }, active: { type: 'boolean' }, imageKey: { type: ['string', 'null'], pattern: '^site/[0-9a-f-]{36}[.]bin$' } } }, success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope(ref('AdminSiteItem')) } }),
+    delete: operation({ id: 'resetSiteSection', summary: 'Return a page section to its default copy and photo by removing the saved row. 404 when nothing was saved.', tag: 'site', permission: 'PlatformAdmin grant with MFA', params: [tokenParam('slot', 'Section slot.')], success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { slot: { type: 'string' }, reset: { type: 'boolean' } } }) } })
+  },
+  '/admin/site-settings': {
+    get: operation({ id: 'getSiteSettings', summary: 'The contact details and social links, every key with its value or an empty string.', tag: 'site', permission: 'PlatformAdmin grant with MFA', success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { keys: { type: 'array', items: { type: 'string' } }, values: { type: 'object', additionalProperties: false, properties: { 'contact.email': { type: 'string' }, 'contact.phone': { type: 'string' }, 'contact.whatsapp': { type: 'string' }, 'contact.address.ar': { type: 'string' }, 'contact.address.en': { type: 'string' }, 'contact.hours.ar': { type: 'string' }, 'contact.hours.en': { type: 'string' }, 'social.facebook': { type: 'string' }, 'social.instagram': { type: 'string' }, 'social.x': { type: 'string' }, 'social.linkedin': { type: 'string' }, 'social.youtube': { type: 'string' } } } } }) } }),
+    put: operation({ id: 'saveSiteSettings', summary: 'Set contact details and social links. Only the listed keys; social links must be https links to that network; an empty string clears a value.', tag: 'site', permission: 'PlatformAdmin grant with MFA', body: { type: 'object', additionalProperties: false, properties: { 'contact.email': { type: 'string' }, 'contact.phone': { type: 'string' }, 'contact.whatsapp': { type: 'string' }, 'contact.address.ar': { type: 'string' }, 'contact.address.en': { type: 'string' }, 'contact.hours.ar': { type: 'string' }, 'contact.hours.en': { type: 'string' }, 'social.facebook': { type: 'string' }, 'social.instagram': { type: 'string' }, 'social.x': { type: 'string' }, 'social.linkedin': { type: 'string' }, 'social.youtube': { type: 'string' } } }, success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { keys: { type: 'array', items: { type: 'string' } }, values: { type: 'object', additionalProperties: false, properties: { 'contact.email': { type: 'string' }, 'contact.phone': { type: 'string' }, 'contact.whatsapp': { type: 'string' }, 'contact.address.ar': { type: 'string' }, 'contact.address.en': { type: 'string' }, 'contact.hours.ar': { type: 'string' }, 'contact.hours.en': { type: 'string' }, 'social.facebook': { type: 'string' }, 'social.instagram': { type: 'string' }, 'social.x': { type: 'string' }, 'social.linkedin': { type: 'string' }, 'social.youtube': { type: 'string' } } } } }) } })
   },
   '/admin/site-media/images': { put: operation({ id: 'uploadSiteImage', summary: 'Upload one PNG, JPEG or WebP as the raw body (max 8 MB, 6000x6000, 40 MP). The declared type must match the bytes. Stored but unused until an item or cover names its key. Demo/test storage only.', tag: 'site', permission: 'PlatformAdmin grant with MFA', headers: [{ name: 'content-length', description: 'Exact byte size; required.' }], body: { type: 'string', format: 'binary' }, bodyContentType: 'image/*', success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'object', properties: { imageKey: { type: 'string' }, imageUrl: { type: 'string' }, contentType: { type: 'string' }, width: { type: 'integer' }, height: { type: 'integer' } } }) } }) },
   '/admin/projects/covers': { get: operation({ id: 'listProjectCovers', summary: 'All projects, newest first (200 at most), with their current cover photo or null.', tag: 'site', permission: 'PlatformAdmin grant with MFA', success: { status: 200, description: ENVELOPE_DESCRIPTION, schema: envelope({ type: 'array', items: { type: 'object', properties: { id: { type: 'string', format: 'uuid' }, slug: { type: 'string' }, title: { type: 'string' }, type: { type: 'string' }, state: { type: 'string' }, organization: { type: 'object', properties: { displayName: { type: 'string' } } }, coverUrl: { type: ['string', 'null'] } } } }) } }) },

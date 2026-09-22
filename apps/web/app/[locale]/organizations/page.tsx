@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation';
-import { AppShell, Card, PageHeader, isLocale, localePath, type Locale } from '@tamkeen/ui';
+import { AppShell, Card, isLocale, localePath, type Locale } from '@tamkeen/ui';
 import { readPublic, type PublicOrganizationSummary } from '../../../lib/server-api';
+import { readSiteContent, section } from '../../../lib/site-content';
 import { OrganizationCard, PublicList } from '../public-parts';
+import { PageHero } from '../marketing';
 
 /** PUB-04. An expired verification is not "verified", which the filter and the badge both respect. */
 
@@ -32,17 +34,13 @@ export default async function Organizations({ params, searchParams }: { params: 
     const value = one(search, key);
     if (value) filters.set(key, value);
   }
-  const organizations = await readPublic<PublicOrganizationSummary[]>('/organizations', filters);
+  const [organizations, site] = await Promise.all([readPublic<PublicOrganizationSummary[]>('/organizations', filters), readSiteContent()]);
+  const header = section(site, 'organizations.header');
+  const pick = (value: { ar: string; en: string }) => value[locale] || value.ar;
 
   return (
-    <AppShell locale={locale} path="/organizations">
-      <PageHeader
-        eyebrow={ar ? 'الجهات' : 'Organisations'}
-        title={ar ? 'من ينفّذ على تمكين' : 'Who delivers on Tamkeen'}
-        lead={ar
-          ? 'شارة «موثقة» تعني قرار توثيق ساريًا، لا مجرد تسجيل. التوثيق المنتهي لا يُحتسب موثقًا.'
-          : 'A “verified” badge means a current verification decision, not merely a registration. An expired verification does not count as verified.'}
-      />
+    <AppShell locale={locale} path="/organizations"
+      lead={<PageHero image={header.image} kicker={pick(header.kicker)} title={pick(header.title)} lead={pick(header.body)} />}>
 
       <Card title={ar ? 'تصفية' : 'Filters'}>
         <form method="get" action={localePath(locale, '/organizations')} autoComplete="off" className="tmk-toolbar">

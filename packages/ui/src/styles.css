@@ -940,6 +940,17 @@ html[dir="ltr"] .tmk-index__item:hover > svg:last-child { transform: translateX(
 .tmk-admin-card__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--tmk-space-8); padding: var(--tmk-space-12) var(--tmk-space-16); border-block-start: 1px solid var(--tmk-color-border); background: var(--tmk-color-surface-sunken); }
 .tmk-admin-card__delete { margin-inline-start: auto; color: var(--tmk-color-danger); }
 .tmk-admin-card__ask { font-weight: 700; color: var(--tmk-color-danger); margin-inline-end: auto; }
+.tmk-admin-card__flag { display: block; padding: var(--tmk-space-16) var(--tmk-space-16) 0; }
+.tmk-editor__body[data-single] { grid-template-columns: 1fr; }
+.tmk-pill__count { margin-inline-start: var(--tmk-space-8); padding: 0 var(--tmk-space-8); border-radius: var(--tmk-radius-pill); background: var(--tmk-color-surface-sunken); font-size: 12px; }
+.tmk-settings { display: grid; gap: var(--tmk-space-16); padding: var(--tmk-space-32); }
+.tmk-settings h2 { margin: var(--tmk-space-16) 0 0; font-size: 20px; }
+.tmk-contact-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--tmk-space-16); margin-block-end: var(--tmk-space-48); padding: var(--tmk-space-24); border-radius: var(--tmk-radius-card); background: var(--tmk-color-surface); border: 1px solid var(--tmk-color-border); box-shadow: var(--tmk-shadow-sm); }
+.tmk-contact-details__item { display: flex; align-items: center; gap: var(--tmk-space-12); }
+.tmk-contact-details__item > span:last-child { display: grid; gap: 2px; min-inline-size: 0; }
+.tmk-contact-details__item small { font-size: 13px; color: var(--tmk-color-muted); font-weight: 600; }
+.tmk-contact-details__item a, .tmk-contact-details__item strong { font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
+.tmk-contact-details__social { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--tmk-space-8); }
 .tmk-admin-card--add { grid-template-rows: none; font: inherit; cursor: pointer; place-items: center; align-content: center; gap: var(--tmk-space-8); min-block-size: 240px; padding: var(--tmk-space-24); text-align: center; border: 2px dashed var(--tmk-color-muted); background: var(--tmk-color-primary-tint); color: var(--tmk-color-primary); box-shadow: none; }
 .tmk-admin-card--add span { color: var(--tmk-color-muted); font-size: var(--tmk-type-caption-size); }
 

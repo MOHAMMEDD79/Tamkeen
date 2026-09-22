@@ -1,11 +1,14 @@
 import { notFound } from 'next/navigation';
-import { Building2, Handshake, LifeBuoy } from 'lucide-react';
+import { Building2, Clock, Handshake, LifeBuoy, Link2, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import { AppShell, isLocale, localePath, type Locale } from '@tamkeen/ui';
-import { readSiteContent } from '../../../lib/site-content';
+import { readSiteContent, section } from '../../../lib/site-content';
 import { PageHero } from '../marketing';
 import { ContactForm } from './contact-form';
 
-/** Public contact page. Messages land in the platform admin's inbox; no account is needed. */
+/**
+ * Public contact page. Messages land in the platform admin's inbox; no account is needed. Every
+ * line of copy, the photo and the contact details are set by the admin.
+ */
 
 export const dynamic = 'force-dynamic';
 
@@ -16,55 +19,75 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     : { title: 'تواصل معنا — تمكين', description: 'سؤال أو شراكة أو فكرة مشروع: اكتب إلى فريق تمكين.' };
 }
 
-const copy = {
-  ar: {
-    kicker: 'تواصل معنا',
-    formTitle: 'أرسل لنا رسالة',
-    formLead: 'املأ النموذج وسيصل مباشرة إلى فريق تمكين.',
-    cards: [
-      { icon: LifeBuoy, title: 'دعم أصحاب الحسابات', body: 'مشكلة في مساهمة أو طلب؟ افتح تذكرة دعم خاصة من حسابك.', href: '/contact' },
-      { icon: Building2, title: 'سجّل جهتك', body: 'جمعية أو شركة أو مؤسسة؟ أنشئ حساب جهتك وابدأ مسار التوثيق.', href: '/app/organizations/new' },
-      { icon: Handshake, title: 'الشراكات', body: 'للشراكات والتمويل المؤسسي اكتب لنا في النموذج واختر موضوعًا واضحًا.', href: null }
-    ]
-  },
-  en: {
-    kicker: 'Contact us',
-    formTitle: 'Send us a message',
-    formLead: 'Fill in the form and it goes straight to the Tamkeen team.',
-    cards: [
-      { icon: LifeBuoy, title: 'Support for account holders', body: 'A problem with a contribution or request? Open a private support ticket from your account.', href: '/contact' },
-      { icon: Building2, title: 'Register your organisation', body: 'A charity, company or foundation? Create your organisation and start verification.', href: '/app/organizations/new' },
-      { icon: Handshake, title: 'Partnerships', body: 'For partnerships and institutional funding, write to us using the form with a clear subject.', href: null }
-    ]
-  }
-} as const;
+const SOCIAL: Array<{ key: string; ar: string; en: string }> = [
+  { key: 'social.facebook', ar: 'فيسبوك', en: 'Facebook' },
+  { key: 'social.instagram', ar: 'إنستغرام', en: 'Instagram' },
+  { key: 'social.x', ar: 'إكس', en: 'X' },
+  { key: 'social.linkedin', ar: 'لينكدإن', en: 'LinkedIn' },
+  { key: 'social.youtube', ar: 'يوتيوب', en: 'YouTube' }
+];
 
 export default async function ContactUs({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
   const locale = raw satisfies Locale;
-  const text = copy[locale];
+  const ar = locale === 'ar';
   const site = await readSiteContent();
   const contact = site.contact!;
   const pick = (value: { ar: string; en: string }) => value[locale] || value.ar;
+  const S = (slot: string) => section(site, slot);
+  const form = S('contact.form');
+  const settings = site.settings;
+  const setting = (key: string) => settings[`${key}.${locale}`] || settings[`${key}.ar`] || '';
+  const digits = (value: string) => value.replace(/[^0-9+]/g, '');
+
+  const details = [
+    settings['contact.email'] ? { icon: Mail, label: ar ? 'البريد' : 'Email', value: settings['contact.email'], href: `mailto:${settings['contact.email']}`, ltr: true } : null,
+    settings['contact.phone'] ? { icon: Phone, label: ar ? 'الهاتف' : 'Phone', value: settings['contact.phone'], href: `tel:${digits(settings['contact.phone'])}`, ltr: true } : null,
+    settings['contact.whatsapp'] ? { icon: MessageCircle, label: ar ? 'واتساب' : 'WhatsApp', value: settings['contact.whatsapp'], href: `https://wa.me/${digits(settings['contact.whatsapp']).replace('+', '')}`, ltr: true } : null,
+    setting('contact.address') ? { icon: MapPin, label: ar ? 'العنوان' : 'Address', value: setting('contact.address'), href: null, ltr: false } : null,
+    setting('contact.hours') ? { icon: Clock, label: ar ? 'ساعات العمل' : 'Working hours', value: setting('contact.hours'), href: null, ltr: false } : null
+  ].filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  const socials = SOCIAL.filter(entry => settings[entry.key]);
 
   return (
     <AppShell locale={locale} path="/contact-us"
-      lead={<PageHero image={contact.imageUrl} kicker={text.kicker} title={pick(contact.title)} lead={pick(contact.body)} />}>
+      lead={<PageHero image={contact.imageUrl} kicker={(contact.kicker && pick(contact.kicker)) || (ar ? 'تواصل معنا' : 'Contact us')} title={pick(contact.title)} lead={pick(contact.body)} />}>
+
+      {details.length || socials.length ? (
+        <section className="tmk-contact-details tmk-reveal" aria-label={ar ? 'بيانات التواصل' : 'Contact details'}>
+          {details.map(entry => {
+            const Icon = entry.icon;
+            const value = <span dir={entry.ltr ? 'ltr' : undefined}>{entry.value}</span>;
+            return (
+              <div className="tmk-contact-details__item" key={entry.label}>
+                <span className="tmk-feature__icon"><Icon aria-hidden="true" size={22} /></span>
+                <span><small>{entry.label}</small>{entry.href ? <a href={entry.href} rel={entry.href.startsWith('https') ? 'noreferrer' : undefined} target={entry.href.startsWith('https') ? '_blank' : undefined}>{value}</a> : <strong>{value}</strong>}</span>
+              </div>
+            );
+          })}
+          {socials.length ? (
+            <div className="tmk-contact-details__social">
+              {socials.map(entry => <a key={entry.key} className="tmk-pill" href={settings[entry.key]} target="_blank" rel="noreferrer"><Link2 aria-hidden="true" size={16} />{ar ? entry.ar : entry.en}</a>)}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="tmk-contact" aria-labelledby="contact-form-title">
         <div className="tmk-contact__cards">
-          {text.cards.map((card, index) => {
-            const Icon = card.icon;
-            const body = <><span className="tmk-feature__icon"><Icon aria-hidden="true" size={24} /></span><span><strong>{card.title}</strong><span>{card.body}</span></span></>;
-            return card.href
-              ? <a className="tmk-contact__card tmk-reveal" key={card.title} href={localePath(locale, card.href)} style={{ ['--reveal-delay' as string]: index }}>{body}</a>
-              : <div className="tmk-contact__card tmk-reveal" key={card.title} style={{ ['--reveal-delay' as string]: index }}>{body}</div>;
+          {[1, 2, 3].map(number => S(`contact.card.${number}`)).map((card, index) => {
+            const Icon = [LifeBuoy, Building2, Handshake][index] ?? LifeBuoy;
+            const body = <><span className="tmk-feature__icon"><Icon aria-hidden="true" size={24} /></span><span><strong>{pick(card.title)}</strong><span>{pick(card.body)}</span></span></>;
+            return card.cta
+              ? <a className="tmk-contact__card tmk-reveal" key={index} href={localePath(locale, card.cta.href)} style={{ ['--reveal-delay' as string]: index }}>{body}</a>
+              : <div className="tmk-contact__card tmk-reveal" key={index} style={{ ['--reveal-delay' as string]: index }}>{body}</div>;
           })}
         </div>
         <div className="tmk-reveal">
           <div className="tmk-section__head" style={{ marginBlockEnd: 24 }}>
-            <h2 id="contact-form-title" style={{ fontSize: 30 }}>{text.formTitle}</h2>
-            <p>{text.formLead}</p>
+            <h2 id="contact-form-title" style={{ fontSize: 30 }}>{pick(form.title)}</h2>
+            <p>{pick(form.body)}</p>
           </div>
           <ContactForm locale={locale} />
         </div>

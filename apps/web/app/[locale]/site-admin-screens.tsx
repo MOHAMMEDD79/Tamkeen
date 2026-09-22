@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Archive, Eye, EyeOff, ImagePlus, Inbox, Loader2, MailOpen, Pencil, Plus, RotateCcw, Save, Trash2, X } from 'lucide-react';
 import { AppShell, EmptyState, Notice, PageHeader, Skeleton, StatusBadge, formatDate, localePath, type Locale } from '@tamkeen/ui';
+import { SECTIONS, SECTION_BY_SLOT, SETTING_FIELDS, SITE_PAGES, resolveSection, type PageKey, type SectionDef, type SectionField } from '../../lib/site-sections';
 
 /**
  * ADM site content: the platform admin controls every photo and line of marketing copy the public
@@ -16,7 +17,7 @@ import { AppShell, EmptyState, Notice, PageHeader, Skeleton, StatusBadge, format
 
 type Text = { ar: string; en: string };
 interface AdminItem {
-  id: string; slot: string; sortOrder: number; title: Text; body: Text;
+  id: string; slot: string; sortOrder: number; kicker?: Text; title: Text; body: Text;
   cta: { label: Text; href: string }; imageKey: string | null; imageUrl: string; defaultImage: string;
   active: boolean; version: number; updatedAt: string;
 }
@@ -58,7 +59,10 @@ const SLOT_LABELS: Record<string, string> = {
   contact: 'بانر صفحة «تواصل معنا»'
 };
 
-export function SiteAdmin({ locale, mode }: { locale: Locale; mode: 'content' | 'covers' | 'messages' }) {
+type Mode = 'content' | 'pages' | 'settings' | 'covers' | 'messages';
+const MODE_PATHS: Record<Mode, string> = { content: '/admin/site', pages: '/admin/site/pages', settings: '/admin/site/settings', covers: '/admin/site/covers', messages: '/admin/messages' };
+
+export function SiteAdmin({ locale, mode }: { locale: Locale; mode: Mode }) {
   const L = (path: string) => localePath(locale, path);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -68,11 +72,14 @@ export function SiteAdmin({ locale, mode }: { locale: Locale; mode: 'content' | 
     catch (e) { setError(e instanceof Error ? e.message : 'تعذر تنفيذ العملية.'); }
   }, []);
   return (
-    <AppShell locale={locale} path={mode === 'messages' ? '/admin/messages' : mode === 'covers' ? '/admin/site/covers' : '/admin/site'} signedIn
+    <AppShell locale={locale} path={MODE_PATHS[mode]} signedIn
       userActions={<a className="tmk-button tmk-button--quiet" href={L('/app')}>لوحتي</a>}>
       {error ? <Notice tone="danger" live="assertive">{error}</Notice> : null}
       {notice ? <Notice tone="success">{notice}</Notice> : null}
-      {mode === 'content' ? <ContentEditor run={run} locale={locale} /> : mode === 'covers' ? <CoverEditor run={run} locale={locale} /> : <MessageInbox run={run} locale={locale} />}
+      {mode === 'content' ? <ContentEditor run={run} locale={locale} />
+        : mode === 'pages' ? <PagesEditor run={run} locale={locale} />
+        : mode === 'settings' ? <SettingsEditor run={run} locale={locale} />
+        : mode === 'covers' ? <CoverEditor run={run} locale={locale} /> : <MessageInbox run={run} locale={locale} />}
     </AppShell>
   );
 }
@@ -95,7 +102,7 @@ function ContentEditor({ run, locale }: { run: Run; locale: Locale }) {
   useEffect(() => { void run(load); }, [run, load]);
   const sorted = items ? [...items].sort((a, b) => HERO_ORDER.indexOf(a.slot) - HERO_ORDER.indexOf(b.slot) || a.sortOrder - b.sortOrder) : null;
   const heroes = sorted?.filter(item => item.slot === 'hero') ?? [];
-  const fixed = sorted?.filter(item => item.slot !== 'hero') ?? [];
+  const fixed = sorted?.filter(item => item.slot !== 'hero' && HERO_ORDER.includes(item.slot)) ?? [];
   const nextOrder = heroes.reduce((max, item) => Math.max(max, item.sortOrder), 0) + 1;
 
   const done = async (message: string) => { setEditing(null); await run(async () => { await load(); return message; }); };
@@ -231,6 +238,7 @@ function ContentDialog({ item, nextOrder, canDelete, onClose, onDone }: {
     const titleAr = value('titleAr');
     const common = {
       titleAr, titleEn: value('titleEn') || (creating ? titleAr : ''), bodyAr: value('bodyAr'), bodyEn: value('bodyEn'),
+      ...(hero ? {} : { kickerAr: value('kickerAr'), kickerEn: value('kickerEn') }),
       ctaLabelAr: value('ctaLabelAr'), ctaLabelEn: value('ctaLabelEn'),
       ...(value('ctaHref') ? { ctaHref: value('ctaHref') } : {}),
       ...(hero && value('sortOrder') ? { sortOrder: Number(value('sortOrder')) } : {})
@@ -280,6 +288,10 @@ function ContentDialog({ item, nextOrder, canDelete, onClose, onDone }: {
           </div>
 
           <div className="tmk-editor__fields">
+            {!hero ? <>
+              <Field label="العنوان الصغير بالعربية" name="kickerAr" value={item?.kicker?.ar ?? ''} max={80} />
+              <Field label="العنوان الصغير بالإنجليزية" name="kickerEn" value={item?.kicker?.en ?? ''} max={80} ltr />
+            </> : null}
             <Field label="العنوان بالعربية" name="titleAr" value={text('title', 'ar')} required max={200} autoFocus={creating} />
             <Field label="العنوان بالإنجليزية" name="titleEn" value={text('title', 'en')} max={200} ltr hint={creating ? 'اتركه فارغًا ليُستخدم العنوان العربي.' : undefined} />
             <Field label="النص بالعربية" name="bodyAr" value={text('body', 'ar')} max={600} area />
@@ -419,5 +431,244 @@ function MessageInbox({ run, locale }: { run: Run; locale: Locale }) {
         </div>
       )}
     </>
+  );
+}
+
+// ---------------------------------------------------------------- page sections
+
+interface SavedRow {
+  id: string; slot: string; version: number; imageKey: string | null; imageUrl: string;
+  kicker: Text; title: Text; body: Text; cta: { label: Text; href: string }; cta2: { label: Text; href: string };
+}
+
+/**
+ * Every section of every public page, grouped by page. A card shows what the page shows now (the
+ * admin's saved text over the default); opening it edits that section in the same kind of dialog
+ * as a banner, and "reset" returns it to the default copy and photo.
+ */
+function PagesEditor({ run, locale }: { run: Run; locale: Locale }) {
+  const [rows, setRows] = useState<SavedRow[] | null>(null);
+  const [page, setPage] = useState<PageKey>('home');
+  const [editing, setEditing] = useState<SectionDef | null>(null);
+  const load = useCallback(async () => {
+    const content = await call<{ items: SavedRow[] }>('/admin/site-content');
+    setRows(content.items.filter(item => SECTION_BY_SLOT.has(item.slot)));
+  }, []);
+  useEffect(() => { void run(load); }, [run, load]);
+  const saved = (slot: string) => rows?.find(row => row.slot === slot);
+  const sections = SECTIONS.filter(entry => entry.page === page);
+  const current = SITE_PAGES.find(entry => entry.key === page)!;
+  const done = async (message: string) => { setEditing(null); await run(async () => { await load(); return message; }); };
+
+  return (
+    <>
+      <PageHeader dashboard eyebrow="إدارة الموقع" title="صفحات الموقع"
+        lead="كل نص وصورة في كل صفحة عامة. افتح أي قسم لتعديله؛ الحقل الذي تتركه فارغًا يعود لنصه الافتراضي، و«استعادة الافتراضي» تلغي كل تعديلاتك على القسم."
+        actions={<a className="tmk-button tmk-button--secondary" href={localePath(locale, current.path)} target="_blank" rel="noreferrer"><Eye aria-hidden="true" size={18} />معاينة «{current.label}»</a>} />
+      <nav className="tmk-pills" aria-label="الصفحات">
+        {SITE_PAGES.map(entry => (
+          <button key={entry.key} type="button" className="tmk-pill" aria-current={entry.key === page ? 'true' : undefined} onClick={() => setPage(entry.key)}>
+            {entry.label}<span className="tmk-pill__count">{SECTIONS.filter(section => section.page === entry.key).length}</span>
+          </button>
+        ))}
+      </nav>
+      {page === 'home' || page === 'about' || page === 'contact' ? (
+        <Notice tone="info">
+          {page === 'home' ? 'شرائح البانر الرئيسي وبطاقات المسارات الثلاثة تُدار من ' : 'البانر العلوي لهذه الصفحة (صورته وعنوانه) يُدار من '}
+          <a href={localePath(locale, '/admin/site')}>البانرات والأقسام</a>.
+        </Notice>
+      ) : null}
+      {!rows ? <Skeleton lines={6} label="جارٍ التحميل" /> : (
+        <div className="tmk-admin-cards">
+          {sections.map(entry => {
+            const row = saved(entry.slot);
+            const shown = resolveSection(entry.slot, row ? { ...row, cta: row.cta.href ? row.cta : null, cta2: row.cta2.href ? row.cta2 : null, imageUrl: row.imageKey ? row.imageUrl : null } : undefined);
+            return (
+              <article className="tmk-admin-card" key={entry.slot}>
+                <button type="button" className="tmk-admin-card__open" onClick={() => setEditing(entry)} aria-label={`تعديل ${entry.label}`}>
+                  {entry.fields.includes('image') ? (
+                    <span className="tmk-admin-card__media">
+                      <img src={shown.image} alt="" loading="lazy" />
+                      {row ? <span className="tmk-admin-card__status"><StatusBadge tone="success">معدّل</StatusBadge></span> : null}
+                    </span>
+                  ) : row ? <span className="tmk-admin-card__flag"><StatusBadge tone="success">معدّل</StatusBadge></span> : null}
+                  <span className="tmk-admin-card__body">
+                    <span className="tmk-admin-card__slot">{entry.label}</span>
+                    <strong>{shown.title.ar || shown.kicker.ar || shown.body.ar.slice(0, 60) || entry.label}</strong>
+                    {entry.fields.includes('body') && shown.body.ar && shown.title.ar ? <span className="tmk-admin-card__text">{shown.body.ar}</span> : null}
+                  </span>
+                </button>
+                <div className="tmk-admin-card__actions">
+                  <button type="button" className="tmk-button tmk-button--secondary" onClick={() => setEditing(entry)}><Pencil aria-hidden="true" size={16} />تعديل</button>
+                  {row ? (
+                    <button type="button" className="tmk-button tmk-button--quiet" onClick={() => void run(async () => {
+                      await call(`/admin/site-content/sections/${entry.slot}`, 'DELETE'); await load(); return `عاد «${entry.label}» إلى نصه الافتراضي.`;
+                    })}><RotateCcw aria-hidden="true" size={16} />استعادة الافتراضي</button>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+      {editing ? <SectionDialog key={editing.slot} def={editing} row={saved(editing.slot)} onClose={() => setEditing(null)} onDone={done} /> : null}
+    </>
+  );
+}
+
+function SectionDialog({ def, row, onClose, onDone }: { def: SectionDef; row: SavedRow | undefined; onClose: () => void; onDone: (message: string) => Promise<void> }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const shown = resolveSection(def.slot, row ? { ...row, cta: row.cta.href ? row.cta : null, cta2: row.cta2.href ? row.cta2 : null, imageUrl: row.imageKey ? row.imageUrl : null } : undefined);
+  const [preview, setPreview] = useState(shown.image);
+  const [pendingKey, setPendingKey] = useState<string | null | undefined>(undefined);
+  const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const has = (field: SectionField) => def.fields.includes(field);
+
+  useEffect(() => {
+    // No cleanup: see ContentDialog.
+    const node = dialog.current;
+    if (node && !node.open) node.showModal();
+  }, []);
+
+  const pick = (file: File | undefined) => {
+    if (!file) return;
+    setError('');
+    const local = URL.createObjectURL(file);
+    const before = preview;
+    setPreview(local); setUploading(true);
+    uploadImage(file)
+      .then(uploaded => { setPendingKey(uploaded.imageKey); setPreview(uploaded.imageUrl); })
+      .catch(e => { setPreview(before); setError(e instanceof Error ? e.message : 'تعذر رفع الصورة.'); })
+      .finally(() => { setUploading(false); URL.revokeObjectURL(local); });
+  };
+
+  const save = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (uploading) { setError('انتظر حتى يكتمل رفع الصورة.'); return; }
+    const data = new FormData(event.currentTarget);
+    const value = (name: string) => String(data.get(name) ?? '').trim();
+    const pair = (prefix: string) => ({ [`${prefix}Ar`]: value(`${prefix}Ar`), [`${prefix}En`]: value(`${prefix}En`) });
+    const body = {
+      ...(row ? { version: row.version } : {}),
+      ...(has('kicker') ? pair('kicker') : {}),
+      ...(has('title') ? pair('title') : {}),
+      ...(has('body') ? pair('body') : {}),
+      ...(has('cta') ? { ...pair('ctaLabel'), ctaHref: value('ctaHref') } : {}),
+      ...(has('cta2') ? { ...pair('cta2Label'), cta2Href: value('cta2Href') } : {}),
+      ...(pendingKey !== undefined ? { imageKey: pendingKey } : {})
+    };
+    setBusy(true); setError('');
+    call(`/admin/site-content/sections/${def.slot}`, 'PUT', body)
+      .then(() => onDone(`حُفظ «${def.label}».`))
+      .catch(e => { setError(e instanceof Error ? e.message : 'تعذر الحفظ.'); setBusy(false); });
+  };
+
+  const pair = (label: string, name: string, text: Text, options: { area?: boolean; max: number }) => (
+    <>
+      <Field label={`${label} بالعربية`} name={`${name}Ar`} value={text.ar} max={options.max} {...(options.area ? { area: true } : {})} />
+      <Field label={`${label} بالإنجليزية`} name={`${name}En`} value={text.en} max={options.max} ltr {...(options.area ? { area: true } : {})} />
+    </>
+  );
+
+  return (
+    <dialog ref={dialog} className="tmk-dialog tmk-editor" aria-labelledby="tmk-section-title" onClose={onClose} onCancel={() => onClose()}>
+      <form onSubmit={save} className="tmk-editor__form">
+        <header className="tmk-editor__head">
+          <div>
+            <p className="tmk-editor__eyebrow">{SITE_PAGES.find(entry => entry.key === def.page)?.label}</p>
+            <h2 id="tmk-section-title">{def.label}</h2>
+          </div>
+          <button type="button" className="tmk-button tmk-button--quiet tmk-editor__close" onClick={onClose} aria-label="إغلاق"><X aria-hidden="true" size={20} /></button>
+        </header>
+        <div className="tmk-editor__body" data-single={has('image') ? undefined : 'true'}>
+          {has('image') ? (
+            <div className="tmk-editor__media">
+              <label className="tmk-editor__drop" onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); pick(event.dataTransfer.files?.[0]); }}>
+                {preview ? <img src={preview} alt="" /> : null}
+                <span className="tmk-editor__drop-hint">
+                  <ImagePlus aria-hidden="true" size={28} />
+                  <strong>تغيير الصورة</strong>
+                  <span>اسحبها هنا أو اضغط للاختيار · PNG أو JPEG أو WebP حتى 8MB</span>
+                </span>
+                {uploading ? <span className="tmk-editor__uploading" role="status"><Loader2 aria-hidden="true" size={22} className="tmk-spin" />جارٍ رفع الصورة…</span> : null}
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="tmk-visually-hidden" onChange={event => { pick(event.target.files?.[0]); event.target.value = ''; }} />
+              </label>
+              {(row?.imageKey || pendingKey) && pendingKey !== null ? (
+                <button type="button" className="tmk-button tmk-button--quiet" onClick={() => { setPendingKey(null); setPreview(def.defaults.image ?? ''); }}><RotateCcw aria-hidden="true" size={16} />الصورة الافتراضية</button>
+              ) : null}
+            </div>
+          ) : null}
+          <div className="tmk-editor__fields">
+            {has('kicker') ? pair('العنوان الصغير', 'kicker', shown.kicker, { max: 80 }) : null}
+            {has('title') ? pair('العنوان', 'title', shown.title, { max: 200 }) : null}
+            {has('body') ? pair('النص', 'body', shown.body, { area: true, max: 1500 }) : null}
+            {has('cta') ? <>
+              {pair('نص الزر', 'ctaLabel', shown.cta?.label ?? { ar: '', en: '' }, { max: 60 })}
+              <Field label="رابط الزر" name="ctaHref" value={shown.cta?.href ?? ''} max={300} ltr hint="صفحة داخل الموقع، مثل ‎/explore" />
+            </> : null}
+            {has('cta2') ? <>
+              {pair('نص الزر الثاني', 'cta2Label', shown.cta2?.label ?? { ar: '', en: '' }, { max: 60 })}
+              <Field label="رابط الزر الثاني" name="cta2Href" value={shown.cta2?.href ?? ''} max={300} ltr />
+            </> : null}
+          </div>
+        </div>
+        {error ? <div className="tmk-editor__error"><Notice tone="danger" live="assertive">{error}</Notice></div> : null}
+        <footer className="tmk-editor__foot">
+          <button type="submit" className="tmk-button tmk-button--primary" disabled={busy || uploading}><Save aria-hidden="true" size={18} />حفظ التغييرات</button>
+          <button type="button" className="tmk-button tmk-button--secondary" onClick={onClose} disabled={busy}>إلغاء</button>
+        </footer>
+      </form>
+    </dialog>
+  );
+}
+
+// ---------------------------------------------------------------- contact details
+
+function SettingsEditor({ run, locale }: { run: Run; locale: Locale }) {
+  const [values, setValues] = useState<Record<string, string> | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => setValues((await call<{ values: Record<string, string> }>('/admin/site-settings')).values), []);
+  useEffect(() => { void run(load); }, [run, load]);
+  const save = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const body = Object.fromEntries(SETTING_FIELDS.map(field => [field.key, String(data.get(field.key) ?? '').trim()]));
+    setBusy(true);
+    void run(async () => { await call('/admin/site-settings', 'PUT', body); await load(); return 'حُفظت بيانات التواصل وظهرت في صفحة «تواصل معنا».'; }).finally(() => setBusy(false));
+  };
+  return (
+    <>
+      <PageHeader dashboard eyebrow="إدارة الموقع" title="بيانات التواصل"
+        lead="البريد والهاتف والعنوان وروابط الشبكات الاجتماعية التي تظهر في صفحة «تواصل معنا». اترك الحقل فارغًا لإخفائه."
+        actions={<a className="tmk-button tmk-button--secondary" href={localePath(locale, '/contact-us')} target="_blank" rel="noreferrer"><Eye aria-hidden="true" size={18} />معاينة الصفحة</a>} />
+      {!values ? <Skeleton lines={6} label="جارٍ التحميل" /> : (
+        <form className="tmk-card tmk-settings" onSubmit={save}>
+          <h2>التواصل المباشر</h2>
+          <div className="tmk-editor__fields">
+            {SETTING_FIELDS.filter(field => field.key.startsWith('contact.')).map(field => <SettingField key={field.key} field={field} value={values[field.key] ?? ''} />)}
+          </div>
+          <h2>الشبكات الاجتماعية</h2>
+          <div className="tmk-editor__fields">
+            {SETTING_FIELDS.filter(field => field.key.startsWith('social.')).map(field => <SettingField key={field.key} field={field} value={values[field.key] ?? ''} />)}
+          </div>
+          <p className="tmk-row__actions" style={{ marginBlockEnd: 0 }}>
+            <button type="submit" className="tmk-button tmk-button--primary" disabled={busy}><Save aria-hidden="true" size={18} />حفظ</button>
+          </p>
+        </form>
+      )}
+    </>
+  );
+}
+
+function SettingField({ field, value }: { field: typeof SETTING_FIELDS[number]; value: string }) {
+  const id = `setting-${field.key.replace(/\./g, '-')}`;
+  return (
+    <div className="tmk-field" style={{ margin: 0 }}>
+      <label className="tmk-field__label" htmlFor={id}>{field.label}</label>
+      <input className="tmk-field__control" id={id} name={field.key} defaultValue={value} type={field.kind === 'url' ? 'url' : field.kind === 'email' ? 'email' : field.kind === 'tel' ? 'tel' : 'text'} dir={field.ltr ? 'ltr' : undefined} maxLength={300} />
+      {field.hint ? <p className="tmk-field__hint" style={{ margin: 0 }} dir="ltr">{field.hint}</p> : null}
+    </div>
   );
 }

@@ -33,6 +33,8 @@ test('site content, media, project covers and the contact inbox over HTTP', asyn
   const createdItems: string[] = [];
   const uploadedIds: string[] = [];
   const heroesBefore = await db.siteMediaItem.findMany({ where: { slot: 'hero' } });
+  const settingsBefore = await db.siteSetting.findMany();
+  const TEST_SECTION = 'explore.itest';
 
   const call = async (method: string, path: string, options: { cookie?: string; body?: unknown; raw?: Buffer; contentType?: string; origin?: string | null; headers?: Record<string, string> } = {}) => {
     const headers: Record<string, string> = { ...(options.headers ?? {}) };
@@ -199,9 +201,42 @@ test('site content, media, project covers and the contact inbox over HTTP', asyn
     assert.ok(Number(limited.headers.get('retry-after')) > 0);
     assert.equal((await call('POST', '/contact-messages', { body: message, headers: client(seed + 4) })).status, 201, 'another client is unaffected');
 
+    // --- Page sections: saved over defaults, versioned, reset by removal ------------------------------
+    assert.equal((await call('PUT', `/admin/site-content/sections/${TEST_SECTION}`, { cookie: visitor.cookie, body: { titleAr: 'x' } })).status, 403, 'only the platform admin edits sections');
+    assert.equal((await call('PUT', '/admin/site-content/sections/hero', { cookie: admin.cookie, body: { titleAr: 'x' } })).status, 422, 'a fixed slot is not a section');
+    assert.equal((await call('PUT', '/admin/site-content/sections/nowhere.at-all', { cookie: admin.cookie, body: { titleAr: 'x' } })).status, 422, 'an unknown page is refused');
+    const firstSave = await call('PUT', `/admin/site-content/sections/${TEST_SECTION}`, { cookie: admin.cookie, body: { kickerAr: 'قسم', titleAr: 'عنوان القسم', bodyAr: 'فقرة أولى\n\nفقرة ثانية', ctaLabelAr: 'اذهب', ctaHref: '/invest' } });
+    assert.equal(firstSave.status, 200, JSON.stringify(firstSave.body));
+    const savedSection = firstSave.data as { version: number; kicker: { ar: string }; cta: { href: string } };
+    assert.equal(savedSection.kicker.ar, 'قسم');
+    assert.equal((await call('PUT', `/admin/site-content/sections/${TEST_SECTION}`, { cookie: admin.cookie, body: { titleAr: 'again' } })).status, 409, 'a second save without the version is stale');
+    assert.equal((await call('PUT', `/admin/site-content/sections/${TEST_SECTION}`, { cookie: admin.cookie, body: { ctaHref: '//evil.example', version: savedSection.version } })).status, 422, 'an off-site link is refused');
+    const secondSave = await call('PUT', `/admin/site-content/sections/${TEST_SECTION}`, { cookie: admin.cookie, body: { titleEn: 'Section title', imageKey: uploaded.imageKey, version: savedSection.version } });
+    assert.equal(secondSave.status, 200);
+    const publicSections = ((await call('GET', '/site-content', { origin: null })).data as { sections: Record<string, { title: { ar: string; en: string }; imageUrl: string | null; cta: { href: string } | null }> }).sections;
+    assert.equal(publicSections[TEST_SECTION]?.title.ar, 'عنوان القسم');
+    assert.equal(publicSections[TEST_SECTION]?.title.en, 'Section title');
+    assert.equal(publicSections[TEST_SECTION]?.cta?.href, '/invest');
+    assert.match(publicSections[TEST_SECTION]?.imageUrl ?? '', /^\/api\/v1\/site-media\//);
+    assert.equal((await call('DELETE', `/admin/site-content/sections/${TEST_SECTION}`, { cookie: admin.cookie })).status, 200);
+    assert.equal((await call('DELETE', `/admin/site-content/sections/${TEST_SECTION}`, { cookie: admin.cookie })).status, 404, 'nothing left to reset');
+    assert.equal(((await call('GET', '/site-content', { origin: null })).data as { sections: Record<string, unknown> }).sections[TEST_SECTION], undefined, 'a reset section falls back to its default');
+
+    // --- Contact details: a fixed key set, validated --------------------------------------------------
+    assert.equal((await call('GET', '/admin/site-settings', { cookie: visitor.cookie })).status, 403);
+    assert.equal((await call('PUT', '/admin/site-settings', { cookie: admin.cookie, body: { 'contact.fax': '1' } })).status, 422, 'an unknown key is refused');
+    assert.equal((await call('PUT', '/admin/site-settings', { cookie: admin.cookie, body: { 'social.facebook': 'https://evil.example/page' } })).status, 422, 'a social link must point at that network');
+    assert.equal((await call('PUT', '/admin/site-settings', { cookie: admin.cookie, body: { 'contact.email': 'nope' } })).status, 422);
+    const savedSettings = await call('PUT', '/admin/site-settings', { cookie: admin.cookie, body: { 'contact.email': 'hello@tamkeen.example', 'contact.phone': '+970 59 000 0000', 'social.x': 'https://x.com/tamkeen', 'contact.hours.ar': '' } });
+    assert.equal(savedSettings.status, 200, JSON.stringify(savedSettings.body));
+    const publicSettings = ((await call('GET', '/site-content', { origin: null })).data as { settings: Record<string, string> }).settings;
+    assert.equal(publicSettings['contact.email'], 'hello@tamkeen.example');
+    assert.equal(publicSettings['social.x'], 'https://x.com/tamkeen');
+    assert.equal(Object.hasOwn(publicSettings, 'contact.hours.ar'), false, 'an empty value is not published');
+
     // --- Every admin change left an audit row ---------------------------------------------------
     const actions = (await db.identityAuditEvent.findMany({ where: { actorId: admin.user.id }, select: { action: true } })).map(row => row.action);
-    for (const action of ['site_media.uploaded', 'site_content.item.updated', 'site_content.item.created', 'site_content.item.deleted', 'project_cover.set', 'project_cover.removed', 'contact_message.read']) {
+    for (const action of ['site_media.uploaded', 'site_content.item.updated', 'site_content.item.created', 'site_content.item.deleted', 'site_content.section.saved', 'site_content.section.reset', 'site_settings.saved', 'project_cover.set', 'project_cover.removed', 'contact_message.read']) {
       assert.ok(actions.includes(action), `${action} is audited`);
     }
   } finally {
@@ -210,6 +245,9 @@ test('site content, media, project covers and the contact inbox over HTTP', asyn
       await db.siteMediaItem.update({ where: { id }, data: original });
     }
     await db.siteMediaItem.deleteMany({ where: { id: { in: createdItems } } });
+    await db.siteMediaItem.deleteMany({ where: { slot: TEST_SECTION } });
+    await db.siteSetting.deleteMany();
+    if (settingsBefore.length) await db.siteSetting.createMany({ data: settingsBefore });
     await db.contactMessage.deleteMany({ where: { email: `${prefix}-contact@example.test` } });
     await db.$transaction(async tx => {
       await tx.project.deleteMany({ where: { id: { in: projects } } });
