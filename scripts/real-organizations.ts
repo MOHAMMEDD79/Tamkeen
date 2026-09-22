@@ -39,6 +39,81 @@ const REAL_ORGANIZATIONS = [
     contactEmail: 'contact@bmaq.org',
     contactAddress: 'الرباط، المملكة المغربية',
     logo: 'scripts/assets/bmaq-logo.jpg'
+  },
+  {
+    slug: "taawon",
+    legalName: "مؤسسة التعاون",
+    displayName: "مؤسسة التعاون",
+    type: 'Foundation' as const,
+    verification: 'not_started' as const,
+    country: "PS",
+    city: "القدس",
+    publicDescription: "مؤسسة التعاون مؤسسة أهلية فلسطينية غير ربحية، انطلقت في جنيف عام 1983 بمبادرة من مجموعة من الشخصيات الاقتصادية والفكرية الفلسطينية والعربية. تعمل على تمكين الأفراد ومؤسسات المجتمع المدني الفلسطيني اقتصادياً واجتماعياً وتعزيز الهوية الفلسطينية، عبر برامج في التعليم والثقافة والتنمية المجتمعية وإعمار البلدات القديمة، ومنها برنامج القدس لإعمار البلدات القديمة. تنشط في فلسطين ومخيمات اللاجئين في لبنان، ولها مكاتب في القدس ورام الله وغزة وعمّان وبيروت ولندن وجنيف.",
+    sectors: ["التعليم", "الثقافة", "التنمية المجتمعية", "إعمار البلدات القديمة"],
+    websiteUrl: "https://www.taawon.org",
+    contactEmail: "info@taawon.org",
+    contactAddress: "شعفاط، القدس",
+    logo: 'scripts/assets/taawon.png'
+  },
+  {
+    slug: "prcs",
+    legalName: "جمعية الهلال الأحمر الفلسطيني",
+    displayName: "جمعية الهلال الأحمر الفلسطيني",
+    type: 'NGO' as const,
+    verification: 'not_started' as const,
+    country: "PS",
+    city: "البيرة",
+    publicDescription: "جمعية الهلال الأحمر الفلسطيني جمعية وطنية ذات شخصية اعتبارية مستقلة، تأسست رسمياً في 26 كانون الأول 1968، وتعود جذور أول هيئة للهلال الأحمر في فلسطين إلى عام 1910. حصلت عام 2006 على العضوية الكاملة في الاتحاد الدولي لجمعيات الصليب الأحمر والهلال الأحمر، وتقدّم الخدمات الإنسانية والصحية والاجتماعية والإغاثية للشعب الفلسطيني في الأرض الفلسطينية المحتلة وأماكن تجمعاته، من الإسعاف والطوارئ وإدارة مخاطر الكوارث إلى التأهيل والصحة النفسية والدعم النفسي الاجتماعي وبرامج الشباب والتطوع.",
+    sectors: ["الإسعاف والطوارئ", "الرعاية الصحية", "التأهيل", "الصحة النفسية والدعم النفسي", "الإغاثة الإنسانية"],
+    websiteUrl: "https://www.palestinercs.org",
+    contactEmail: "info@palestinercs.org",
+    contactAddress: "الإدارة العامة، البيرة",
+    logo: 'scripts/assets/prcs.png'
+  },
+  {
+    slug: "pif",
+    legalName: "صندوق الاستثمار الفلسطيني",
+    displayName: "صندوق الاستثمار الفلسطيني",
+    type: 'Company' as const,
+    verification: 'not_started' as const,
+    country: "PS",
+    city: "رام الله",
+    publicDescription: "صندوق الاستثمار الفلسطيني شركة مساهمة عامة تأسست عام 2003 ومسجلة لدى وزارة الاقتصاد الوطني، ومقرها رام الله. يستثمر الصندوق في مشاريع استراتيجية بهدف تحقيق أثر إيجابي في المؤشرات الاقتصادية وتعزيز النمو الاقتصادي المستدام، في قطاعات الطاقة التقليدية والمتجددة والرعاية الصحية والاتصالات والاقتصاد الرقمي والبنية التحتية والصناعة والتجارة والزراعة. ويدير محفظة للاستثمار المجتمعي تشمل برنامج إبداع لتمويل المشاريع الصغيرة والمتوسطة وبرنامج منح الطاقة الخضراء في القدس.",
+    sectors: ["الاستثمار", "الطاقة المتجددة", "البنية التحتية", "الاقتصاد الرقمي", "تمويل المشاريع الصغيرة والمتوسطة"],
+    websiteUrl: "https://www.pif.ps",
+    contactEmail: "info@pif.ps",
+    contactAddress: "شارع الإرسال، رام الله",
+    logo: 'scripts/assets/pif.png'
+  },
+  {
+    slug: "parc",
+    legalName: "الإغاثة الزراعية الفلسطينية",
+    displayName: "الإغاثة الزراعية الفلسطينية",
+    type: 'NGO' as const,
+    verification: 'not_started' as const,
+    country: "PS",
+    city: "رام الله",
+    publicDescription: "الإغاثة الزراعية الفلسطينية مؤسسة وطنية تنموية تعمل منذ عام 1983 على تنمية القطاع الزراعي وتعزيز صمود المزارعين، وتسعى إلى ريف فلسطيني قوي محصّن بقطاعه الزراعي. تعمل عبر برامج إدارة الموارد الطبيعية والتمكين الاجتماعي والاقتصادي والصمود والتعبئة والمناصرة، ونفّذت شبكات ري وخطوط مياه وطرقاً زراعية واستصلاح أراضٍ وزراعة ملايين الأشجار وبرامج تدريب زراعي. مقرها رام الله، ولها فروع في القدس ومحافظات الضفة الغربية وقطاع غزة.",
+    sectors: ["الزراعة", "إدارة الموارد الطبيعية", "التمكين الاقتصادي", "التدريب الزراعي", "صمود المزارعين"],
+    websiteUrl: "https://pal-arc.org",
+    contactEmail: "info@pal-arc.org",
+    contactAddress: "شارع المعاهد، رام الله",
+    logo: 'scripts/assets/parc.png'
+  },
+  {
+    slug: "alnayzak",
+    legalName: "مؤسسة النيزك",
+    displayName: "مؤسسة النيزك",
+    type: 'NGO' as const,
+    verification: 'not_started' as const,
+    country: "PS",
+    city: "رام الله",
+    publicDescription: "مؤسسة النيزك مؤسسة فلسطينية غير ربحية وغير حزبية تأسست في القدس عام 2003، تعمل على تمكين الشباب الفلسطيني عبر التعليم التطبيقي في مجالات العلوم والتكنولوجيا والهندسة والرياضيات، وتنمية قدرات الريادة والابتكار، وتوفير فرص اجتماعية واقتصادية من خلال برامج متخصصة. تقوم أعمالها على ثلاث ركائز: العلم والمجتمع، والابتكار في التعليم، والابتكار في الاقتصاد، وتخدم أكثر من 32 ألف مستفيد سنوياً عبر شبكة من المراكز والشركاء، ومقرها في رام الله.",
+    sectors: ["ريادة الأعمال", "العلوم والتكنولوجيا", "التعليم التطبيقي", "تمكين الشباب", "الابتكار"],
+    websiteUrl: "https://alnayzak.org",
+    contactEmail: "info@alnayzak.org",
+    contactAddress: "الماصيون، رام الله",
+    logo: 'scripts/assets/alnayzak.png'
   }
 ];
 
@@ -67,14 +142,15 @@ try {
 
     if (!record.currentLogoId) {
       const bytes = await readFile(logoFiles[index]!);
+      const contentType = logoFiles[index]!.endsWith('.png') ? 'image/png' : 'image/jpeg';
       const assetId = randomUUID();
       const storageKey = `logos/${record.id}/${assetId}.bin`;
       const quarantined = resolve(process.cwd(), '.local', 'organization-logos', 'quarantine', ...storageKey.split('/'));
       await mkdir(dirname(quarantined), { recursive: true });
       await writeFile(quarantined, bytes);
       const current = await db.organization.findUniqueOrThrow({ where: { id: record.id }, select: { version: true } });
-      await db.organizationLogoAsset.create({ data: { id: assetId, organizationId: record.id, organizationVersion: current.version, fileName: 'logo.jpg', storageKey, contentType: 'image/jpeg', expectedSize: (await stat(quarantined)).size } });
-      const result = await storage.inspectAndPublish(storageKey, 'image/jpeg');
+      await db.organizationLogoAsset.create({ data: { id: assetId, organizationId: record.id, organizationVersion: current.version, fileName: `logo.${contentType === 'image/png' ? 'png' : 'jpg'}`, storageKey, contentType, expectedSize: (await stat(quarantined)).size } });
+      const result = await storage.inspectAndPublish(storageKey, contentType);
       if (!result.clean) throw new Error(`The logo for ${organization.displayName} failed the image check: ${result.reason}.`);
       await db.$transaction([
         db.organizationLogoAsset.update({ where: { id: assetId }, data: { scanState: 'clean', checksum: result.checksum, actualSize: result.actualSize, finalizedAt: new Date() } }),
