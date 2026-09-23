@@ -1,0 +1,526 @@
+{
+  "quds-2026-children-library": {
+    "title": "مكتبة الطفل المقدسي",
+    "file": "scripts/assets/photos/project-b0c56450a3dd3b9b.jpg",
+    "commonsFile": "File:Children's reading in Public Library 02.jpg",
+    "author": "Ngostary2k",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Children%27s_reading_in_Public_Library_02.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "quds-2026-old-city-homes": {
+    "title": "ترميم منازل مقدسية في البلدة القديمة",
+    "file": "scripts/assets/photos/project-bfcbbf56ea650697.jpg",
+    "commonsFile": "File:East Jerusalem - The Old City - 175 (4260981803).jpg",
+    "author": "Kyle Taylor from London, 84 Countries",
+    "licence": "CC BY 2.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:East_Jerusalem_-_The_Old_City_-_175_(4260981803).jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "quds-2026-school-steadfastness": {
+    "title": "دعم صمود طلبة مدارس القدس",
+    "file": "scripts/assets/photos/project-0df4a28c9dbe2733.jpg",
+    "commonsFile": "File:Al Shioukh elementary girl’s school.jpg",
+    "author": "Department of Foreign Affairs and Trade",
+    "licence": "CC BY 2.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Al_Shioukh_elementary_girl%E2%80%99s_school.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "quds-2026-old-city-alleys": {
+    "title": "إحياء أزقة البلدة القديمة",
+    "file": "scripts/assets/photos/project-b3a4a97f157457ad.jpg",
+    "commonsFile": "File:Jerusalem Old City Market, 2019 (03).jpg",
+    "author": "Bahnfrend",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Jerusalem_Old_City_Market,_2019_(03).jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "quds-2026-mobile-lab": {
+    "title": "مختبر علوم متنقل لمدارس القدس",
+    "file": "scripts/assets/photos/project-4055ca19128bc050.jpg",
+    "commonsFile": "File:Students in Shadeh High School Laboratory.JPG",
+    "author": "Sonia Sevilla",
+    "licence": "CC BY-SA 3.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Students_in_Shadeh_High_School_Laboratory.JPG",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "quds-2026-mobile-clinic": {
+    "title": "عيادة متنقلة لأحياء خلف الجدار",
+    "file": "scripts/assets/photos/project-45d8f6bdb164de28.jpg",
+    "commonsFile": "File:CHC PERIYE DOCTOR CHECK.jpg",
+    "author": "Baburajpk",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:CHC_PERIYE_DOCTOR_CHECK.jpg",
+    "query": "incategory:\"Health centres\" patient",
+    "chosen": 0,
+    "candidates": [
+      {
+        "title": "File:CHC PERIYE DOCTOR CHECK.jpg",
+        "licence": "CC BY-SA 4.0",
+        "ratioScore": 0.1899378881987579,
+        "artist": "Baburajpk",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:CHC_PERIYE_DOCTOR_CHECK.jpg",
+        "thumburl": "https://upload.wikimedia.org/wikipedia/commons/f/ff/CHC_PERIYE_DOCTOR_CHECK.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      }
+    ]
+  },
+  "quds-2026-silwan-ambulance": {
+    "title": "تجهيز نقطة إسعاف في سلوان",
+    "file": "scripts/assets/photos/project-1d6668d152f3ab6b.jpg",
+    "commonsFile": "File:Palestinian Red Crescent Society 002.jpg",
+    "author": "Mark Nakasone",
+    "licence": "CC BY 2.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Palestinian_Red_Crescent_Society_002.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "quds-2026-home-gardens": {
+    "title": "حدائق منزلية في أحياء القدس",
+    "file": "scripts/assets/photos/project-3109bccaa6a3555d.jpg",
+    "commonsFile": "File:PVC-Farme Smart Pot Urban Raised Bed.jpg",
+    "author": "Smart Pot",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:PVC-Farme_Smart_Pot_Urban_Raised_Bed.jpg",
+    "query": "incategory:\"Vegetable gardens\" beds",
+    "chosen": 0,
+    "candidates": [
+      {
+        "title": "File:PVC-Farme Smart Pot Urban Raised Bed.jpg",
+        "licence": "CC BY-SA 4.0",
+        "ratioScore": 0.0022222222222223476,
+        "artist": "Smart Pot",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:PVC-Farme_Smart_Pot_Urban_Raised_Bed.jpg",
+        "thumburl": "https://upload.wikimedia.org/wikipedia/commons/f/f1/PVC-Farme_Smart_Pot_Urban_Raised_Bed.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      {
+        "title": "File:Kale and Cabbage in Raised Garden Beds (49200262267).jpg",
+        "licence": "CC0",
+        "ratioScore": 0.27805447470817124,
+        "artist": "Alabama Extension",
+        "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Kale_and_Cabbage_in_Raised_Garden_Beds_(49200262267).jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Kale_and_Cabbage_in_Raised_Garden_Beds_%2849200262267%29.jpg/1920px-Kale_and_Cabbage_in_Raised_Garden_Beds_%2849200262267%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      {
+        "title": "File:Raised vegetable bed at Boreham, Essex, England.jpg",
+        "licence": "CC BY-SA 4.0",
+        "ratioScore": 0.2797856836690955,
+        "artist": "Acabashi",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Raised_vegetable_bed_at_Boreham,_Essex,_England.jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Raised_vegetable_bed_at_Boreham%2C_Essex%2C_England.jpg/1920px-Raised_vegetable_bed_at_Boreham%2C_Essex%2C_England.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      {
+        "title": "File:Students learn how to weed in the specially designed wheelchair accessible garden beds. (10727065023).jpg",
+        "licence": "CC BY 2.0",
+        "ratioScore": 0.2861728395061729,
+        "artist": "Department of Foreign Affairs and Trade",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Students_learn_how_to_weed_in_the_specially_designed_wheelchair_accessible_garden_beds._(10727065023).jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Students_learn_how_to_weed_in_the_specially_designed_wheelchair_accessible_garden_beds._%2810727065023%29.jpg/1920px-Students_learn_how_to_weed_in_the_specially_designed_wheelchair_accessible_garden_beds._%2810727065023%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      {
+        "title": "File:Bethesda agriculture studies teacher Thelma Awasi supervises weeding in the specially designed wheelchair accessible garden beds. All gardening is organic and the vegetables help feed the staff and students. (10676974125).jpg",
+        "licence": "CC BY 2.0",
+        "ratioScore": 0.2861728395061729,
+        "artist": "Department of Foreign Affairs and Trade",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Bethesda_agriculture_studies_teacher_Thelma_Awasi_supervises_weeding_in_the_specially_designed_wheelchair_accessible_garden_beds._All_gardening_is_organic_and_the_vegetables_help_feed_the_staff_and_students._(10676974125).jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5c/Bethesda_agriculture_studies_teacher_Thelma_Awasi_supervises_weeding_in_the_specially_designed_wheelchair_accessible_garden_beds._All_gardening_is_organic_and_the_vegetables_help_feed_the_staff_and_students._%2810676974125%29.jpg/1920px-thumbnail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      {
+        "title": "File:Raised bed.jpg",
+        "licence": "CC BY-SA 3.0",
+        "ratioScore": 0.35381615598885796,
+        "artist": "Srl",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Raised_bed.jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7d/Raised_bed.jpg/1920px-Raised_bed.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      {
+        "title": "File:U.S. Botanic Garden in July (23769851356).jpg",
+        "licence": "CC BY 2.0",
+        "ratioScore": 0.3651546391752578,
+        "artist": "DC Gardens",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:U.S._Botanic_Garden_in_July_(23769851356).jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6e/U.S._Botanic_Garden_in_July_%2823769851356%29.jpg/1920px-U.S._Botanic_Garden_in_July_%2823769851356%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      {
+        "title": "File:Students weed in the specially designed wheelchair accessible garden beds. (10727428626).jpg",
+        "licence": "CC BY 2.0",
+        "ratioScore": 0.3734466019417475,
+        "artist": "Department of Foreign Affairs and Trade",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Students_weed_in_the_specially_designed_wheelchair_accessible_garden_beds._(10727428626).jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2a/Students_weed_in_the_specially_designed_wheelchair_accessible_garden_beds._%2810727428626%29.jpg/1920px-Students_weed_in_the_specially_designed_wheelchair_accessible_garden_beds._%2810727428626%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      }
+    ]
+  },
+  "جولة-خط-القص-بالمنشار-السلكي-e2e5c4": {
+    "title": "جولة خط القص بالمنشار السلكي",
+    "file": "scripts/assets/photos/offering-d0f7d13059bc2d00.jpg",
+    "commonsFile": "File:Use of cutting machine, Marble Quarries thassos.jpg",
+    "author": "Dr Petros Tzeferis",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Use_of_cutting_machine,_Marble_Quarries_thassos.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "جولة-الخزانات-ومشغل-النحت-946298": {
+    "title": "جولة الخزانات ومشغل النحت",
+    "file": "scripts/assets/photos/offering-e1e8cbe419fa7e68.jpg",
+    "commonsFile": "File:Stonemason at Guedelon.jpg",
+    "author": "Schorle",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Stonemason_at_Guedelon.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "جولة-تمويل-مخزون-الا-لواح-والعواكس-9420fd": {
+    "title": "جولة تمويل مخزون الألواح والعواكس",
+    "file": "scripts/assets/photos/offering-4eb272280300a71a.jpg",
+    "commonsFile": "File:Rooftop solar photovoltaic installation.jpg",
+    "author": "Marta Victoria",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Rooftop_solar_photovoltaic_installation.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "جولة-خط-التعبي-ة-وخزانات-الموسم-85d783": {
+    "title": "جولة خط التعبئة وخزانات الموسم",
+    "file": "scripts/assets/photos/offering-fb0aff6adb66634f.jpg",
+    "commonsFile": "File:Idalion palace - oil mill - 08. pressing room.jpg",
+    "author": "פעמי-עליון",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Idalion_palace_-_oil_mill_-_08._pressing_room.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "جولة-تحويل-نظام-ا-دارة-المنح-ا-لى-منتج-db2ec8": {
+    "title": "جولة تحويل نظام إدارة المنح إلى منتج",
+    "file": "scripts/assets/photos/offering-b5cf976329845616.jpg",
+    "commonsFile": "File:Programmer writing code with Unit Tests.jpg",
+    "author": "Joonspoon",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Programmer_writing_code_with_Unit_Tests.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "الترميم-والحرف-التقليدية-في-البلدة-القديمة-f6f81f": {
+    "title": "الترميم والحرف التقليدية في البلدة القديمة",
+    "file": "scripts/assets/photos/program-286355434db42b4b.jpg",
+    "commonsFile": "File:Masons' Lodge, York Minster (29th August 2020) 002.jpg",
+    "author": "Mtaylor848",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Masons%27_Lodge,_York_Minster_(29th_August_2020)_002.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "stem-للفتيات-القدس-60339c": {
+    "title": "STEM للفتيات — القدس",
+    "file": "scripts/assets/photos/program-ac9f3f70c0590cc7.jpg",
+    "commonsFile": "File:Students use microscope LPB Laos.jpg",
+    "author": "Blue Plover",
+    "licence": "CC BY-SA 3.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Students_use_microscope_LPB_Laos.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "الا-سعاف-الا-ولي-المجتمعي-57bb2b": {
+    "title": "الإسعاف الأولي المجتمعي",
+    "file": "scripts/assets/photos/program-edabee79b17848b0.jpg",
+    "commonsFile": "File:First Aid Training Pakistan.jpg",
+    "author": "Rescueranger",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:First_Aid_Training_Pakistan.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "المهارات-الرقمية-وريادة-الا-عمال-للشباب-المقدسي-03b179": {
+    "title": "المهارات الرقمية وريادة الأعمال للشباب المقدسي",
+    "file": "scripts/assets/photos/program-dd30b5a956a759a1.jpg",
+    "commonsFile": "File:Students working on class assignment in computer lab.jpg",
+    "author": "Michael Surran",
+    "licence": "CC BY-SA 2.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Students_working_on_class_assignment_in_computer_lab.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "مهندس-ة-مدني-للا-شراف-على-الترميم-c85132": {
+    "title": "مهندس/ة مدني للإشراف على الترميم",
+    "file": "scripts/assets/photos/job-e4877009ae6feab2.jpg",
+    "commonsFile": "File:Warehouse under construction in Manaus Amazonas by Platinum Construções.jpg",
+    "author": "Bernardobenzecry",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Warehouse_under_construction_in_Manaus_Amazonas_by_Platinum_Constru%C3%A7%C3%B5es.jpg",
+    "query": "incategory:\"Civil engineering\" construction site",
+    "chosen": 0,
+    "candidates": [
+      {
+        "title": "File:Warehouse under construction in Manaus Amazonas by Platinum Construções.jpg",
+        "licence": "CC BY-SA 4.0",
+        "ratioScore": 0.0022222222222223476,
+        "artist": "Bernardobenzecry",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Warehouse_under_construction_in_Manaus_Amazonas_by_Platinum_Constru%C3%A7%C3%B5es.jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Warehouse_under_construction_in_Manaus_Amazonas_by_Platinum_Constru%C3%A7%C3%B5es.jpg/1920px-Warehouse_under_construction_in_Manaus_Amazonas_by_Platinum_Constru%C3%A7%C3%B5es.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      {
+        "title": "File:Concrete-balcony-external-insulation-heatflux.png",
+        "licence": "CC BY-SA 4.0",
+        "ratioScore": 0.13897435897435906,
+        "artist": "HTflux",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Concrete-balcony-external-insulation-heatflux.png",
+        "thumburl": "https://upload.wikimedia.org/wikipedia/commons/3/37/Concrete-balcony-external-insulation-heatflux.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      {
+        "title": "File:Concrete-balcony-thermally-separated-materials.png",
+        "licence": "CC BY-SA 4.0",
+        "ratioScore": 0.13897435897435906,
+        "artist": "HTflux",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Concrete-balcony-thermally-separated-materials.png",
+        "thumburl": "https://upload.wikimedia.org/wikipedia/commons/b/b2/Concrete-balcony-thermally-separated-materials.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      {
+        "title": "File:Concrete-balcony-thermally-separated-heatflux.png",
+        "licence": "CC BY-SA 4.0",
+        "ratioScore": 0.13897435897435906,
+        "artist": "HTflux",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Concrete-balcony-thermally-separated-heatflux.png",
+        "thumburl": "https://upload.wikimedia.org/wikipedia/commons/5/56/Concrete-balcony-thermally-separated-heatflux.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      {
+        "title": "File:Heavy machinery in construction site in Manaus by Platinum Construções.jpg",
+        "licence": "CC BY-SA 4.0",
+        "ratioScore": 0.2798468606431854,
+        "artist": "Bernardobenzecry",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Heavy_machinery_in_construction_site_in_Manaus_by_Platinum_Constru%C3%A7%C3%B5es.jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Heavy_machinery_in_construction_site_in_Manaus_by_Platinum_Constru%C3%A7%C3%B5es.jpg/1920px-Heavy_machinery_in_construction_site_in_Manaus_by_Platinum_Constru%C3%A7%C3%B5es.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      },
+      {
+        "title": "File:Thermal-Bridge-Attic-temperature.png",
+        "licence": "CC BY-SA 4.0",
+        "ratioScore": 0.43016872890888647,
+        "artist": "HTflux",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Thermal-Bridge-Attic-temperature.png",
+        "thumburl": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Thermal-Bridge-Attic-temperature.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      {
+        "title": "File:Thermal-Bridge-Attic-heat flux.png",
+        "licence": "CC BY-SA 4.0",
+        "ratioScore": 0.43016872890888647,
+        "artist": "HTflux",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Thermal-Bridge-Attic-heat_flux.png",
+        "thumburl": "https://upload.wikimedia.org/wikipedia/commons/4/40/Thermal-Bridge-Attic-heat_flux.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+      },
+      {
+        "title": "File:RBS 1500.jpg",
+        "licence": "CC BY-SA 3.0",
+        "ratioScore": 0.44666666666666677,
+        "artist": "ABSTrenchless",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:RBS_1500.jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/RBS_1500.jpg/1920px-RBS_1500.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      }
+    ]
+  },
+  "فني-ة-كهرباء-وصيانة-9cdbe9": {
+    "title": "فني/ة كهرباء وصيانة",
+    "file": "scripts/assets/photos/job-ddcbff3a2c3e6799.jpg",
+    "commonsFile": "File:Electrician Working.jpg",
+    "author": "photo taken by flickr user editor B",
+    "licence": "CC BY 2.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Electrician_Working.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "منسق-ة-مشاريع-ميداني-القدس-8f9cad": {
+    "title": "منسق/ة مشاريع ميداني — القدس",
+    "file": "scripts/assets/photos/job-6820b3271d99f59f.jpg",
+    "commonsFile": "File:A village community development meeting in northern Ghana.jpg",
+    "author": "Qulat96",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:A_village_community_development_meeting_in_northern_Ghana.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "مسعف-ة-القدس-988045": {
+    "title": "مسعف/ة — القدس",
+    "file": "scripts/assets/photos/job-4efea29e83edba2c.jpg",
+    "commonsFile": "File:Paramedics in an ambulance.jpg",
+    "author": "Jim Legans, Jr",
+    "licence": "CC BY 2.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Paramedics_in_an_ambulance.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "محاسب-ة-مشاريع-c675a7": {
+    "title": "محاسب/ة مشاريع",
+    "file": "scripts/assets/photos/job-573e1253da7da7b6.jpg",
+    "commonsFile": "File:The Accountants desks (3817577217).jpg",
+    "author": "Kristin Dos Santos from Los Angeles, California, United States",
+    "licence": "CC BY-SA 2.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:The_Accountants_desks_(3817577217).jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "مرشد-ة-زراعي-القدس-وضواحيها-ce72d5": {
+    "title": "مرشد/ة زراعي — القدس وضواحيها",
+    "file": "scripts/assets/photos/job-34aa4921b2f6cc08.jpg",
+    "commonsFile": "File:Farm Extension Worker.jpg",
+    "author": "Samuel Macharia",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Farm_Extension_Worker.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "ا-خصاي-ي-ة-توثيق-تراثي-9929fe": {
+    "title": "أخصائي/ة توثيق تراثي",
+    "file": "scripts/assets/photos/job-d721afac7c07fd01.jpg",
+    "commonsFile": "File:The Dome of the Rock façade (10805457495).jpg",
+    "author": "Jorge Láscar from Australia",
+    "licence": "CC BY 2.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:The_Dome_of_the_Rock_fa%C3%A7ade_(10805457495).jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "ممرض-ة-عيادة-كفر-عقب-981483": {
+    "title": "ممرض/ة عيادة — كفر عقب",
+    "file": "scripts/assets/photos/job-49083f6030aa4101.jpg",
+    "commonsFile": "File:Nurse educating patient.jpg",
+    "author": "Bill Branson (Photographer)",
+    "licence": "Public domain",
+    "licenceUrl": "",
+    "source": "https://commons.wikimedia.org/wiki/File:Nurse_educating_patient.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "فني-ة-ترميم-وحجر-البلدة-القديمة-89110b": {
+    "title": "فني/ة ترميم وحجر — البلدة القديمة",
+    "file": "scripts/assets/photos/job-83caa61768c2ead7.jpg",
+    "commonsFile": "File:Masons' Lodge, York Minster (29th August 2020) 001.jpg",
+    "author": "Mtaylor848",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Masons%27_Lodge,_York_Minster_(29th_August_2020)_001.jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  },
+  "مدرب-ة-علوم-وتكنولوجيا-2ac1ea": {
+    "title": "مدرب/ة علوم وتكنولوجيا",
+    "file": "scripts/assets/photos/job-5b4b907f6b8f3b05.jpg",
+    "commonsFile": "File:The fire within her.jpg",
+    "author": "Scohen2017",
+    "licence": "CC BY 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:The_fire_within_her.jpg",
+    "query": "incategory:\"Science education\" teacher experiment",
+    "chosen": 0,
+    "candidates": [
+      {
+        "title": "File:The fire within her.jpg",
+        "licence": "CC BY 4.0",
+        "ratioScore": 0.28,
+        "artist": "Scohen2017",
+        "licenceUrl": "https://creativecommons.org/licenses/by/4.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:The_fire_within_her.jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/The_fire_within_her.jpg/1920px-The_fire_within_her.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      }
+    ]
+  },
+  "منسق-ة-برامج-شبابية-018f3f": {
+    "title": "منسق/ة برامج شبابية",
+    "file": "scripts/assets/photos/job-5ddaaa97ed2e8c93.jpg",
+    "commonsFile": "File:In Timor Leste, Australia is funding training for young people in skills such as electronics and carpentry to improve their employment prospects. Timor Leste 2008. Photo- AusAID (10704714345).jpg",
+    "author": "Department of Foreign Affairs and Trade",
+    "licence": "CC BY 2.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:In_Timor_Leste,_Australia_is_funding_training_for_young_people_in_skills_such_as_electronics_and_carpentry_to_improve_their_employment_prospects._Timor_Leste_2008._Photo-_AusAID_(10704714345).jpg",
+    "query": "incategory:\"Workshops\" young people training",
+    "chosen": 0,
+    "candidates": [
+      {
+        "title": "File:In Timor Leste, Australia is funding training for young people in skills such as electronics and carpentry to improve their employment prospects. Timor Leste 2008. Photo- AusAID (10704714345).jpg",
+        "licence": "CC BY 2.0",
+        "ratioScore": 0.28,
+        "artist": "Department of Foreign Affairs and Trade",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+        "descriptionUrl": "https://commons.wikimedia.org/wiki/File:In_Timor_Leste,_Australia_is_funding_training_for_young_people_in_skills_such_as_electronics_and_carpentry_to_improve_their_employment_prospects._Timor_Leste_2008._Photo-_AusAID_(10704714345).jpg",
+        "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/In_Timor_Leste%2C_Australia_is_funding_training_for_young_people_in_skills_such_as_electronics_and_carpentry_to_improve_their_employment_prospects._Timor_Leste_2008._Photo-_AusAID_%2810704714345%29.jpg/1920px-thumbnail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+      }
+    ]
+  },
+  "ا-خصاي-ي-ة-دعم-نفسي-اجتماعي-a69ccb": {
+    "title": "أخصائي/ة دعم نفسي اجتماعي",
+    "file": "scripts/assets/photos/job-903b78f166749423.jpg",
+    "commonsFile": "File:Community Support Centre Starobelsk Yulia Psychologist, Svetlana Social Worker, Oksana SOS Children Village Coordinator (21413645020).jpg",
+    "author": "UNICEF  Ukraine from Kyiv, Ukraine",
+    "licence": "CC BY 2.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Community_Support_Centre_Starobelsk_Yulia_Psychologist,_Svetlana_Social_Worker,_Oksana_SOS_Children_Village_Coordinator_(21413645020).jpg",
+    "query": "picked by name",
+    "chosen": 0,
+    "candidates": []
+  }
+}
