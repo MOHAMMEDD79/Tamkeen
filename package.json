@@ -37,6 +37,7 @@
     "demo:jerusalem": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-jerusalem.ts",
     "demo:invest": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-invest.ts",
     "demo:covers": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-covers.ts",
+    "render:prepare-data": "node scripts/render-prepare.mjs",
     "admin:grant": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/grant-platform-admin.ts",
     "dev:session": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/dev-session.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"

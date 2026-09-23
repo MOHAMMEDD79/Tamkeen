@@ -1,0 +1,27 @@
+# Render blueprint: the whole stack in one free web service.
+#
+# The database is not a managed Render Postgres. packages/config refuses a remote host while
+# APP_ENV is demo, and the demo scripts refuse to run under any other APP_ENV, so the database runs
+# on loopback inside this container. No guard in the application is relaxed to get it online.
+#
+# Free tier: the instance sleeps after inactivity and its disk resets to the built image, so the
+# data returns to exactly what the build seeded. That suits a short-lived preview and nothing more.
+services:
+  - type: web
+    name: tamkeen
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build && node scripts/render-prepare.mjs
+    startCommand: node scripts/render-start.mjs
+    healthCheckPath: /ar
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: APP_ENV
+        value: demo
+      - key: SESSION_SECRET
+        generateValue: true
+      # APP_BASE_URL comes from RENDER_EXTERNAL_URL, which Render sets to the public https URL.
+      - key: EMAIL_FROM
+        value: tamkeen@example.test
