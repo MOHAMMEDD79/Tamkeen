@@ -493,18 +493,21 @@ textarea.tmk-field__control { min-block-size: 132px; resize: vertical; padding-b
 .tmk-table td[data-numeric="true"], .tmk-table th[data-numeric="true"] { text-align: end; font-variant-numeric: tabular-nums; }
 
 /* Money is always tabular and isolated so a mixed-direction string cannot reorder it. */
-.tmk-money { font-family: var(--tmk-type-family-numeric); font-variant-numeric: tabular-nums; white-space: nowrap; unicode-bidi: isolate; }
-.tmk-money__amount { font-weight: 700; }
+/* The digits stay together; the currency may drop to the next line rather than push the amount
+   out of whatever box it sits in. Carrying `nowrap` on the whole span defeated the
+   `overflow-wrap` the narrow boxes below set for exactly this case. */
+.tmk-money { font-family: var(--tmk-type-family-numeric); font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
+.tmk-money__amount { font-weight: 700; white-space: nowrap; }
 .tmk-money__currency { color: var(--tmk-color-muted); font-size: 0.85em; margin-inline-start: var(--tmk-space-4); }
 
 .tmk-meter { display: grid; gap: var(--tmk-space-8); }
 .tmk-meter__track { block-size: 10px; border-radius: var(--tmk-radius-pill); background: var(--tmk-color-surface-sunken); overflow: hidden; }
 .tmk-meter__fill { block-size: 100%; background: linear-gradient(90deg, var(--tmk-color-primary), var(--tmk-color-accent)); border-radius: var(--tmk-radius-pill); transition: inline-size var(--tmk-motion-slow) var(--tmk-motion-easing-out); }
-.tmk-meter__labels { display: flex; justify-content: space-between; gap: var(--tmk-space-12); font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); margin: 0; font-variant-numeric: tabular-nums; }
+.tmk-meter__labels { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--tmk-space-4) var(--tmk-space-12); font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); margin: 0; font-variant-numeric: tabular-nums; }
 
 .tmk-stat { background: var(--tmk-color-surface); border: 1px solid var(--tmk-color-border); border-radius: var(--tmk-radius-card); padding: var(--tmk-space-24); box-shadow: var(--tmk-shadow-sm); }
 .tmk-stat__label { font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); margin-block-end: var(--tmk-space-4); font-weight: 600; }
-.tmk-stat__value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0; line-height: 1.25; letter-spacing: -0.01em; }
+.tmk-stat__value { font-size: clamp(21px, 2.2vw, 28px); font-weight: 700; font-variant-numeric: tabular-nums; margin: 0; line-height: 1.25; letter-spacing: -0.01em; min-inline-size: 0; overflow-wrap: anywhere; }
 .tmk-stat__note { font-size: var(--tmk-type-caption-size); color: var(--tmk-color-muted); margin-block: var(--tmk-space-4) 0; }
 /*
  * An opaque reference — a provider transaction id, a proof reference, a hash — has no spaces to
@@ -706,10 +709,12 @@ html[dir="ltr"] .tmk-track:hover .tmk-track__cta svg { transform: translateX(6px
 .tmk-project__foot .tmk-button { position: relative; z-index: 1; min-block-size: 40px; padding-inline: var(--tmk-space-16); }
 
 /* Key numbers inside a card: three small tiles side by side. */
-.tmk-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--tmk-space-8); margin: 0; }
+.tmk-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 108px), 1fr)); gap: var(--tmk-space-8); margin: 0; }
 .tmk-metrics > div { padding: var(--tmk-space-8) var(--tmk-space-12); background: var(--tmk-color-surface-sunken); border-radius: var(--tmk-radius-field); min-inline-size: 0; }
 .tmk-metrics dt { font-size: 12px; color: var(--tmk-color-muted); font-weight: 600; }
 .tmk-metrics dd { margin: 0; font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
+/* A raise in the millions is longer than any share of a card: let it break before it overflows. */
+.tmk-metrics dd .tmk-money__amount { white-space: normal; overflow-wrap: anywhere; }
 
 /* How it works: numbered steps joined by a line. */
 .tmk-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--tmk-space-24); counter-reset: tmk-step; position: relative; }
