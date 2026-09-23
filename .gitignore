@@ -16,3 +16,7 @@ Tamkeen-Blueprint-MD.zip
 
 # Local test-account credentials (passwords and the shared staff 2FA key); never published.
 tamkeen-test-accounts.txt
+
+# macOS Finder metadata and Office lock files, which appear whenever the folder is opened.
+.DS_Store
+~$*
