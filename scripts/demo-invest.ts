@@ -160,7 +160,8 @@ try {
             slug: company.slug, legalName: company.legalName, displayName: company.displayName, type: 'Company',
             country: 'PS', city: company.city, createdBy: founder.id, verification: 'verified', publiclyListed: true,
             publicDescription: company.description, sectors: company.sectors,
-            createdAt: ago(company.offering.openedDaysAgo + 40)
+            // Registered a little before its first round opened.
+            createdAt: ago((company.rounds[0]?.openedDaysAgo ?? 30) + 40)
           }
         });
         await tx.party.create({ data: { organizationId: created.id } });
