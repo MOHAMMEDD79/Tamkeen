@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.19.0",
-  "engines": { "node": ">=24.19.0 <25" },
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "dev": "node --env-file=.env scripts/dev.mjs",
@@ -32,6 +34,9 @@
     "demo:accounts": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-accounts.ts",
     "orgs:real": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/real-organizations.ts",
     "demo:opportunities": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-opportunities.ts",
+    "demo:jerusalem": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-jerusalem.ts",
+    "demo:invest": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-invest.ts",
+    "demo:covers": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/demo-covers.ts",
     "admin:grant": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/grant-platform-admin.ts",
     "dev:session": "node --env-file=.env --import ./scripts/tsx-user-shim.mjs --import tsx scripts/dev-session.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
